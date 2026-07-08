@@ -160,6 +160,8 @@ document.addEventListener('DOMContentLoaded', () => {
     tools: {
       identicalIPs: true,
       identicalIPsColor: '#ff4444',
+      similarIPsFinder: true,
+      actionRepeatsFinder: true,
       columnEyeButtons: true,
       filterWindow: true,
       formsEnabled: true,
@@ -236,6 +238,8 @@ document.addEventListener('DOMContentLoaded', () => {
     'templatesEnabled': 'templatesEnabled',
     'tools-identicalIPs': 'tools.identicalIPs',
     'tools-identicalIPsColor': 'tools.identicalIPsColor',
+    'tools-similarIPsFinder': 'tools.similarIPsFinder',
+    'tools-actionRepeatsFinder': 'tools.actionRepeatsFinder',
     'tools-columnEyeButtons': 'tools.columnEyeButtons',
     'tools-filterWindow': 'tools.filterWindow',
     'tools-formsEnabled': 'tools.formsEnabled',
@@ -300,6 +304,27 @@ document.addEventListener('DOMContentLoaded', () => {
       accentHover: '#f43f5e',
       dark: { bg: '#1c0d02', cardBg: '#471b05' },
       light: { bg: '#fffbeb', cardBg: '#ffffff' }
+    },
+    cyberpunk: {
+      accent: '#ff007f',
+      accentRgb: '255, 0, 127',
+      accentHover: '#00f0ff',
+      dark: { bg: '#0a0a0f', cardBg: '#181826' },
+      light: { bg: '#faf9fb', cardBg: '#ffffff' }
+    },
+    nord: {
+      accent: '#88c0d0',
+      accentRgb: '136, 192, 208',
+      accentHover: '#8fbcbb',
+      dark: { bg: '#2e3440', cardBg: '#3b4252' },
+      light: { bg: '#eceff4', cardBg: '#ffffff' }
+    },
+    matrix: {
+      accent: '#00ff41',
+      accentRgb: '0, 255, 65',
+      accentHover: '#39ff14',
+      dark: { bg: '#030704', cardBg: '#0e2213' },
+      light: { bg: '#f0fff4', cardBg: '#ffffff' }
     }
   };
 

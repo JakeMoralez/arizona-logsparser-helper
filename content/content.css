@@ -2101,3 +2101,308 @@ div:has(> #arz-filter-logs) {
   position: relative !important;
   z-index: 1000 !important;
 }
+
+.arz-similar-group-card {
+  background: var(--az-bg-sidebar) !important;
+  border: 1px solid var(--az-border) !important;
+  border-radius: var(--az-border-radius-small) !important;
+  padding: 12px 14px !important;
+  margin-bottom: 10px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  transition: all 0.2s ease !important;
+}
+
+.arz-similar-group-card:hover {
+  border-color: rgba(var(--az-accent-rgb), 0.3) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.arz-similar-group-title {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: var(--az-text) !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.arz-similar-group-nicks {
+  font-size: 12px !important;
+  color: var(--az-text-secondary) !important;
+  line-height: 1.4 !important;
+  word-break: break-word !important;
+}
+
+.arz-similar-group-nicks strong {
+  color: var(--az-accent-hover) !important;
+}
+
+.arz-similar-group-ips {
+  font-size: 11px !important;
+  color: var(--az-text-secondary) !important;
+  font-family: monospace !important;
+}
+
+.tempus-dominus-widget {
+  background-color: var(--az-bg-sidebar) !important;
+  background-image: radial-gradient(circle at 100% 0%, rgba(var(--az-accent-rgb), 0.05) 0%, transparent 40%) !important;
+  border: 1px solid var(--az-border) !important;
+  border-radius: var(--az-border-radius) !important;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4) !important;
+  font-family: 'Outfit', 'Inter', system-ui, sans-serif !important;
+  color: var(--az-text) !important;
+  padding: 12px !important;
+  z-index: 100000 !important;
+}
+
+.tempus-dominus-widget .calendar-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 4px 6px 10px 6px !important;
+  border-bottom: 1px solid var(--az-border) !important;
+  margin-bottom: 8px !important;
+}
+
+.tempus-dominus-widget .calendar-header .previous,
+.tempus-dominus-widget .calendar-header .next,
+.tempus-dominus-widget .calendar-header .picker-switch {
+  color: var(--az-text) !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.2s ease !important;
+}
+
+.tempus-dominus-widget .calendar-header .previous:hover,
+.tempus-dominus-widget .calendar-header .next:hover {
+  color: var(--az-accent-hover) !important;
+  transform: scale(1.1) !important;
+}
+
+.tempus-dominus-widget .calendar-header .picker-switch {
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  padding: 4px 10px !important;
+  border-radius: var(--az-border-radius-small) !important;
+}
+
+.tempus-dominus-widget .calendar-header .picker-switch:hover {
+  background-color: var(--az-table-row-hover) !important;
+  color: var(--az-accent-hover) !important;
+}
+
+.tempus-dominus-widget .date-container-days {
+  display: grid !important;
+  grid-template-columns: repeat(7, 1fr) !important;
+  gap: 4px !important;
+  padding: 4px 0 !important;
+}
+
+.tempus-dominus-widget .date-container-days .dow {
+  color: var(--az-text-secondary) !important;
+  font-weight: 600 !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  text-align: center !important;
+  padding: 4px 0 !important;
+}
+
+.tempus-dominus-widget .date-container-days .day {
+  color: var(--az-text) !important;
+  font-size: 12px !important;
+  text-align: center !important;
+  padding: 6px 0 !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  aspect-ratio: 1 !important;
+}
+
+.tempus-dominus-widget .date-container-days .day:hover {
+  background-color: var(--az-table-row-hover) !important;
+  color: var(--az-accent-hover) !important;
+}
+
+.tempus-dominus-widget .date-container-days .day.old,
+.tempus-dominus-widget .date-container-days .day.new {
+  color: var(--az-text-secondary) !important;
+  opacity: 0.4 !important;
+}
+
+.tempus-dominus-widget .date-container-days .day.weekend {
+  color: #ff4d4d !important;
+}
+
+.tempus-dominus-widget .date-container-days .day.weekend:hover {
+  color: #ff7373 !important;
+}
+
+.tempus-dominus-widget .date-container-days .day.active {
+  background: linear-gradient(135deg, var(--az-accent) 0%, var(--az-accent-hover) 100%) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 10px rgba(var(--az-accent-rgb), 0.25) !important;
+}
+
+.tempus-dominus-widget .date-container-days .day.active.weekend {
+  color: #ffffff !important;
+}
+
+.tempus-dominus-widget .time-container-clock {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  align-items: center !important;
+  justify-items: center !important;
+  gap: 4px !important;
+  padding: 8px 0 !important;
+  border-top: 1px solid var(--az-border) !important;
+}
+
+.tempus-dominus-widget .time-container-clock div[data-action*="increment"],
+.tempus-dominus-widget .time-container-clock div[data-action*="decrement"] {
+  color: var(--az-text-secondary) !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.tempus-dominus-widget .time-container-clock div[data-action*="increment"]:hover,
+.tempus-dominus-widget .time-container-clock div[data-action*="decrement"]:hover {
+  color: var(--az-accent-hover) !important;
+  transform: scale(1.1) !important;
+}
+
+.tempus-dominus-widget .time-container-clock div[data-time-component] {
+  font-weight: 700 !important;
+  font-size: 14px !important;
+  color: var(--az-text) !important;
+  cursor: pointer !important;
+  padding: 4px 8px !important;
+  border-radius: var(--az-border-radius-small) !important;
+}
+
+.tempus-dominus-widget .time-container-clock div[data-time-component]:hover {
+  background-color: var(--az-table-row-hover) !important;
+  color: var(--az-accent-hover) !important;
+}
+
+.tempus-dominus-widget .date-container-months,
+.tempus-dominus-widget .date-container-years,
+.tempus-dominus-widget .date-container-decades,
+.tempus-dominus-widget .time-container-hour,
+.tempus-dominus-widget .time-container-minute,
+.tempus-dominus-widget .time-container-second {
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 6px !important;
+  padding: 8px 0 !important;
+}
+
+.tempus-dominus-widget .date-container-months div,
+.tempus-dominus-widget .date-container-years div,
+.tempus-dominus-widget .date-container-decades div,
+.tempus-dominus-widget .time-container-hour div,
+.tempus-dominus-widget .time-container-minute div,
+.tempus-dominus-widget .time-container-second div {
+  color: var(--az-text) !important;
+  font-size: 12px !important;
+  text-align: center !important;
+  padding: 8px 0 !important;
+  border-radius: var(--az-border-radius-small) !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.tempus-dominus-widget .date-container-months div:hover,
+.tempus-dominus-widget .date-container-years div:hover,
+.tempus-dominus-widget .date-container-decades div:hover,
+.tempus-dominus-widget .time-container-hour div:hover,
+.tempus-dominus-widget .time-container-minute div:hover,
+.tempus-dominus-widget .time-container-second div:hover {
+  background-color: var(--az-table-row-hover) !important;
+  color: var(--az-accent-hover) !important;
+}
+
+.tempus-dominus-widget .date-container-months div.active,
+.tempus-dominus-widget .date-container-years div.active,
+.tempus-dominus-widget .date-container-decades div.active,
+.tempus-dominus-widget .time-container-hour div.active,
+.tempus-dominus-widget .time-container-minute div.active,
+.tempus-dominus-widget .time-container-second div.active {
+  background: linear-gradient(135deg, var(--az-accent) 0%, var(--az-accent-hover) 100%) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+.tempus-dominus-widget .toolbar {
+  border-top: 1px solid var(--az-border) !important;
+  padding-top: 8px !important;
+  margin-top: 6px !important;
+  display: flex !important;
+  justify-content: center !important;
+}
+
+.tempus-dominus-widget .toolbar div {
+  color: var(--az-text-secondary) !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  padding: 6px 12px !important;
+  border-radius: var(--az-border-radius-small) !important;
+}
+
+.tempus-dominus-widget .toolbar div:hover {
+  background-color: var(--az-table-row-hover) !important;
+  color: var(--az-accent-hover) !important;
+}
+
+.tempus-dominus-widget .arrow::before {
+  background-color: var(--az-bg-sidebar) !important;
+  border-color: var(--az-border) !important;
+}
+
+.arz-repeat-group-card {
+  background: var(--az-bg-sidebar) !important;
+  border: 1px solid var(--az-border) !important;
+  border-radius: var(--az-border-radius-small) !important;
+  padding: 12px 14px !important;
+  margin-bottom: 10px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  transition: all 0.2s ease !important;
+}
+
+.arz-repeat-group-card:hover {
+  border-color: rgba(var(--az-accent-rgb), 0.3) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.arz-repeat-group-title {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: var(--az-text) !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.arz-repeat-group-desc {
+  font-size: 12px !important;
+  color: var(--az-text-secondary) !important;
+  line-height: 1.4 !important;
+  word-break: break-word !important;
+}
+
+.arz-repeat-group-desc strong {
+  color: var(--az-accent-hover) !important;
+}

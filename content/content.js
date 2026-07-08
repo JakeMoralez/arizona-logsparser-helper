@@ -2457,6 +2457,69 @@
           tableBg: '#ffffff',
           tableRowHover: '#ffedd5'
         }
+      },
+      cyberpunk: {
+        accent: '#ff007f',
+        accentRgb: '255, 0, 127',
+        accentHover: '#00f0ff',
+        dark: {
+          bg: '#0a0a0f',
+          bgSidebar: '#11111a',
+          bgNav: '#11111a',
+          cardBg: '#181826',
+          tableBg: '#141420',
+          tableRowHover: 'rgba(0, 240, 255, 0.05)'
+        },
+        light: {
+          bg: '#faf9fb',
+          bgSidebar: '#ffffff',
+          bgNav: '#ffffff',
+          cardBg: '#ffffff',
+          tableBg: '#ffffff',
+          tableRowHover: '#fff0f5'
+        }
+      },
+      nord: {
+        accent: '#88c0d0',
+        accentRgb: '136, 192, 208',
+        accentHover: '#8fbcbb',
+        dark: {
+          bg: '#2e3440',
+          bgSidebar: '#242933',
+          bgNav: '#242933',
+          cardBg: '#3b4252',
+          tableBg: '#343b49',
+          tableRowHover: 'rgba(255, 255, 255, 0.03)'
+        },
+        light: {
+          bg: '#eceff4',
+          bgSidebar: '#ffffff',
+          bgNav: '#ffffff',
+          cardBg: '#ffffff',
+          tableBg: '#ffffff',
+          tableRowHover: '#e5e9f0'
+        }
+      },
+      matrix: {
+        accent: '#00ff41',
+        accentRgb: '0, 255, 65',
+        accentHover: '#39ff14',
+        dark: {
+          bg: '#030704',
+          bgSidebar: '#09140c',
+          bgNav: '#09140c',
+          cardBg: '#0e2213',
+          tableBg: '#0b1a0f',
+          tableRowHover: 'rgba(0, 255, 65, 0.05)'
+        },
+        light: {
+          bg: '#f0fff4',
+          bgSidebar: '#ffffff',
+          bgNav: '#ffffff',
+          cardBg: '#ffffff',
+          tableBg: '#ffffff',
+          tableRowHover: '#e6ffe9'
+        }
       }
     };
 
@@ -6348,6 +6411,543 @@
     }
   };
 
+    window.ArizonaAnalyticsManager = (function () {
+    let settings = {};
+    let currentModeIP = 'exact';
+    let currentModeRepeats = 'exact';
+    let currentThresholdRepeats = 2;
+    let activeTab = 'similar-ips';
+
+    const modalHTML = `
+      <div id="arz-analytics-overlay" class="arz-modal-overlay">
+        <div class="arz-modal-container" style="max-width: 620px; width: 95%;">
+          <div class="arz-modal-header">
+            <div class="arz-modal-icon-wrapper">
+              <i class="fa-solid fa-chart-simple"></i>
+            </div>
+            <div class="arz-modal-title-block">
+              <div class="arz-modal-title">Аналитика логов</div>
+              <div class="arz-modal-subtitle">Поиск схожих IP-адресов и повторяющихся действий игроков</div>
+            </div>
+            <button id="arz-analytics-close" class="arz-modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          
+          <div class="arz-lookup-tabs">
+            <button class="arz-tab-btn" data-tab="similar-ips"><i class="fa-solid fa-network-wired" style="margin-right: 6px;"></i> Похожие IP</button>
+            <button class="arz-tab-btn" data-tab="repeats"><i class="fa-solid fa-rotate" style="margin-right: 6px;"></i> Повторы действий</button>
+          </div>
+          
+          <div class="arz-modal-body" style="gap: 16px !important; padding-top: 12px !important;">
+            <div id="arz-analytics-tab-similar-ips" class="arz-tab-content" style="display: flex; flex-direction: column; gap: 12px;">
+              <div class="arz-modal-form-group">
+                <label class="arz-modal-label"><i class="fa-solid fa-sliders"></i> Режим сравнения IP</label>
+                <div style="display: flex; gap: 8px; background: var(--az-input-bg); padding: 6px; border-radius: 14px; border: 1px solid var(--az-border);">
+                  <button type="button" class="similar-mode-btn active" data-mode="exact" style="flex: 1; padding: 8px 12px; border: none; border-radius: 10px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; background: linear-gradient(135deg, var(--az-accent) 0%, var(--az-accent-hover) 100%); color: white;">Точный IP</button>
+                  <button type="button" class="similar-mode-btn" data-mode="subnet24" style="flex: 1; padding: 8px 12px; border: none; border-radius: 10px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; background: transparent; color: var(--az-text-secondary);">Подсеть /24 (Похожие)</button>
+                  <button type="button" class="similar-mode-btn" data-mode="subnet16" style="flex: 1; padding: 8px 12px; border: none; border-radius: 10px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; background: transparent; color: var(--az-text-secondary);">Подсеть /16 (Провайдер)</button>
+                </div>
+              </div>
+              
+              <div class="arz-modal-form-group">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <label class="arz-modal-label"><i class="fa-solid fa-list-check"></i> Найденные совпадения</label>
+                  <span id="arz-similar-groups-count" style="background: linear-gradient(135deg, var(--az-accent) 0%, var(--az-accent-hover) 100%); color: white; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 30px;">0 групп</span>
+                </div>
+                <div id="arz-similar-groups-list" class="arz-list-container" style="max-height: 230px; overflow-y: auto;"></div>
+              </div>
+            </div>
+
+            <div id="arz-analytics-tab-repeats" class="arz-tab-content" style="display: none; flex-direction: column; gap: 12px;">
+              <div style="display: flex; gap: 12px; align-items: flex-end;">
+                <div class="arz-modal-form-group" style="flex: 2;">
+                  <label class="arz-modal-label"><i class="fa-solid fa-sliders"></i> Режим сопоставления</label>
+                  <div style="display: flex; gap: 6px; background: var(--az-input-bg); padding: 4px; border-radius: 12px; border: 1px solid var(--az-border);">
+                    <button type="button" class="repeats-mode-btn active" data-mode="exact" style="flex: 1; padding: 6px 10px; border: none; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s; background: linear-gradient(135deg, var(--az-accent) 0%, var(--az-accent-hover) 100%); color: white;">Полный лог</button>
+                    <button type="button" class="repeats-mode-btn" data-mode="actionOnly" style="flex: 1; padding: 6px 10px; border: none; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s; background: transparent; color: var(--az-text-secondary);">Только действие</button>
+                  </div>
+                </div>
+                <div class="arz-modal-form-group" style="flex: 1;">
+                  <label class="arz-modal-label"><i class="fa-solid fa-arrow-up-9-1"></i> Повторов от</label>
+                  <input type="number" id="arz-repeats-threshold" class="arz-input" min="2" max="100" value="2" style="padding: 6px 10px !important; text-align: center;">
+                </div>
+              </div>
+              
+              <div class="arz-modal-form-group">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <label class="arz-modal-label"><i class="fa-solid fa-list-check"></i> Обнаруженные повторы</label>
+                  <span id="arz-repeats-groups-count" style="background: linear-gradient(135deg, var(--az-accent) 0%, var(--az-accent-hover) 100%); color: white; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 30px;">0 групп</span>
+                </div>
+                <div id="arz-repeats-groups-list" class="arz-list-container" style="max-height: 230px; overflow-y: auto;"></div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="arz-modal-footer">
+            <button id="arz-analytics-reset" class="arz-btn-danger" style="flex: 1;"><i class="fa-solid fa-rotate-left"></i> Сбросить фильтр</button>
+            <button id="arz-analytics-show-all" class="arz-btn-primary" style="flex: 1.5;"><i class="fa-solid fa-eye"></i> Показать все</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    function extractNicksFromRow(row) {
+      const nicks = new Set();
+      row.querySelectorAll('a[href*="player="], a[href*="player"]').forEach(lnk => {
+        const text = lnk.textContent.trim();
+        if (text) nicks.add(text);
+      });
+      row.querySelectorAll('a strong').forEach(el => {
+        const text = el.textContent.trim();
+        if (text) nicks.add(text);
+      });
+      const textContent = (row.cells[1]?.textContent || '') + ' ' + (row.cells[2]?.textContent || '');
+      const nickRegex = /\b[A-Za-z0-9]+_[A-Za-z0-9]+\b/g;
+      const matches = textContent.match(nickRegex);
+      if (matches) {
+        matches.forEach(m => nicks.add(m));
+      }
+      return Array.from(nicks);
+    }
+
+    function extractIpsFromRow(row) {
+      const ips = new Set();
+      const ipCell = row.cells[3];
+      if (!ipCell) return [];
+      
+      if (typeof parseAllIpsFromCell === 'function') {
+        const pairs = parseAllIpsFromCell(ipCell);
+        if (pairs && pairs.length > 0) {
+          pairs.forEach(pair => {
+            if (pair.lastIp && !pair.lastIp.includes('*')) ips.add(pair.lastIp);
+            if (pair.regIp && !pair.regIp.includes('*')) ips.add(pair.regIp);
+          });
+        }
+      }
+      
+      const ipRegex = /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g;
+      const textMatches = ipCell.textContent.match(ipRegex);
+      if (textMatches) {
+        textMatches.forEach(ip => ips.add(ip));
+      }
+      
+      return Array.from(ips);
+    }
+
+    function getIpKey(ip, mode) {
+      const parts = ip.split('.');
+      if (parts.length < 4) return null;
+      if (mode === 'subnet24') {
+        return parts.slice(0, 3).join('.') + '.X';
+      }
+      if (mode === 'subnet16') {
+        return parts.slice(0, 2).join('.') + '.X.X';
+      }
+      return ip;
+    }
+
+    function scanAndGroupIPs(mode) {
+      const rows = document.querySelectorAll('table.table tbody tr');
+      const groups = {};
+      
+      rows.forEach(row => {
+        const nicks = extractNicksFromRow(row);
+        const ips = extractIpsFromRow(row);
+        if (nicks.length === 0 || ips.length === 0) return;
+        
+        ips.forEach(ip => {
+          const key = getIpKey(ip, mode);
+          if (!key) return;
+          
+          if (!groups[key]) {
+            groups[key] = {
+              key: key,
+              ips: new Set(),
+              nicks: new Set(),
+              nickDistances: {},
+              rows: []
+            };
+          }
+          groups[key].ips.add(ip);
+          nicks.forEach(n => {
+            groups[key].nicks.add(n);
+            
+            let distanceText = '';
+            const ipCell = row.cells[3];
+            if (ipCell && typeof parseAllIpsFromCell === 'function') {
+              const pairs = parseAllIpsFromCell(ipCell);
+              if (pairs && pairs[0]) {
+                const pair = pairs[0];
+                const regData = pair.regIp ? ipDetailsCache[pair.regIp] : null;
+                const lastData = pair.lastIp ? ipDetailsCache[pair.lastIp] : null;
+                if (regData && lastData && regData.lat && regData.lon && lastData.lat && lastData.lon) {
+                  const dist = calculateHaversineDistance(regData.lat, regData.lon, lastData.lat, lastData.lon);
+                  if (dist !== null) {
+                    distanceText = `~${Math.round(dist)}km`;
+                  }
+                }
+              }
+            }
+            if (distanceText) {
+              if (!groups[key].nickDistances[n]) {
+                groups[key].nickDistances[n] = new Set();
+              }
+              groups[key].nickDistances[n].add(distanceText);
+            }
+          });
+          if (!groups[key].rows.includes(row)) {
+            groups[key].rows.push(row);
+          }
+        });
+      });
+      
+      return Object.values(groups).filter(g => g.nicks.size > 1);
+    }
+
+    function scanAndGroupRepeats(mode, threshold) {
+      const rows = document.querySelectorAll('table.table tbody tr');
+      const groups = {};
+      
+      rows.forEach(row => {
+        const nicks = extractNicksFromRow(row);
+        if (nicks.length === 0) return;
+        
+        const actionCell = row.cells[1];
+        const dataCell = row.cells[2];
+        if (!actionCell) return;
+        
+        let actionText = actionCell.textContent.replace(/\s+/g, ' ').trim();
+        if (mode === 'exact' && dataCell) {
+          actionText += ' | ' + dataCell.textContent.replace(/\s+/g, ' ').trim();
+        }
+        
+        nicks.forEach(nick => {
+          const key = nick + '::' + actionText;
+          if (!groups[key]) {
+            groups[key] = {
+              nick: nick,
+              actionText: actionText,
+              rows: []
+            };
+          }
+          groups[key].rows.push(row);
+        });
+      });
+      
+      return Object.values(groups).filter(g => g.rows.length >= threshold);
+    }
+
+    function renderIPs(modal, groups) {
+      const listContainer = modal.querySelector('#arz-similar-groups-list');
+      const countBadge = modal.querySelector('#arz-similar-groups-count');
+      if (!listContainer) return;
+      
+      listContainer.innerHTML = '';
+      countBadge.textContent = `${groups.length} групп`;
+      
+      if (groups.length === 0) {
+        listContainer.innerHTML = `
+          <div class="arz-empty-state">
+            <i class="fa-solid fa-face-smile" style="font-size: 24px; color: var(--az-text-secondary);"></i>
+            <span>Совпадений не найдено</span>
+          </div>
+        `;
+        return;
+      }
+      
+      groups.forEach(group => {
+        const card = document.createElement('div');
+        card.className = 'arz-similar-group-card';
+        card.style.cursor = 'pointer';
+        
+        const sortedIps = Array.from(group.ips).join(', ');
+        const formattedNicks = Array.from(group.nicks).map(nick => {
+          const distSet = group.nickDistances && group.nickDistances[nick];
+          const distArray = distSet ? Array.from(distSet).filter(Boolean) : [];
+          if (distArray.length > 0) {
+            return `${nick} (${distArray.join('/')})`;
+          }
+          return nick;
+        }).join(', ');
+        
+        card.innerHTML = `
+          <div class="arz-similar-group-title">
+            <span><i class="fa-solid fa-network-wired" style="color: var(--az-accent-hover); margin-right: 6px;"></i> ${group.key}</span>
+            <span class="badge" style="background: rgba(var(--az-accent-rgb), 0.1); color: var(--az-accent-hover); border: 1px solid rgba(var(--az-accent-rgb), 0.2);">${group.nicks.size} акк.</span>
+          </div>
+          <div class="arz-similar-group-nicks">
+            Аккаунты: <strong>${formattedNicks}</strong>
+          </div>
+          <div class="arz-similar-group-ips">
+            IP: ${sortedIps}
+          </div>
+        `;
+        
+        card.onclick = () => {
+          const tableRows = document.querySelectorAll('table.table tbody tr');
+          tableRows.forEach(row => {
+            if (group.rows.includes(row)) {
+              row.style.display = '';
+            } else {
+              row.style.display = 'none';
+            }
+          });
+          window.ArizonaNotifications.show(`Показано ${group.rows.length} логов для ${group.key}`, 'success');
+          closeOverlay(modal);
+        };
+        
+        listContainer.appendChild(card);
+      });
+    }
+
+    function renderRepeats(modal, groups) {
+      const listContainer = modal.querySelector('#arz-repeats-groups-list');
+      const countBadge = modal.querySelector('#arz-repeats-groups-count');
+      if (!listContainer) return;
+      
+      listContainer.innerHTML = '';
+      countBadge.textContent = `${groups.length} групп`;
+      
+      if (groups.length === 0) {
+        listContainer.innerHTML = `
+          <div class="arz-empty-state">
+            <i class="fa-solid fa-face-smile" style="font-size: 24px; color: var(--az-text-secondary);"></i>
+            <span>Повторов не найдено</span>
+          </div>
+        `;
+        return;
+      }
+      
+      groups.forEach(group => {
+        const card = document.createElement('div');
+        card.className = 'arz-repeat-group-card';
+        card.style.cursor = 'pointer';
+        
+        card.innerHTML = `
+          <div class="arz-repeat-group-title">
+            <span><i class="fa-solid fa-user" style="color: var(--az-accent-hover); margin-right: 6px;"></i> ${group.nick}</span>
+            <span class="badge" style="background: rgba(var(--az-accent-rgb), 0.1); color: var(--az-accent-hover); border: 1px solid rgba(var(--az-accent-rgb), 0.2);">${group.rows.length} повт.</span>
+          </div>
+          <div class="arz-repeat-group-desc">
+            Действие: <strong>${window.ArizonaUtils.escapeHtml(group.actionText)}</strong>
+          </div>
+        `;
+        
+        card.onclick = () => {
+          const tableRows = document.querySelectorAll('table.table tbody tr');
+          tableRows.forEach(row => {
+            if (group.rows.includes(row)) {
+              row.style.display = '';
+            } else {
+              row.style.display = 'none';
+            }
+          });
+          window.ArizonaNotifications.show(`Показано ${group.rows.length} повторов для ${group.nick}`, 'success');
+          closeOverlay(modal);
+        };
+        
+        listContainer.appendChild(card);
+      });
+    }
+
+    async function setupModal(modal) {
+      modal.querySelector('#arz-analytics-close').onclick = () => closeOverlay(modal);
+      modal.onclick = (e) => { if (e.target === modal) closeOverlay(modal); };
+      
+      const hasSimilar = settings.tools?.similarIPsFinder !== false;
+      const hasRepeats = settings.tools?.actionRepeatsFinder !== false;
+
+      const tabHeader = modal.querySelector('.arz-lookup-tabs');
+      const tabSimilarBtn = modal.querySelector('[data-tab="similar-ips"]');
+      const tabRepeatsBtn = modal.querySelector('[data-tab="repeats"]');
+      
+      if (!hasSimilar) {
+        tabSimilarBtn.remove();
+        modal.querySelector('#arz-analytics-tab-similar-ips').style.display = 'none';
+        modal.querySelector('#arz-analytics-tab-repeats').style.display = 'flex';
+        tabRepeatsBtn.classList.add('active');
+        tabHeader.style.display = 'none';
+        activeTab = 'repeats';
+      } else if (!hasRepeats) {
+        tabRepeatsBtn.remove();
+        modal.querySelector('#arz-analytics-tab-similar-ips').style.display = 'flex';
+        modal.querySelector('#arz-analytics-tab-repeats').style.display = 'none';
+        tabSimilarBtn.classList.add('active');
+        tabHeader.style.display = 'none';
+        activeTab = 'similar-ips';
+      } else {
+        tabHeader.style.display = 'flex';
+        tabSimilarBtn.classList.add('active');
+        tabRepeatsBtn.classList.remove('active');
+        modal.querySelector('#arz-analytics-tab-similar-ips').style.display = 'flex';
+        modal.querySelector('#arz-analytics-tab-repeats').style.display = 'none';
+        activeTab = 'similar-ips';
+      }
+
+      const tabs = modal.querySelectorAll('.arz-tab-btn');
+      tabs.forEach(tab => {
+        tab.onclick = () => {
+          tabs.forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          activeTab = tab.dataset.tab;
+          
+          modal.querySelector('#arz-analytics-tab-similar-ips').style.display = activeTab === 'similar-ips' ? 'flex' : 'none';
+          modal.querySelector('#arz-analytics-tab-repeats').style.display = activeTab === 'repeats' ? 'flex' : 'none';
+        };
+      });
+
+      if (typeof loadIpDetailsCache === 'function') {
+        await loadIpDetailsCache();
+      }
+      
+      const similarModeButtons = modal.querySelectorAll('.similar-mode-btn');
+      similarModeButtons.forEach(btn => {
+        btn.onclick = async () => {
+          similarModeButtons.forEach(b => {
+            b.classList.remove('active');
+            b.style.background = 'transparent';
+            b.style.color = 'var(--az-text-secondary)';
+          });
+          btn.classList.add('active');
+          btn.style.background = 'linear-gradient(135deg, var(--az-accent) 0%, var(--az-accent-hover) 100%)';
+          btn.style.color = 'white';
+          
+          currentModeIP = btn.dataset.mode;
+          if (typeof loadIpDetailsCache === 'function') {
+            await loadIpDetailsCache();
+          }
+          const groups = scanAndGroupIPs(currentModeIP);
+          renderIPs(modal, groups);
+        };
+      });
+
+      const thresholdInput = modal.querySelector('#arz-repeats-threshold');
+      if (thresholdInput) {
+        thresholdInput.oninput = () => {
+          let val = parseInt(thresholdInput.value);
+          if (isNaN(val) || val < 2) val = 2;
+          currentThresholdRepeats = val;
+          const groups = scanAndGroupRepeats(currentModeRepeats, currentThresholdRepeats);
+          renderRepeats(modal, groups);
+        };
+      }
+
+      const repeatsModeButtons = modal.querySelectorAll('.repeats-mode-btn');
+      repeatsModeButtons.forEach(btn => {
+        btn.onclick = () => {
+          repeatsModeButtons.forEach(b => {
+            b.classList.remove('active');
+            b.style.background = 'transparent';
+            b.style.color = 'var(--az-text-secondary)';
+          });
+          btn.classList.add('active');
+          btn.style.background = 'linear-gradient(135deg, var(--az-accent) 0%, var(--az-accent-hover) 100%)';
+          btn.style.color = 'white';
+          
+          currentModeRepeats = btn.dataset.mode;
+          const groups = scanAndGroupRepeats(currentModeRepeats, currentThresholdRepeats);
+          renderRepeats(modal, groups);
+        };
+      });
+
+      modal.querySelector('#arz-analytics-reset').onclick = () => {
+        document.querySelectorAll('table.table tbody tr').forEach(row => {
+          row.style.display = '';
+        });
+        window.ArizonaNotifications.show('Фильтр сброшен', 'info');
+        closeOverlay(modal);
+      };
+
+      modal.querySelector('#arz-analytics-show-all').onclick = () => {
+        const tableRows = document.querySelectorAll('table.table tbody tr');
+        const allMatchingRows = new Set();
+        let shown = 0;
+
+        if (activeTab === 'similar-ips') {
+          const groups = scanAndGroupIPs(currentModeIP);
+          groups.forEach(g => {
+            g.rows.forEach(r => allMatchingRows.add(r));
+          });
+          tableRows.forEach(row => {
+            if (allMatchingRows.has(row)) {
+              row.style.display = '';
+              shown++;
+            } else {
+              row.style.display = 'none';
+            }
+          });
+          window.ArizonaNotifications.show(`Показано ${shown} совпадающих логов по IP`, 'success');
+        } else {
+          const groups = scanAndGroupRepeats(currentModeRepeats, currentThresholdRepeats);
+          groups.forEach(g => {
+            g.rows.forEach(r => allMatchingRows.add(r));
+          });
+          tableRows.forEach(row => {
+            if (allMatchingRows.has(row)) {
+              row.style.display = '';
+              shown++;
+            } else {
+              row.style.display = 'none';
+            }
+          });
+          window.ArizonaNotifications.show(`Показано ${shown} логов с повторами`, 'success');
+        }
+        closeOverlay(modal);
+      };
+
+      const ipGroups = scanAndGroupIPs(currentModeIP);
+      renderIPs(modal, ipGroups);
+
+      const repeatsGroups = scanAndGroupRepeats(currentModeRepeats, currentThresholdRepeats);
+      renderRepeats(modal, repeatsGroups);
+    }
+
+    return {
+      init: function (s) {
+        settings = s || {};
+        this.update();
+      },
+      updateSettings: function (s) {
+        settings = s || {};
+        this.update();
+      },
+      update: function () {
+        const hasSimilar = settings.tools?.similarIPsFinder !== false;
+        const hasRepeats = settings.tools?.actionRepeatsFinder !== false;
+        const isEnabled = currentSettings['extension-toggle'] !== false && (hasSimilar || hasRepeats);
+        
+        const existingBtn = document.getElementById('arz-analytics-btn');
+        if (isEnabled) {
+          runWhenElementExists('.filter-buttons', () => this.injectButton());
+        } else {
+          if (existingBtn) existingBtn.remove();
+        }
+      },
+      injectButton: function () {
+        if (document.getElementById('arz-analytics-btn')) return;
+        const container = document.querySelector('.filter-buttons');
+        if (!container) return;
+        
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.id = 'arz-analytics-btn';
+        btn.className = 'btn btn-success';
+        btn.style.cssText = 'margin-left: 10px;';
+        btn.innerHTML = `<i class="fa-solid fa-chart-simple" style="margin-right: 6px;"></i> Аналитика`;
+        
+        btn.onclick = async () => {
+          const overlay = document.createElement('div');
+          overlay.className = 'arz-modal-overlay';
+          overlay.innerHTML = modalHTML;
+          const el = overlay;
+          openOverlay(el);
+          await setupModal(el);
+        };
+        
+        container.appendChild(btn);
+      }
+    };
+  })();
+
   window.ArizonaCopyLogsManager = (function () {
     let settings = {};
     function formatAction(cell) {
@@ -6835,6 +7435,8 @@
       try { window.ArizonaLookupManager.init(arizonaSettings); } catch (e) { console.error('Error in ArizonaLookupManager.init:', e); }
       try { window.ArizonaDateShortcut.init(arizonaSettings); } catch (e) { console.error('Error in ArizonaDateShortcut.init:', e); }
       try { window.ArizonaIdenticalIpHighlight.init(arizonaSettings); } catch (e) { console.error('Error in ArizonaIdenticalIpHighlight.init:', e); }
+      
+      try { window.ArizonaAnalyticsManager.init(arizonaSettings); } catch (e) { console.error('Error in ArizonaAnalyticsManager.init:', e); }
       try { window.ArizonaTemplatesManager.init(arizonaSettings, arizonaTemplates); } catch (e) { console.error('Error in ArizonaTemplatesManager.init:', e); }
       try { window.ArizonaThemeManager.init(arizonaSettings); } catch (e) { console.error('Error in ArizonaThemeManager.init:', e); }
       try { window.ArizonaCopyLogsManager.init(arizonaSettings); } catch (e) { console.error('Error in ArizonaCopyLogsManager.init:', e); }
@@ -7019,6 +7621,8 @@
               if (window.ArizonaLookupManager) window.ArizonaLookupManager.updateSettings(arizonaSettings);
               if (window.ArizonaTemplatesManager) window.ArizonaTemplatesManager.updateSettings(arizonaSettings);
               if (window.ArizonaFormsManager) window.ArizonaFormsManager.updateSettings(arizonaSettings);
+              
+              if (window.ArizonaAnalyticsManager) window.ArizonaAnalyticsManager.updateSettings(arizonaSettings);
               styleResetButton();
             }
           }
