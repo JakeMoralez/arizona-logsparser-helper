@@ -21,6 +21,16 @@
   --az-input-text: #ffffff;
 }
 
+::selection {
+  background-color: var(--az-accent) !important;
+  color: #ffffff !important;
+}
+
+::-moz-selection {
+  background-color: var(--az-accent) !important;
+  color: #ffffff !important;
+}
+
 body.arz-sticky-navbar-active .app-nav {
   position: fixed !important;
   top: 0 !important;
@@ -47,7 +57,7 @@ html:has(body.arz-sticky-headers-active) {
 body.arz-sticky-headers-active table.table thead th {
   position: sticky !important;
   top: 0 !important;
-  z-index: 990 !important;
+  z-index: 99 !important;
 }
 
 body.arz-sticky-headers-active table.table thead th {
@@ -78,6 +88,67 @@ body.arz-hide-sidebar-active .app-sidebar {
 
 body.arz-hide-sidebar-active .app-content--sidebar {
   margin-left: 0 !important;
+}
+
+html body .app-nav-logo,
+html body .navbar-brand.logo,
+html body .navbar-brand {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  position: relative !important;
+}
+
+html body #arz-sidebar-toggle-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  height: 30px !important;
+  padding: 0 10px !important;
+  margin: 0 !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid var(--az-border, rgba(255, 255, 255, 0.12)) !important;
+  border-radius: var(--az-border-radius-small, 6px) !important;
+  color: var(--az-text, #ffffff) !important;
+  font-family: 'Outfit', 'Inter', system-ui, sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  vertical-align: middle !important;
+  position: relative !important;
+  z-index: 10 !important;
+}
+
+html body #arz-sidebar-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: var(--az-accent-hover, #ff4d4d) !important;
+  color: var(--az-accent-hover, #ff4d4d) !important;
+}
+
+body.arz-toggle-sidebar-active .app-sidebar {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+body.arz-toggle-sidebar-active .app-content--sidebar {
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+body.arz-toggle-sidebar-active.arz-sidebar-collapsed .app-sidebar {
+  transform: translateX(-100%) !important;
+  margin-left: -240px !important;
+  position: absolute !important;
+}
+
+body.arz-toggle-sidebar-active.arz-sidebar-collapsed .app-content--sidebar {
+  margin-left: 0 !important;
+}
+
+html body table.table thead th:first-child,
+html body table.table tbody td:first-child {
+  width: 1% !important;
+  white-space: nowrap !important;
 }
 
 .arz-row-actions-wrapper {
@@ -476,6 +547,16 @@ body.arz-modal-open {
 .arz-ip-distance-inline.dist-placeholder {
   background: rgba(128, 128, 128, 0.15) !important;
   color: var(--az-text-secondary, #888888) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 24px !important;
+}
+
+.arz-ip-distance-inline.dist-placeholder i {
+  font-size: 0.85em !important;
+  line-height: 1 !important;
+  vertical-align: middle !important;
 }
 
 @keyframes arzPulse {
@@ -825,6 +906,15 @@ body:not(.arz-tweak-ip-info-active) .arz-ip-loading-placeholder {
   background: linear-gradient(135deg, var(--az-accent) 0%, var(--az-accent-hover) 100%) !important;
   color: #ffffff !important;
   text-decoration: none !important;
+}
+
+.arz-ip-dropdown-item.disabled,
+.arz-ip-dropdown-item[disabled] {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  background: transparent !important;
+  color: var(--az-text-secondary) !important;
 }
 
 .arz-ip-dropdown-item i,
@@ -1662,13 +1752,33 @@ html body #arz-log-filter-root .btn i {
   font-size: 14px !important;
 }
 
+html body .filter-buttons {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  align-items: center !important;
+}
+
+html body .filter-buttons > * {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
 html body #arz-filter-logs-reset {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  line-height: 1 !important;
   background: rgba(255, 255, 255, 0.05) !important;
   border: 1px solid var(--az-border) !important;
   color: var(--az-text) !important;
-  width: 38px !important;
-  height: 38px !important;
-  padding: 0 !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
 }
 
@@ -1685,8 +1795,17 @@ html body #arz-filter-logs-reset:active {
 }
 
 html body #arz-filter-logs-reset i {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 14px !important;
+  line-height: 1 !important;
+  vertical-align: middle !important;
   transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  margin-right: 0 !important;
 }
 
 html body #arz-filter-logs-reset:hover i {
@@ -1937,7 +2056,7 @@ table.table tbody tr td:nth-child(2) {
   right: 6px !important;
   top: 50% !important;
   transform: translateY(-50%) scale(0.9) !important;
-  z-index: 100 !important;
+  z-index: 98 !important;
   background: var(--az-bg-sidebar) !important;
   border: 1px solid var(--az-border) !important;
   border-radius: 6px !important;
@@ -2405,4 +2524,185 @@ div:has(> #arz-filter-logs) {
 
 .arz-repeat-group-desc strong {
   color: var(--az-accent-hover) !important;
+}
+
+.arz-row-checkbox {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  width: 16px !important;
+  height: 16px !important;
+  background-color: rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  margin-right: 8px !important;
+  vertical-align: middle !important;
+  position: relative !important;
+  display: inline-block !important;
+  outline: none !important;
+  transition: all 0.15s ease !important;
+}
+
+.arz-row-checkbox:hover {
+  border-color: var(--az-accent-hover, #ff4d4d) !important;
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.arz-row-checkbox:checked {
+  background: linear-gradient(135deg, var(--az-accent) 0%, var(--az-accent-hover) 100%) !important;
+  border-color: var(--az-accent-hover) !important;
+  box-shadow: 0 0 6px rgba(var(--az-accent-rgb), 0.4) !important;
+}
+
+.arz-row-checkbox:checked::after {
+  content: '' !important;
+  position: absolute !important;
+  left: 5px !important;
+  top: 2px !important;
+  width: 4px !important;
+  height: 8px !important;
+  border: solid #ffffff !important;
+  border-width: 0 2px 2px 0 !important;
+  transform: rotate(45deg) !important;
+}
+
+table.table tbody tr.arz-row-selected,
+table.table tbody tr.arz-row-selected > td {
+  background-color: rgba(var(--az-accent-rgb, 212, 13, 13), 0.1) !important;
+  transition: background-color 0.2s ease !important;
+}
+
+table.table tbody tr.arz-row-selected > td:first-child {
+  box-shadow: inset 3px 0 0 var(--az-accent-hover, #ff4d4d) !important;
+}
+
+#arz-bulk-actions-bar {
+  position: fixed !important;
+  bottom: 20px !important;
+  left: 50% !important;
+  transform: translateX(-50%) translateY(100px) !important;
+  z-index: 100000 !important;
+  background: var(--az-bg-sidebar, #13171e) !important;
+  border: 1px solid var(--az-border, rgba(255, 255, 255, 0.12)) !important;
+  border-radius: var(--az-border-radius, 12px) !important;
+  padding: 10px 18px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.6) !important;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+#arz-bulk-actions-bar.visible {
+  transform: translateX(-50%) translateY(0) !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.arz-bulk-bar-count {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: var(--az-text, #ffffff) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  white-space: nowrap !important;
+}
+
+.arz-bulk-bar-count strong {
+  color: var(--az-accent-hover) !important;
+  font-size: 14px !important;
+}
+
+.arz-bulk-bar-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.arz-bulk-bar-actions .arz-btn-secondary,
+.arz-bulk-bar-actions .arz-btn-danger {
+  padding: 6px 12px !important;
+  font-size: 12px !important;
+  height: 34px !important;
+  white-space: nowrap !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+}
+
+body.arz-extension-disabled #arz-bulk-actions-bar,
+body.arz-extension-disabled .arz-row-checkbox,
+body.arz-extension-disabled #arz-select-all-logs-btn {
+  display: none !important;
+}
+
+@keyframes arzModalBounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+.arz-modal-bounce {
+  animation: arzModalBounce 0.2s ease-in-out !important;
+}
+
+.arz-sales-card {
+  background: var(--az-bg-sidebar) !important;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+  border-radius: var(--az-border-radius-small) !important;
+  padding: 12px 14px !important;
+  margin-bottom: 10px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  transition: all 0.2s ease !important;
+}
+
+.arz-sales-card:hover {
+  border-color: #ef4444 !important;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.25) !important;
+}
+
+.arz-sales-badge {
+  background: rgba(239, 68, 68, 0.15) !important;
+  color: #ef4444 !important;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+  padding: 2px 8px !important;
+  border-radius: 12px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+}
+
+.arz-sales-log-item {
+  font-size: 12px !important;
+  line-height: 1.4 !important;
+  padding: 6px 10px !important;
+  background: rgba(0, 0, 0, 0.25) !important;
+  border-left: 3px solid var(--az-accent-hover) !important;
+  border-radius: 4px !important;
+  word-break: break-word !important;
+}
+
+.arz-sales-log-item.transfer {
+  border-left-color: #f59e0b !important;
+}
+
+.js_component_filter_item.arz-forced-visible {
+  display: block !important;
+}
+
+.js_component_filter_item.arz-forced-visible label::after {
+  content: " (Заполнено)";
+  color: var(--az-accent-hover, #ff4d4d) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+}
+
+.js_component_filter_item.arz-forced-visible input {
+  border-color: rgba(var(--az-accent-rgb, 212, 13, 13), 0.6) !important;
+  box-shadow: 0 0 6px rgba(var(--az-accent-rgb, 212, 13, 13), 0.2) !important;
 }

@@ -11,17 +11,20 @@
     'visual-sticky-navbar': true,
     'visual-sticky-headers': true,
     'visual-hide-sidebar': false,
+    'visual-toggle-sidebar': false,
     'visual-vertical-borders': false,
     'visual-replace-favicon': false,
     'visual-remove-top-padding': false,
     'tweak-floating-filter': true,
+    'tweak-load-more': true,
     'tweak-ip-info': false,
     'tweak-always-limit': 'none',
     'tweak-copy-btn-visibility': 'hover',
     'visual-logo-customization': 'default',
     'tweak-copy-row': true,
     'tweak-hide-row': true,
-    'tweak-copy-cells': true
+    'tweak-copy-cells': true,
+    'tweak-multi-select': true
   };
 
   let currentSettings = { ...DEFAULT_SETTINGS };
@@ -59,6 +62,17 @@
     }
   }
 
+  function isValidNickname(str) {
+    if (!str || typeof str !== 'string') return false;
+    const s = str.trim();
+    if (s.length < 3 || s.length > 32) return false;
+    if (/^(unic_id\d*|color_?id\d*|item_?id\d*|model_?id\d*|account_?id\d*|char_?id\d*|player_?id\d*|user_?id\d*|vk_?id\d*|tg_?id\d*|vc_?id\d*|discord_?id\d*)$/i.test(s)) {
+      return false;
+    }
+    return /^[A-Z][a-zA-Z0-9]*_[A-Za-z0-9_]+$/.test(s);
+  }
+  window.isValidNickname = isValidNickname;
+
   function runWhenElementExists(selector, callback) {
     const el = document.querySelector(selector);
     if (el) {
@@ -83,6 +97,17 @@
     overlay.getBoundingClientRect();
     overlay.classList.add('open-active');
     document.body.classList.add('arz-modal-open');
+
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        const container = overlay.querySelector('.arz-modal-container, .arz-modal');
+        if (container) {
+          container.classList.remove('arz-modal-bounce');
+          void container.offsetWidth;
+          container.classList.add('arz-modal-bounce');
+        }
+      }
+    });
   }
 
   function closeOverlay(overlay) {
@@ -144,7 +169,6 @@
             delay = initialDelay * Math.pow(2, retries - 1);
           }
           delay = Math.min(delay, 15000);
-          console.warn(`Fetch got 429. Retrying in ${delay}ms... (Retry ${retries}/${maxRetries})`);
           await new Promise(resolve => setTimeout(resolve, delay));
           continue;
         }
@@ -156,7 +180,6 @@
         retries++;
         let delay = initialDelay * Math.pow(2, retries - 1);
         delay = Math.min(delay, 15000);
-        console.warn(`Fetch error: ${err.message}. Retrying in ${delay}ms... (Retry ${retries}/${maxRetries})`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
@@ -503,19 +526,19 @@
     });
   }
 
-  function copyRowToClipboard(tr, btn) {
-    const getCleanCellText = (cell, isIpCell = false) => {
-      if (!cell) return '';
-      const clone = cell.cloneNode(true);
-      clone.querySelectorAll('.arz-row-actions-wrapper, .arz-cell-copy-btn, .arz-log-copy-menu-btn, .arz-col-eye-btn, .badge, .bi, svg, i, .az-geo-inserted, .arizona-ecosystem-badge').forEach(el => el.remove());
-      let text = clone.textContent;
-      if (!isIpCell) {
-        const ipGeoRegex = /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b(?:\s*\([^)]*\))?(?:\s*~\d+(?:\.\d+)?km)?/g;
-        text = text.replace(ipGeoRegex, '');
-      }
-      return text.replace(/\s+/g, ' ').trim();
-    };
+  const getCleanCellText = (cell, isIpCell = false) => {
+    if (!cell) return '';
+    const clone = cell.cloneNode(true);
+    clone.querySelectorAll('.arz-row-actions-wrapper, .arz-cell-copy-btn, .arz-log-copy-menu-btn, .arz-col-eye-btn, .badge, .bi, svg, i, .az-geo-inserted, .arizona-ecosystem-badge').forEach(el => el.remove());
+    let text = clone.textContent;
+    if (!isIpCell) {
+      const ipGeoRegex = /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b(?:\s*\([^)]*\))?(?:\s*~\d+(?:\.\d+)?km)?/g;
+      text = text.replace(ipGeoRegex, '');
+    }
+    return text.replace(/\s+/g, ' ').trim();
+  };
 
+  function copyRowToClipboard(tr, btn) {
     const date = getCleanCellText(tr.cells[0]);
     const action = getCleanCellText(tr.cells[1]);
     const data = getCleanCellText(tr.cells[2]);
@@ -541,44 +564,9 @@
   }
 
   function injectRowActions(tr) {
-    const timeCell = tr.cells[0];
-    if (!timeCell) return;
-    if (timeCell.querySelector('.arz-row-actions-wrapper')) return;
-
-    const wrapper = document.createElement('span');
-    wrapper.className = 'arz-row-actions-wrapper';
-
-    const copyRowBtn = document.createElement('span');
-    copyRowBtn.setAttribute('role', 'button');
-    copyRowBtn.className = 'arz-action-btn arz-copy-row-btn';
-    copyRowBtn.title = 'Копировать строку';
-    copyRowBtn.innerHTML = '<i class="fa-regular fa-copy"></i>';
-    copyRowBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      copyRowToClipboard(tr, copyRowBtn);
-    });
-
-    const hideRowBtn = document.createElement('span');
-    hideRowBtn.setAttribute('role', 'button');
-    hideRowBtn.className = 'arz-action-btn arz-hide-row-btn';
-    hideRowBtn.title = 'Скрыть строку';
-    hideRowBtn.innerHTML = '<i class="fa-regular fa-eye-slash"></i>';
-    hideRowBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const isHidden = tr.classList.toggle('arz-row-hidden');
-      if (isHidden) {
-        hideRowBtn.innerHTML = '<i class="fa-regular fa-eye"></i>';
-        hideRowBtn.title = 'Показать строку';
-      } else {
-        hideRowBtn.innerHTML = '<i class="fa-regular fa-eye-slash"></i>';
-        hideRowBtn.title = 'Скрыть строку';
-      }
-    });
-
-    wrapper.appendChild(copyRowBtn);
-    wrapper.appendChild(hideRowBtn);
-
-    timeCell.insertBefore(wrapper, timeCell.firstChild);
+    if (!tr) return;
+    const wrappers = tr.querySelectorAll('.arz-row-actions-wrapper');
+    wrappers.forEach(el => el.remove());
   }
 
   function copyCellText(cell, btn) {
@@ -718,11 +706,25 @@
     document.addEventListener('mouseover', handleRowHover, { passive: true });
   }
 
+  function getIpCellFromRow(tr) {
+    if (!tr || !tr.cells) return null;
+    if (tr.cells[3] && (tr.cells[3].querySelector('.table-ip') || /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/.test(tr.cells[3].textContent))) {
+      return tr.cells[3];
+    }
+    if (tr.cells[2] && (tr.cells[2].querySelector('.table-ip') || /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/.test(tr.cells[2].textContent))) {
+      return tr.cells[2];
+    }
+    for (let i = 1; i < tr.cells.length; i++) {
+      if (tr.cells[i] && tr.cells[i].querySelector('.table-ip')) return tr.cells[i];
+    }
+    return tr.cells[3] || null;
+  }
+
   function highlightIdenticalIps(tr) {
     if (!arizonaSettings.tools?.identicalIPs) return;
-    const ipCell = tr.cells[3];
+    const ipCell = getIpCellFromRow(tr);
     if (!ipCell) return;
-    const links = ipCell.querySelectorAll('a[title="последний"]');
+    const links = ipCell.querySelectorAll('a[title="последний"], [title*="последний"], .badge-secondary');
     if (links.length < 2) return;
     const ips = Array.from(links).map(l => l.textContent.trim());
     const hasDup = ips.some((ip, idx) => ips.indexOf(ip) !== idx);
@@ -788,37 +790,44 @@
   }
 
   function processRow(tr) {
-    if (!tr.cells[1]) return;
+    if (!tr || !tr.cells || !tr.cells[1]) return;
+
+    try { window.ArizonaMultiSelectManager.injectCheckbox(tr); } catch (e) { }
 
     if (window.ArizonaMaskingManager && typeof window.ArizonaMaskingManager.maskRow === 'function') {
-      window.ArizonaMaskingManager.maskRow(tr);
+      try { window.ArizonaMaskingManager.maskRow(tr); } catch (e) { }
     }
 
-    highlightIdenticalIps(tr);
-    highlightTuningAHK(tr);
+    try { highlightIdenticalIps(tr); } catch (e) { }
+    try { highlightTuningAHK(tr); } catch (e) { }
+    try { injectRowActions(tr); } catch (e) { }
 
-    injectRowActions(tr);
-    processSnippetsInElement(tr.cells[1]);
+    try { processSnippetsInElement(tr.cells[1]); } catch (e) { }
     if (tr.cells[2]) {
-      processSnippetsInElement(tr.cells[2]);
+      try { processSnippetsInElement(tr.cells[2]); } catch (e) { }
     }
 
     const isEnabled = currentSettings['extension-toggle'] !== false;
     const isIpEnabled = isEnabled && (currentSettings['tweak-ip-info'] || arizonaSettings.ipLookupEnabled);
     if (isIpEnabled) {
-      injectIpPlaceholder(tr);
-      const observer = getIpRowObserver();
-      if (observer) {
-        const processed = tr.getAttribute('data-arz-ip-processed');
-        if (processed !== 'true' && processed !== 'pending') {
-          observer.observe(tr);
+      try {
+        injectIpPlaceholder(tr);
+        const observer = getIpRowObserver();
+        if (observer) {
+          const processed = tr.getAttribute('data-arz-ip-processed');
+          if (processed !== 'true' && processed !== 'pending') {
+            observer.observe(tr);
+            queueIpRowForProcessing(tr);
+          }
         }
+      } catch (e) {
+        console.error('Error processing IP for row:', e);
       }
     }
 
     const visibilityMode = currentSettings['tweak-copy-btn-visibility'] || 'hover';
     if (visibilityMode === 'always' && copyBtnObserver) {
-      copyBtnObserver.observe(tr);
+      try { copyBtnObserver.observe(tr); } catch (e) { }
     }
   }
 
@@ -833,6 +842,46 @@
         setTimeout(() => pop.remove(), 200);
         currentPopup = null;
       }
+    }
+
+    function getNicknamesFromRow(tr) {
+      const nicks = [];
+      const actionCell = tr.cells ? tr.cells[1] : null;
+      if (!actionCell) return nicks;
+
+      actionCell.querySelectorAll('a[href*="player="], a[href*="player"]').forEach(lnk => {
+        let text = '';
+        if (lnk.href) {
+          try {
+            const url = new URL(lnk.href, window.location.origin);
+            text = url.searchParams.get('player') || '';
+          } catch (e) { }
+        }
+        if (!text) text = lnk.textContent.trim();
+        if (text && isValidNickname(text) && !nicks.includes(text)) {
+          nicks.push(text);
+        }
+      });
+
+      actionCell.querySelectorAll('a strong').forEach(el => {
+        const text = el.textContent.trim();
+        if (text && isValidNickname(text) && !nicks.includes(text)) {
+          nicks.push(text);
+        }
+      });
+
+      if (nicks.length === 0) {
+        const textContent = actionCell.textContent || '';
+        const nickRegex = /\b[A-Z][a-zA-Z0-9]*_[A-Za-z0-9_]+\b/g;
+        const matches = textContent.match(nickRegex);
+        if (matches) {
+          matches.forEach(m => {
+            if (isValidNickname(m) && !nicks.includes(m)) nicks.push(m);
+          });
+        }
+      }
+
+      return nicks;
     }
 
     function open(event, tr) {
@@ -853,14 +902,29 @@
       const date = getCleanCellText(tr.cells[0]);
       const action = getCleanCellText(tr.cells[1]);
       const data = getCleanCellText(tr.cells[2]);
-      const ip = getCleanCellText(tr.cells[3], true);
+      const ipCell = getIpCellFromRow(tr);
+      const ip = getCleanCellText(ipCell, true);
+
+      const nicks = getNicknamesFromRow(tr);
+      const nick1 = nicks[0] || null;
+      const nick2 = nicks[1] || null;
 
       const dropdown = document.createElement('div');
       dropdown.className = 'arz-ip-dropdown arz-copy-dropdown';
 
+      const nick1Btn = nick1
+        ? `<button class="arz-ip-dropdown-item" data-action="nick-1" data-nick="${window.ArizonaUtils.escapeHtml(nick1)}"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; display: inline-block; vertical-align: middle;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> Никнейм игрока 1 (${window.ArizonaUtils.escapeHtml(nick1)})</button>`
+        : `<button class="arz-ip-dropdown-item disabled" data-action="nick-1" disabled style="opacity: 0.4; cursor: not-allowed;"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; display: inline-block; vertical-align: middle;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> Никнейм игрока 1</button>`;
+
+      const nick2Btn = nick2
+        ? `<button class="arz-ip-dropdown-item" data-action="nick-2" data-nick="${window.ArizonaUtils.escapeHtml(nick2)}"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; display: inline-block; vertical-align: middle;"><path d="M17 21v-2a4 4 0 0 0-3-3.87"></path><path d="M9 21v-2a4 4 0 0 0-4-4H3a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg> Никнейм игрока 2 (${window.ArizonaUtils.escapeHtml(nick2)})</button>`
+        : `<button class="arz-ip-dropdown-item disabled" data-action="nick-2" disabled style="opacity: 0.4; cursor: not-allowed;"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; display: inline-block; vertical-align: middle;"><path d="M17 21v-2a4 4 0 0 0-3-3.87"></path><path d="M9 21v-2a4 4 0 0 0-4-4H3a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg> Никнейм игрока 2</button>`;
+
       dropdown.innerHTML = `
         <div class="arz-ip-dropdown-header"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; display: inline-block; vertical-align: middle;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Копирование</div>
         <button class="arz-ip-dropdown-item" data-action="time-log"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; display: inline-block; vertical-align: middle;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Время + Лог</button>
+        ${nick1Btn}
+        ${nick2Btn}
         <button class="arz-ip-dropdown-item" data-action="log"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; display: inline-block; vertical-align: middle;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> Текст лога</button>
         <button class="arz-ip-dropdown-item" data-action="time"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; display: inline-block; vertical-align: middle;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> Время</button>
         <button class="arz-ip-dropdown-item" data-action="data"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; display: inline-block; vertical-align: middle;"><circle cx="8" cy="8" r="6"></circle><circle cx="18" cy="18" r="4"></circle><path d="M12 18a6 6 0 0 0-6-6"></path></svg> Данные</button>
@@ -893,10 +957,16 @@
       dropdown.querySelectorAll('.arz-ip-dropdown-item').forEach(item => {
         item.onclick = (e) => {
           e.stopPropagation();
+          if (item.hasAttribute('disabled') || item.classList.contains('disabled')) return;
+
           const act = item.getAttribute('data-action');
           let textToCopy = '';
           if (act === 'time-log') {
             textToCopy = date && action ? `${date} | ${action}` : (date || action);
+          } else if (act === 'nick-1') {
+            textToCopy = item.getAttribute('data-nick') || nick1 || '';
+          } else if (act === 'nick-2') {
+            textToCopy = item.getAttribute('data-nick') || nick2 || '';
           } else if (act === 'log') {
             textToCopy = action;
           } else if (act === 'time') {
@@ -908,6 +978,11 @@
           } else if (act === 'all') {
             const parts = [date, action, data, ip].filter(p => p);
             textToCopy = parts.join(' | ');
+          }
+
+          if (!textToCopy) {
+            window.ArizonaNotifications.show('Нечего копировать', 'warning');
+            return;
           }
 
           writeToClipboard(textToCopy).then(() => {
@@ -977,9 +1052,7 @@
             }
           }
         }
-      } catch (err) {
-        console.warn('Server IP cache load error:', err);
-      }
+      } catch (err) {}
     }
 
     isCacheLoaded = true;
@@ -1025,15 +1098,24 @@
   }
 
   function parseAllIpsFromCell(ipCell) {
+    if (!ipCell) return [];
     const pairs = [];
     const tableIpDivs = ipCell.querySelectorAll('.table-ip');
     if (tableIpDivs.length > 0) {
       tableIpDivs.forEach((div) => {
-        const lastIpEl = div.querySelector('.badge-secondary, [title="последний"], [title*="Последний IP"]');
-        const regIpEl = div.querySelector('.badge-primary, [title="регистрационный"], [title*="Регистрационный IP"]');
+        const lastIpEl = div.querySelector('.badge-secondary, [title="последний"], [title*="Последний IP"], [title*="последний"]');
+        const regIpEl = div.querySelector('.badge-primary, .badge-danger, .badge-warning, .badge-info, [title="регистрационный"], [title*="Регистрационный IP"], [title*="регистрационный"]');
 
-        const lastIp = lastIpEl ? lastIpEl.textContent.trim() : null;
-        const regIp = regIpEl ? regIpEl.textContent.trim() : null;
+        let lastIp = lastIpEl ? lastIpEl.textContent.trim() : null;
+        let regIp = regIpEl ? regIpEl.textContent.trim() : null;
+
+        if (!lastIp || !regIp) {
+          const ipsInDiv = (div.textContent || '').match(/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g);
+          if (ipsInDiv && ipsInDiv.length > 0) {
+            if (!lastIp) lastIp = ipsInDiv[0];
+            if (!regIp && ipsInDiv.length > 1) regIp = ipsInDiv[1];
+          }
+        }
 
         let prefix = '';
         const strongEl = div.querySelector('strong, code');
@@ -1056,7 +1138,7 @@
         }
       });
     } else {
-      const text = ipCell.textContent;
+      const text = ipCell.textContent || '';
       const ips = text.match(/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g);
       if (ips && ips.length > 0) {
         for (let i = 0; i < ips.length; i += 2) {
@@ -1095,9 +1177,9 @@
     if (!table) return;
     const rows = table.querySelectorAll('tbody tr');
     rows.forEach(tr => {
-      const ipCell = tr.cells[3];
-      if (!ipCell) return;
+      const ipCell = getIpCellFromRow(tr);
       tr.removeAttribute('data-arz-ip-processed');
+      if (!ipCell) return;
 
       const lastIpEl = ipCell.querySelector('.badge-secondary, [title*="Последний IP"]');
       const regIpEl = ipCell.querySelector('.badge-primary, [title*="Регистрационный IP"]');
@@ -1282,7 +1364,7 @@
   }
 
   function injectIpPlaceholder(tr) {
-    const ipCell = tr.cells[3];
+    const ipCell = getIpCellFromRow(tr);
     if (!ipCell) return;
     const processed = tr.getAttribute('data-arz-ip-processed');
     if (processed === 'true' || processed === 'pending') return;
@@ -1293,7 +1375,7 @@
       if (!parent.querySelector('.arz-ip-distance-inline')) {
         const distEl = document.createElement('span');
         distEl.className = 'arz-ip-distance-inline dist-placeholder';
-        distEl.innerHTML = '?????';
+        distEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
         parent.appendChild(distEl);
       }
     });
@@ -1343,6 +1425,7 @@
         if (processed !== 'true' && processed !== 'pending') {
           observer.observe(tr);
           injectIpPlaceholder(tr);
+          queueIpRowForProcessing(tr);
         }
       });
     }
@@ -1375,7 +1458,7 @@
       const rowsWaitingForIps = [];
 
       rowsToProcess.forEach(tr => {
-        const ipCell = tr.cells[3];
+        const ipCell = getIpCellFromRow(tr);
         if (!ipCell) return;
 
         const processed = tr.getAttribute('data-arz-ip-processed');
@@ -1408,18 +1491,12 @@
 
         if (allCached) {
           tr.setAttribute('data-arz-ip-processed', 'true');
-          const placeholders = ipCell.querySelectorAll('.arz-ip-loading-placeholder');
+          const placeholders = ipCell.querySelectorAll('.arz-ip-loading-placeholder, .dist-placeholder');
           placeholders.forEach(p => p.remove());
         } else {
           tr.setAttribute('data-arz-ip-processed', 'pending');
           rowsWaitingForIps.push({ tr, ipCell, pairs });
-
-          if (!ipCell.querySelector('.arz-ip-loading-placeholder')) {
-            const placeholder = document.createElement('div');
-            placeholder.className = 'arz-ip-loading-placeholder';
-            placeholder.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
-            ipCell.appendChild(placeholder);
-          }
+          injectIpPlaceholder(tr);
         }
       });
 
@@ -1468,7 +1545,11 @@
 
           if (allCached) {
             tr.setAttribute('data-arz-ip-processed', 'true');
-            const placeholders = ipCell.querySelectorAll('.arz-ip-loading-placeholder');
+            const placeholders = ipCell.querySelectorAll('.arz-ip-loading-placeholder, .dist-placeholder');
+            placeholders.forEach(p => p.remove());
+          } else {
+            tr.removeAttribute('data-arz-ip-processed');
+            const placeholders = ipCell.querySelectorAll('.arz-ip-loading-placeholder, .dist-placeholder');
             placeholders.forEach(p => p.remove());
           }
         });
@@ -1488,35 +1569,50 @@
     if (rows.length === 0) return false;
 
     isProcessingTable = true;
-    if (window.ArizonaTgVkDetector) window.ArizonaTgVkDetector.reset();
-    if (window.ArizonaEmailDetector) window.ArizonaEmailDetector.reset();
+    try {
+      if (window.ArizonaTgVkDetector) window.ArizonaTgVkDetector.reset();
+      if (window.ArizonaEmailDetector) window.ArizonaEmailDetector.reset();
+    } catch (e) { }
+
     let index = 0;
     const chunkSize = 100;
 
     function processBatch() {
-      const limit = Math.min(index + chunkSize, rows.length);
-      for (; index < limit; index++) {
-        const tr = rows[index];
-        tr.setAttribute('data-arz-processed', 'true');
-        processRow(tr);
-      }
-
-      if (index < rows.length) {
-        setTimeout(processBatch, 0);
-      } else {
-        isProcessingTable = false;
-
-        window.ArizonaColumnEyeButtons.update();
-        window.ArizonaTgVkDetector.scan();
-        window.ArizonaEmailDetector.scan();
-        handleTuningAutoScroll();
-        window.ArizonaOnlineManager.checkAutoCalculation();
-        window.ArizonaDateShortcut.reposition();
-
-        const newRows = table.querySelectorAll('tbody tr:not([data-arz-processed="true"])');
-        if (newRows.length > 0) {
-          processTable();
+      try {
+        const limit = Math.min(index + chunkSize, rows.length);
+        for (; index < limit; index++) {
+          const tr = rows[index];
+          tr.setAttribute('data-arz-processed', 'true');
+          try {
+            processRow(tr);
+          } catch (e) {
+            console.error('Error processing row:', e);
+          }
         }
+
+        if (index < rows.length) {
+          setTimeout(processBatch, 0);
+        } else {
+          isProcessingTable = false;
+          try {
+            window.ArizonaColumnEyeButtons.update();
+            window.ArizonaTgVkDetector.scan();
+            window.ArizonaEmailDetector.scan();
+            handleTuningAutoScroll();
+            window.ArizonaOnlineManager.checkAutoCalculation();
+            window.ArizonaDateShortcut.reposition();
+          } catch (e) {
+            console.error('Error in post-processTable update:', e);
+          }
+
+          const newRows = table.querySelectorAll('tbody tr:not([data-arz-processed="true"])');
+          if (newRows.length > 0) {
+            processTable();
+          }
+        }
+      } catch (err) {
+        console.error('Error in processBatch loop:', err);
+        isProcessingTable = false;
       }
     }
 
@@ -1769,6 +1865,19 @@
     }
   }
 
+  function setupNickCounter(overlay, textareaSelector, countNumId) {
+    const textarea = overlay.querySelector(textareaSelector);
+    const countEl = overlay.querySelector('#' + countNumId);
+    if (textarea && countEl) {
+      const update = () => {
+        const count = textarea.value.split(/[\n,]+/).map(n => n.trim()).filter(Boolean).length;
+        countEl.textContent = count;
+      };
+      textarea.addEventListener('input', update);
+      update();
+    }
+  }
+
   function closeFilterModal() {
     if (!filterModal || filterModal.style.display !== 'flex') return;
 
@@ -1852,18 +1961,38 @@
     }
     if (settings['tweak-ip-info']) {
       document.body.classList.add('arz-tweak-ip-info-active');
+      const table = document.querySelector('table.table');
+      if (table) {
+        table.querySelectorAll('tbody tr').forEach(tr => {
+          tr.removeAttribute('data-arz-ip-processed');
+        });
+      }
+      initIpRowsObserver();
     } else {
       clearIpDetailsFromPage();
+    }
+
+    if (window.ArizonaSidebarManager) {
+      window.ArizonaSidebarManager.updateSettings(arizonaSettings);
     }
 
     const visibilityMode = settings['tweak-copy-btn-visibility'] || 'hover';
     document.body.classList.add(`arz-copy-btn-${visibilityMode}`);
 
     renderEcosystemBadges();
+
+    const table = document.querySelector('table.table');
+    if (table) {
+      table.querySelectorAll('tbody tr').forEach(tr => {
+        tr.removeAttribute('data-arz-processed');
+      });
+      processTable();
+    }
   }
 
 
   window.ArizonaUtils = {
+    isValidNickname: isValidNickname,
     escapeHtml: function (str) {
       if (!str) return '';
       const div = document.createElement('div');
@@ -1871,17 +2000,21 @@
       return div.innerHTML;
     },
     sendMessageToBackground: function (message) {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
         if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-          chrome.runtime.sendMessage(message, (response) => {
-            if (chrome.runtime.lastError) {
-              reject(new Error(chrome.runtime.lastError.message));
-            } else {
-              resolve(response);
-            }
-          });
+          try {
+            chrome.runtime.sendMessage(message, (response) => {
+              if (chrome.runtime.lastError) {
+                resolve({ success: false, error: chrome.runtime.lastError.message });
+              } else {
+                resolve(response || { success: false });
+              }
+            });
+          } catch (err) {
+            resolve({ success: false, error: err.message });
+          }
         } else {
-          reject(new Error('Extension context not available'));
+          resolve({ success: false, error: 'Extension context not available' });
         }
       });
     },
@@ -2285,7 +2418,6 @@
         currentModal = overlay;
 
         modal.querySelector('.arz-modal-close').addEventListener('click', () => this.close());
-        overlay.addEventListener('click', (e) => { if (e.target === overlay) this.close(); });
 
         if (options.buttons) {
           const buttons = modal.querySelectorAll('.arz-modal-footer button');
@@ -3174,9 +3306,30 @@
     return {
       init: function (s) {
         settings = s || {};
-        if (settings.tools?.filterWindow) {
+        this.update();
+      },
+      updateSettings: function (s) {
+        settings = s || {};
+        this.update();
+      },
+      update: function () {
+        const isEnabled = currentSettings['extension-toggle'] !== false && settings.tools?.filterWindow !== false;
+        if (isEnabled) {
           runWhenElementExists('.filter-buttons', () => this.createUI());
+        } else {
+          this.removeUI();
         }
+      },
+      removeUI: function () {
+        const root = document.getElementById('arz-log-filter-root');
+        if (root) root.remove();
+        const ta = document.getElementById('arz-filter-logs');
+        if (ta) {
+          const container = ta.closest('.col-sm-3, .col-sm-4');
+          if (container) container.remove();
+          else ta.remove();
+        }
+        document.querySelectorAll('table.table tbody tr').forEach(r => r.style.display = '');
       },
       createUI: function () {
         if (document.getElementById('arz-log-filter-root')) return;
@@ -3185,19 +3338,34 @@
 
         const div = document.createElement('div');
         div.id = 'arz-log-filter-root';
-        div.className = 'col-sm-3 pt-4';
+        div.className = 'col-sm-4 pt-3';
         div.innerHTML = `
-          <button type="button" id="arz-filter-logs-submit" class="btn btn-success" style="margin-right: 10px;"><i class="fa-solid fa-filter" style="margin-right:6px;"></i> Применить</button>
-          <button type="button" id="arz-filter-logs-reset" class="btn"><i class="fa-solid fa-arrows-rotate"></i></button>
+          <div style="font-weight: 600; font-size: 13px; margin-bottom: 6px; color: var(--az-text); visibility: hidden;">&nbsp;</div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button type="button" id="arz-filter-logs-submit" class="btn btn-success"><i class="fa-solid fa-magnifying-glass" style="margin-right:6px;"></i> Применить поиск</button>
+            <button type="button" id="arz-filter-logs-reset" class="btn btn-secondary" title="Сбросить поиск"><i class="fa-solid fa-arrows-rotate" style="margin-right: 0px !important;"></i></button>
+          </div>
           <div id="arz-filter-logs-options" style="margin-top: 10px;">
-            <div class="form-check" style="margin-bottom: 5px;"><input class="form-check-input" type="radio" name="arz-filter-logs-mode" id="arz-filter-mode-show" value="show" checked><label class="form-check-label" for="arz-filter-mode-show" style="color:var(--az-text);cursor:pointer;margin-left:5px;">Оставить</label></div>
-            <div class="form-check" style="margin-bottom: 5px;"><input class="form-check-input" type="radio" name="arz-filter-logs-mode" id="arz-filter-mode-hide" value="hide"><label class="form-check-label" for="arz-filter-mode-hide" style="color:var(--az-text);cursor:pointer;margin-left:5px;">Скрыть</label></div>
-            <div class="form-check"><input class="form-check-input" type="checkbox" id="arz-filter-logs-auto"><label class="form-check-label" for="arz-filter-logs-auto" style="color:var(--az-text);cursor:pointer;margin-left:5px;">Автоматически применять</label></div>
+            <div class="form-check" style="margin-bottom: 5px;">
+              <input class="form-check-input" type="radio" name="arz-filter-logs-mode" id="arz-filter-mode-show" value="show" checked>
+              <label class="form-check-label" for="arz-filter-mode-show" style="color:var(--az-text);cursor:pointer;margin-left:5px;">Оставить с указанным текстом</label>
+            </div>
+            <div class="form-check" style="margin-bottom: 5px;">
+              <input class="form-check-input" type="radio" name="arz-filter-logs-mode" id="arz-filter-mode-hide" value="hide">
+              <label class="form-check-label" for="arz-filter-mode-hide" style="color:var(--az-text);cursor:pointer;margin-left:5px;">Скрыть с указанным текстом</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="arz-filter-logs-auto">
+              <label class="form-check-label" for="arz-filter-logs-auto" style="color:var(--az-text);cursor:pointer;margin-left:5px;">Автоматически применять при загрузке страницы</label>
+            </div>
           </div>
         `;
         const taDiv = document.createElement('div');
-        taDiv.className = 'pt-4 col-sm-3';
-        taDiv.innerHTML = `<textarea id="arz-filter-logs" class="form-control" rows="3" placeholder="Фильтр для логов..." style="height:102px; background:var(--az-input-bg); border:1px solid var(--az-input-border); color:var(--az-input-text);"></textarea>`;
+        taDiv.className = 'pt-3 col-sm-4';
+        taDiv.innerHTML = `
+          <div style="font-weight: 500; font-size: 13px; margin-bottom: 6px; color: var(--az-text);"><i class="fa-solid fa-magnifying-glass" style="margin-right: 6px; color: var(--az-accent-hover);"></i>Фильтр для поиска среди логов на странице</div>
+          <textarea id="arz-filter-logs" class="form-control" rows="3" placeholder="Фильтр для поиска в логах..." style="height:102px; background:var(--az-input-bg); border:1px solid var(--az-input-border); color:var(--az-input-text);"></textarea>
+        `;
 
         const row = container.closest('.row');
         if (row) { row.appendChild(taDiv); row.appendChild(div); }
@@ -3339,7 +3507,6 @@
     function setup(modal) {
       modal.querySelector('#arz-forms-close').onclick = () => closeOverlay(modal);
       modal.querySelector('#arz-forms-close-bottom').onclick = () => closeOverlay(modal);
-      modal.onclick = (e) => { if (e.target === modal) closeOverlay(modal); };
       modal.querySelector('#arz-copy-all-btn').onclick = async () => {
         const cmds = Array.from(modal.querySelectorAll('#arz-form-commands .arz-list-item-text')).map(el => el.textContent);
         if (cmds.length) {
@@ -3420,7 +3587,10 @@
           </div>
           <div class="arz-modal-body">
             <div class="arz-modal-form-group">
-              <label class="arz-modal-label"><i class="fa-solid fa-users"></i> Ник(и) игрока(ов)</label>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <label class="arz-modal-label" style="margin: 0;"><i class="fa-solid fa-users"></i> Ник(и) игрока(ов)</label>
+                <span style="font-size: 11px; color: var(--az-text-secondary); background: var(--az-input-bg); border: 1px solid var(--az-border); padding: 2px 8px; border-radius: 12px;">Введено: <strong id="arz-online-count-num" style="color: var(--az-accent-hover);">0</strong></span>
+              </div>
               <textarea id="arz-online-nicks" class="arz-textarea" rows="3" placeholder="Введите один или несколько ников (каждый с новой строки или через запятую)"></textarea>
             </div>
             <div style="display: flex; gap: 12px; width: 100%; box-sizing: border-box;">
@@ -3544,8 +3714,8 @@
 
       const entries = allDays.map(k => [k, onlineByDay[k] || 0]);
       const total = entries.reduce((s, [, v]) => s + v, 0);
-      const active = entries.filter(([, v]) => v > 0).length;
-      const avg = active > 0 ? (total / active / 3600).toFixed(1) : '0.0';
+      const totalDaysCount = allDays.length;
+      const avg = totalDaysCount > 0 ? (total / totalDaysCount / 3600).toFixed(1) : '0.0';
 
       return {
         player,
@@ -3678,7 +3848,7 @@
         });
       };
       overlay.querySelector('#arz-online-reopen-btn').onclick = () => { closeOverlay(overlay); window.ArizonaLookupManager.openModal('online'); };
-      overlay.onclick = (e) => { if (e.target === overlay) closeOverlay(overlay); };
+
     }
 
     async function calculate() {
@@ -4042,7 +4212,7 @@
       overlay.querySelector('#arz-online-multi-close-btn').onclick = () => closeOverlay(overlay);
       const closeHeader = overlay.querySelector('#arz-online-multi-close-header-btn');
       if (closeHeader) closeHeader.onclick = () => closeOverlay(overlay);
-      overlay.onclick = (e) => { if (e.target === overlay) closeOverlay(overlay); };
+
 
       overlay.querySelector('#arz-online-multi-reopen-btn').onclick = () => {
         closeOverlay(overlay);
@@ -4172,7 +4342,7 @@
           processMultiplePlayers(nicks, dateFrom, dateTo);
         }
       };
-      overlay.onclick = (e) => { if (e.target === overlay) closeOverlay(overlay); };
+
     }
 
     return {
@@ -4232,7 +4402,10 @@
           </div>
           <div class="arz-modal-body">
             <div class="arz-modal-form-group">
-              <label class="arz-modal-label"><i class="fa-solid fa-users"></i> Ник(и) игрока(ов)</label>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <label class="arz-modal-label" style="margin: 0;"><i class="fa-solid fa-users"></i> Ник(и) игрока(ов)</label>
+                <span style="font-size: 11px; color: var(--az-text-secondary); background: var(--az-input-bg); border: 1px solid var(--az-border); padding: 2px 8px; border-radius: 12px;">Введено: <strong id="arz-punish-count-num" style="color: var(--az-accent-hover);">0</strong></span>
+              </div>
               <textarea id="arz-punish-nicks" class="arz-textarea" rows="3" placeholder="Введите один или несколько ников (каждый с новой строки или через запятую)"></textarea>
             </div>
             <div style="display: flex; gap: 12px; width: 100%; box-sizing: border-box;">
@@ -4373,7 +4546,7 @@
         });
       };
       overlay.querySelector('#arz-punish-reopen-btn').onclick = () => { closeOverlay(overlay); window.ArizonaLookupManager.openModal('punish'); };
-      overlay.onclick = (e) => { if (e.target === overlay) closeOverlay(overlay); };
+
     }
 
     async function processMultiplePlayers(nicks, dateFrom, dateTo) {
@@ -4582,7 +4755,7 @@
       overlay.querySelector('#arz-punish-multi-close-btn').onclick = () => closeOverlay(overlay);
       const closeHeader = overlay.querySelector('#arz-punish-multi-close-header-btn');
       if (closeHeader) closeHeader.onclick = () => closeOverlay(overlay);
-      overlay.onclick = (e) => { if (e.target === overlay) closeOverlay(overlay); };
+
 
       overlay.querySelector('#arz-punish-multi-reopen-btn').onclick = () => {
         closeOverlay(overlay);
@@ -4683,7 +4856,7 @@
         closeOverlay(overlay);
         processMultiplePlayers(nicks, dateFrom, dateTo);
       };
-      overlay.onclick = (e) => { if (e.target === overlay) closeOverlay(overlay); };
+
     }
 
     return {
@@ -4717,6 +4890,166 @@
     };
   })();
 
+  window.ArizonaLoadMoreManager = (function () {
+    let settings = {};
+    let isLoading = false;
+
+    function getNextPageUrl(doc = document) {
+      const nextBtn = doc.querySelector('.pagination a[aria-label*="Вперёд"], .pagination a[aria-label*="Next"]');
+      if (nextBtn && nextBtn.href && !nextBtn.closest('li').classList.contains('disabled')) {
+        return nextBtn.href;
+      }
+
+      const activeLi = doc.querySelector('.pagination li.page-item.active');
+      if (activeLi) {
+        const nextLi = activeLi.nextElementSibling;
+        if (nextLi && !nextLi.classList.contains('disabled')) {
+          const a = nextLi.querySelector('a');
+          if (a && a.href && a.href !== '#' && !a.href.startsWith('javascript:')) {
+            return a.href;
+          }
+        }
+      }
+      return null;
+    }
+
+    function injectButton() {
+      const isEnabled = currentSettings['extension-toggle'] !== false && currentSettings['tweak-load-more'] !== false;
+      const existingBtn = document.getElementById('arz-load-more-btn');
+
+      if (!isEnabled) {
+        if (existingBtn) existingBtn.remove();
+        return;
+      }
+
+      const nextPageUrl = getNextPageUrl();
+      if (!nextPageUrl) {
+        if (existingBtn) existingBtn.remove();
+        return;
+      }
+
+      const nav = document.querySelector('nav[role="navigation"]');
+      if (!nav) return;
+
+      const paginationUl = nav.querySelector('.pagination');
+      if (!paginationUl) return;
+
+      if (existingBtn) return;
+
+      const btn = document.createElement('button');
+      btn.id = 'arz-load-more-btn';
+      btn.type = 'button';
+      btn.className = 'btn btn-primary';
+      btn.style.cssText = 'margin-right: 12px; height: 38px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; font-size: 13px; background: linear-gradient(135deg, var(--az-accent) 0%, var(--az-accent-hover) 100%) !important; border: none !important; color: white !important;';
+      btn.innerHTML = `<i class="fa-solid fa-angles-down"></i> Загрузить ещё`;
+
+      btn.onclick = () => loadNextPage();
+
+      const parentDiv = paginationUl.parentElement;
+      if (parentDiv) {
+        parentDiv.insertBefore(btn, paginationUl);
+      }
+    }
+
+    async function loadNextPage() {
+      if (isLoading) return;
+
+      const nextPageUrl = getNextPageUrl();
+      if (!nextPageUrl) {
+        window.ArizonaNotifications.show('Больше нет страниц для загрузки', 'warning');
+        return;
+      }
+
+      const btn = document.getElementById('arz-load-more-btn');
+      if (btn) {
+        isLoading = true;
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Загрузка...`;
+      }
+
+      try {
+        const response = await fetchWithRetry(nextPageUrl);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const htmlText = await response.text();
+        const parser = new DOMParser();
+        const newDoc = parser.parseFromString(htmlText, 'text/html');
+
+        const newRows = newDoc.querySelectorAll('table.table tbody tr');
+        const currentTbody = document.querySelector('table.table tbody');
+
+        if (currentTbody && newRows.length > 0) {
+          newRows.forEach(row => {
+            row.removeAttribute('data-arz-processed');
+            row.removeAttribute('data-arz-ip-processed');
+            row.removeAttribute('data-arz-copy-btn-injected');
+            currentTbody.appendChild(row);
+          });
+        }
+
+        const newNav = newDoc.querySelector('nav[role="navigation"]');
+        const currentNav = document.querySelector('nav[role="navigation"]');
+
+        if (newNav && currentNav) {
+          const currentStrongTo = currentNav.querySelector('p.text-muted strong:nth-of-type(2)');
+          const newStrongTo = newNav.querySelector('p.text-muted strong:nth-of-type(2)');
+          if (currentStrongTo && newStrongTo) {
+            currentStrongTo.textContent = newStrongTo.textContent;
+          }
+
+          const currentUl = currentNav.querySelector('ul.pagination');
+          const newUl = newNav.querySelector('ul.pagination');
+          if (currentUl && newUl) {
+            currentUl.innerHTML = newUl.innerHTML;
+          }
+        }
+
+        if (typeof processTable === 'function') {
+          processTable();
+        }
+
+        window.ArizonaNotifications.show(`Загружено ещё ${newRows.length} логов`, 'success');
+
+      } catch (err) {
+        console.error('Error loading next page logs:', err);
+        window.ArizonaNotifications.show(`Ошибка загрузки: ${err.message}`, 'error');
+      } finally {
+        isLoading = false;
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = `<i class="fa-solid fa-angles-down"></i> Загрузить ещё`;
+        }
+
+        const hasMorePages = getNextPageUrl();
+        if (!hasMorePages && btn) {
+          btn.remove();
+        }
+      }
+    }
+
+    return {
+      init: function (s) {
+        settings = s || {};
+        this.update();
+      },
+      updateSettings: function (s) {
+        settings = s || {};
+        this.update();
+      },
+      update: function () {
+        const isEnabled = currentSettings['extension-toggle'] !== false && currentSettings['tweak-load-more'] !== false;
+        if (isEnabled) {
+          runWhenElementExists('nav[role="navigation"]', () => injectButton());
+        } else {
+          const btn = document.getElementById('arz-load-more-btn');
+          if (btn) btn.remove();
+        }
+      },
+      injectButton: injectButton,
+      loadNextPage: loadNextPage
+    };
+  })();
+
   window.ArizonaIpBatchManager = (function () {
     let settings = {};
 
@@ -4733,7 +5066,10 @@
           </div>
           <div class="arz-modal-body">
             <div class="arz-modal-form-group">
-              <label class="arz-modal-label"><i class="fa-solid fa-users"></i> Ник(и) игрока(ов)</label>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <label class="arz-modal-label" style="margin: 0;"><i class="fa-solid fa-users"></i> Ник(и) игрока(ов)</label>
+                <span style="font-size: 11px; color: var(--az-text-secondary); background: var(--az-input-bg); border: 1px solid var(--az-border); padding: 2px 8px; border-radius: 12px;">Введено: <strong id="arz-ip-batch-count-num" style="color: var(--az-accent-hover);">0</strong></span>
+              </div>
               <textarea id="arz-ip-batch-nicks" class="arz-textarea" rows="3" placeholder="Введите один или несколько ников (каждый с новой строки или через запятую)"></textarea>
             </div>
           </div>
@@ -4999,7 +5335,7 @@
       overlay.querySelector('#arz-ip-multi-close-btn').onclick = () => closeOverlay(overlay);
       const closeHeader = overlay.querySelector('#arz-ip-multi-close-header-btn');
       if (closeHeader) closeHeader.onclick = () => closeOverlay(overlay);
-      overlay.onclick = (e) => { if (e.target === overlay) closeOverlay(overlay); };
+
 
       overlay.querySelector('#arz-ip-multi-reopen-btn').onclick = () => {
         closeOverlay(overlay);
@@ -5040,7 +5376,7 @@
         closeOverlay(overlay);
         processMultiplePlayers(nicks);
       };
-      overlay.onclick = (e) => { if (e.target === overlay) closeOverlay(overlay); };
+
     }
 
     return {
@@ -5080,7 +5416,10 @@
           </div>
           <div class="arz-modal-body">
             <div class="arz-modal-form-group">
-              <label class="arz-modal-label"><i class="fa-solid fa-users"></i> Никнеймы или ID аккаунтов</label>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <label class="arz-modal-label" style="margin: 0;"><i class="fa-solid fa-users"></i> Никнеймы или ID аккаунтов</label>
+                <span style="font-size: 11px; color: var(--az-text-secondary); background: var(--az-input-bg); border: 1px solid var(--az-border); padding: 2px 8px; border-radius: 12px;">Введено: <strong id="arz-idnick-count-num" style="color: var(--az-accent-hover);">0</strong></span>
+              </div>
               <textarea id="arz-idnick-inputs" class="arz-textarea" rows="4" placeholder="Введите никнеймы (Nick_Name) или ID аккаунтов (числа)\nКаждый элемент с новой строки или через запятую"></textarea>
             </div>
           </div>
@@ -5362,7 +5701,7 @@
       overlay.querySelector('#arz-idnick-close-btn').onclick = () => closeOverlay(overlay);
       const closeHeader = overlay.querySelector('#arz-idnick-close-header-btn');
       if (closeHeader) closeHeader.onclick = () => closeOverlay(overlay);
-      overlay.onclick = (e) => { if (e.target === overlay) closeOverlay(overlay); };
+
 
       overlay.querySelector('#arz-idnick-reopen-btn').onclick = () => {
         closeOverlay(overlay);
@@ -5403,7 +5742,7 @@
         closeOverlay(overlay);
         processMultipleInputs(inputs);
       };
-      overlay.onclick = (e) => { if (e.target === overlay) closeOverlay(overlay); };
+
     }
 
     return {
@@ -5580,7 +5919,7 @@
       overlay.querySelector('#arz-report-close-btn').onclick = () => closeOverlay(overlay);
       const closeHeader = overlay.querySelector('#arz-report-close-header-btn');
       if (closeHeader) closeHeader.onclick = () => closeOverlay(overlay);
-      overlay.onclick = (e) => { if (e.target === overlay) closeOverlay(overlay); };
+
 
       const searchInput = overlay.querySelector('#arz-reports-search');
       const tableBody = overlay.querySelector('tbody');
@@ -5822,7 +6161,7 @@
       overlay.querySelector('#arz-report-multi-close-btn').onclick = () => closeOverlay(overlay);
       const closeHeader = overlay.querySelector('#arz-report-multi-close-header-btn');
       if (closeHeader) closeHeader.onclick = () => closeOverlay(overlay);
-      overlay.onclick = (e) => { if (e.target === overlay) closeOverlay(overlay); };
+
 
       const searchInput = overlay.querySelector('#arz-reports-multi-search');
       searchInput.oninput = () => {
@@ -5947,7 +6286,10 @@
             <div class="arz-modal-form-group">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                 <label class="arz-modal-label" id="arz-lookup-input-label" style="margin: 0;"><i class="fa-solid fa-users"></i> Ник(и) игрока(ов)</label>
-                <span id="arz-lookup-extract-btn" style="font-size: 11px; color: var(--az-accent-hover); cursor: pointer; display: flex; align-items: center; gap: 4px; user-select: none; border-bottom: 1px dashed currentColor;" title="Извлечь ники Nick_Name из любого текста"><i class="fa-solid fa-wand-magic-sparkles"></i> Извлечь ники</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 11px; color: var(--az-text-secondary); background: var(--az-input-bg); border: 1px solid var(--az-border); padding: 2px 8px; border-radius: 12px; white-space: nowrap;">Введено: <strong id="arz-lookup-count-num" style="color: var(--az-accent-hover);">0</strong></span>
+                  <span id="arz-lookup-extract-btn" style="font-size: 11px; color: var(--az-accent-hover); cursor: pointer; display: flex; align-items: center; gap: 4px; user-select: none; border-bottom: 1px dashed currentColor; white-space: nowrap;" title="Извлечь ники Nick_Name из любого текста"><i class="fa-solid fa-wand-magic-sparkles"></i> Извлечь ники</span>
+                </div>
               </div>
               <textarea id="arz-lookup-nicks" class="arz-textarea" rows="4" placeholder="Введите никнеймы (каждый с новой строки или через запятую) или вставьте текст для извлечения"></textarea>
             </div>
@@ -6100,6 +6442,8 @@
       overlay.innerHTML = modalHTML;
       openOverlay(overlay);
 
+      setupNickCounter(overlay, '#arz-lookup-nicks', 'arz-lookup-count-num');
+
       const params = new URLSearchParams(window.location.search);
       const urlMin = params.get('min_period');
       const urlMax = params.get('max_period');
@@ -6134,21 +6478,23 @@
 
       overlay.querySelector('#arz-lookup-close').onclick = () => closeOverlay(overlay);
       overlay.querySelector('#arz-lookup-close-bottom').onclick = () => closeOverlay(overlay);
-      overlay.onclick = (e) => { if (e.target === overlay) closeOverlay(overlay); };
+
 
       overlay.querySelector('#arz-lookup-extract-btn').onclick = (e) => {
         e.preventDefault();
         const textarea = overlay.querySelector('#arz-lookup-nicks');
         const text = textarea.value;
-        const nickRegex = /\b[A-Za-z0-9]+_[A-Za-z0-9]+\b/g;
+        const nickRegex = /\b[A-Z][a-zA-Z0-9]*_[A-Za-z0-9_]+\b/g;
         const matches = text.match(nickRegex);
-        if (!matches || matches.length === 0) {
+        const validMatches = matches ? matches.filter(isValidNickname) : [];
+        if (validMatches.length === 0) {
           window.ArizonaNotifications.show('Никнеймы Nick_Name не найдены!', 'error');
           return;
         }
 
-        const uniqueNicks = Array.from(new Set(matches));
+        const uniqueNicks = Array.from(new Set(validMatches));
         textarea.value = uniqueNicks.join(',');
+        textarea.dispatchEvent(new Event('input'));
         window.ArizonaNotifications.show(`Извлечено никнеймов: ${uniqueNicks.length}`, 'success');
       };
 
@@ -6411,36 +6757,42 @@
     }
   };
 
-    window.ArizonaAnalyticsManager = (function () {
+  window.ArizonaAnalyticsManager = (function () {
     let settings = {};
     let currentModeIP = 'exact';
     let currentModeRepeats = 'exact';
     let currentThresholdRepeats = 2;
     let activeTab = 'similar-ips';
 
+    const LEADER_ACTION_REGEX = /(снял.*выговор|снял.*спец.\s*выговор|принял во фракцию|принял в фракцию|повысил|изменил ранг|уволил|выдал выговор|выдал скин|выдал ранг|принял в орг)/i;
+    const ADMIN_ACTION_REGEX = /(телепортировал|выдал|спавн|заспавнил|снял наказание|разбанил|выдал лицензию|пополнил|вылечил|выдал хп|выдал армор|выдал оружие|назначил|выдал скины|выдал аз)/i;
+    const TRANSFER_REGEX = /(перевёл|перевел).*\$|перевёл.*на банк|перевел.*на банк|получил от игрока.*\$|передал игроку.*\$|потерял из инвентаря|причина:\s*(перевод денег|передача денег|передача предметов|трейд|торговля)|на банк|в банке/i;
+
     const modalHTML = `
       <div id="arz-analytics-overlay" class="arz-modal-overlay">
-        <div class="arz-modal-container" style="max-width: 620px; width: 95%;">
+        <div class="arz-modal-container" style="max-width: 680px; width: 95%;">
           <div class="arz-modal-header">
             <div class="arz-modal-icon-wrapper">
               <i class="fa-solid fa-chart-simple"></i>
             </div>
             <div class="arz-modal-title-block">
               <div class="arz-modal-title">Аналитика логов</div>
-              <div class="arz-modal-subtitle">Поиск схожих IP-адресов и повторяющихся действий игроков</div>
+              <div class="arz-modal-subtitle">Поиск совпадений, повторов и пробив подозрительных сделок</div>
             </div>
             <button id="arz-analytics-close" class="arz-modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
           </div>
           
-          <div class="arz-lookup-tabs">
-            <button class="arz-tab-btn" data-tab="similar-ips"><i class="fa-solid fa-network-wired" style="margin-right: 6px;"></i> Похожие IP</button>
-            <button class="arz-tab-btn" data-tab="repeats"><i class="fa-solid fa-rotate" style="margin-right: 6px;"></i> Повторы действий</button>
+          <div class="arz-lookup-tabs" style="gap: 2px !important;">
+            <button class="arz-tab-btn" data-tab="similar-ips"><i class="fa-solid fa-network-wired"></i> Похожие IP</button>
+            <button class="arz-tab-btn" data-tab="repeats"><i class="fa-solid fa-rotate"></i> Повторы</button>
+            <button class="arz-tab-btn" data-tab="leader-sales"><i class="fa-solid fa-user-tie"></i> Продажа лид. действий</button>
+            <button class="arz-tab-btn" data-tab="admin-sales"><i class="fa-solid fa-user-ninja"></i> Продажа адм. действий</button>
           </div>
           
           <div class="arz-modal-body" style="gap: 16px !important; padding-top: 12px !important;">
             <div id="arz-analytics-tab-similar-ips" class="arz-tab-content" style="display: flex; flex-direction: column; gap: 12px;">
               <div class="arz-modal-form-group">
-                <label class="arz-modal-label"><i class="fa-solid fa-sliders"></i> Режим сравнения IP</label>
+                <label class="arz-modal-label"><i class="fa-solid fa-sliders"></i> Режим сравнения IP (по текущей странице)</label>
                 <div style="display: flex; gap: 8px; background: var(--az-input-bg); padding: 6px; border-radius: 14px; border: 1px solid var(--az-border);">
                   <button type="button" class="similar-mode-btn active" data-mode="exact" style="flex: 1; padding: 8px 12px; border: none; border-radius: 10px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; background: linear-gradient(135deg, var(--az-accent) 0%, var(--az-accent-hover) 100%); color: white;">Точный IP</button>
                   <button type="button" class="similar-mode-btn" data-mode="subnet24" style="flex: 1; padding: 8px 12px; border: none; border-radius: 10px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; background: transparent; color: var(--az-text-secondary);">Подсеть /24 (Похожие)</button>
@@ -6480,11 +6832,77 @@
                 <div id="arz-repeats-groups-list" class="arz-list-container" style="max-height: 230px; overflow-y: auto;"></div>
               </div>
             </div>
+
+            <div id="arz-analytics-tab-leader-sales" class="arz-tab-content" style="display: none; flex-direction: column; gap: 12px;">
+              <div style="font-size: 12px; color: var(--az-text-secondary); line-height: 1.4; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-triangle-exclamation" style="color: #ef4444;"></i>
+                <span>Пробив истории логов лидеров: Поиск пар "Лидерское действие + Передача средств от того же игрока за 15 минут".</span>
+              </div>
+              <div class="arz-modal-form-group">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <label class="arz-modal-label" style="margin: 0;"><i class="fa-solid fa-user-tie"></i> Ник(и) лидеров / заместителей</label>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 11px; color: var(--az-text-secondary); background: var(--az-input-bg); border: 1px solid var(--az-border); padding: 2px 8px; border-radius: 12px; white-space: nowrap;">Введено: <strong id="arz-leader-sales-count-num" style="color: var(--az-accent-hover);">0</strong></span>
+                    <span id="arz-leader-extract-btn" style="font-size: 11px; color: var(--az-accent-hover); cursor: pointer; display: flex; align-items: center; gap: 4px; user-select: none; border-bottom: 1px dashed currentColor; white-space: nowrap;" title="Извлечь ники Nick_Name из любого текста"><i class="fa-solid fa-wand-magic-sparkles"></i> Извлечь ники</span>
+                  </div>
+                </div>
+                <textarea id="arz-leader-sales-nicks" class="arz-textarea" rows="3" placeholder="Введите никнеймы лидеров (каждый с новой строки или через запятую)"></textarea>
+              </div>
+              <div style="display: flex; gap: 12px; width: 100%; box-sizing: border-box;">
+                <div class="arz-modal-form-group" style="flex: 1;">
+                  <label class="arz-modal-label"><i class="fa-regular fa-calendar"></i> Дата от</label>
+                  <input type="date" id="arz-leader-sales-date-from" class="arz-input">
+                </div>
+                <div class="arz-modal-form-group" style="flex: 1;">
+                  <label class="arz-modal-label"><i class="fa-regular fa-calendar"></i> Дата до</label>
+                  <input type="date" id="arz-leader-sales-date-to" class="arz-input">
+                </div>
+              </div>
+              <div class="arz-date-shortcuts" style="display: flex; gap: 8px; width: 100%; box-sizing: border-box; margin-top: -4px;">
+                <button type="button" class="arz-btn-shortcut" data-range="day">За день</button>
+                <button type="button" class="arz-btn-shortcut" data-range="week">За неделю</button>
+                <button type="button" class="arz-btn-shortcut" data-range="month">За месяц</button>
+              </div>
+              <button type="button" id="arz-start-leader-sales-btn" class="arz-btn-primary" style="margin-top: 4px;"><i class="fa-solid fa-magnifying-glass"></i> Пробить логи лидеров</button>
+            </div>
+
+            <div id="arz-analytics-tab-admin-sales" class="arz-tab-content" style="display: none; flex-direction: column; gap: 12px;">
+              <div style="font-size: 12px; color: var(--az-text-secondary); line-height: 1.4; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-triangle-exclamation" style="color: #ef4444;"></i>
+                <span>Пробив истории логов админов: Поиск пар "Админское действие + Передача средств от того же игрока за 15 минут".</span>
+              </div>
+              <div class="arz-modal-form-group">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <label class="arz-modal-label" style="margin: 0;"><i class="fa-solid fa-user-ninja"></i> Ник(и) администраторов</label>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 11px; color: var(--az-text-secondary); background: var(--az-input-bg); border: 1px solid var(--az-border); padding: 2px 8px; border-radius: 12px; white-space: nowrap;">Введено: <strong id="arz-admin-sales-count-num" style="color: var(--az-accent-hover);">0</strong></span>
+                    <span id="arz-admin-extract-btn" style="font-size: 11px; color: var(--az-accent-hover); cursor: pointer; display: flex; align-items: center; gap: 4px; user-select: none; border-bottom: 1px dashed currentColor; white-space: nowrap;" title="Извлечь ники Nick_Name из любого текста"><i class="fa-solid fa-wand-magic-sparkles"></i> Извлечь ники</span>
+                  </div>
+                </div>
+                <textarea id="arz-admin-sales-nicks" class="arz-textarea" rows="3" placeholder="Введите никнеймы админов (каждый с новой строки или через запятую)"></textarea>
+              </div>
+              <div style="display: flex; gap: 12px; width: 100%; box-sizing: border-box;">
+                <div class="arz-modal-form-group" style="flex: 1;">
+                  <label class="arz-modal-label"><i class="fa-regular fa-calendar"></i> Дата от</label>
+                  <input type="date" id="arz-admin-sales-date-from" class="arz-input">
+                </div>
+                <div class="arz-modal-form-group" style="flex: 1;">
+                  <label class="arz-modal-label"><i class="fa-regular fa-calendar"></i> Дата до</label>
+                  <input type="date" id="arz-admin-sales-date-to" class="arz-input">
+                </div>
+              </div>
+              <div class="arz-date-shortcuts" style="display: flex; gap: 8px; width: 100%; box-sizing: border-box; margin-top: -4px;">
+                <button type="button" class="arz-btn-shortcut" data-range="day">За день</button>
+                <button type="button" class="arz-btn-shortcut" data-range="week">За неделю</button>
+                <button type="button" class="arz-btn-shortcut" data-range="month">За месяц</button>
+              </div>
+              <button type="button" id="arz-start-admin-sales-btn" class="arz-btn-primary" style="margin-top: 4px;"><i class="fa-solid fa-magnifying-glass"></i> Пробить логи админов</button>
+            </div>
           </div>
           
           <div class="arz-modal-footer">
             <button id="arz-analytics-reset" class="arz-btn-danger" style="flex: 1;"><i class="fa-solid fa-rotate-left"></i> Сбросить фильтр</button>
-            <button id="arz-analytics-show-all" class="arz-btn-primary" style="flex: 1.5;"><i class="fa-solid fa-eye"></i> Показать все</button>
+            <button id="arz-analytics-show-all" class="arz-btn-primary" style="flex: 1.5;"><i class="fa-solid fa-eye"></i> Показать все на странице</button>
           </div>
         </div>
       </div>
@@ -6493,25 +6911,45 @@
     function extractNicksFromRow(row) {
       const nicks = new Set();
       row.querySelectorAll('a[href*="player="], a[href*="player"]').forEach(lnk => {
-        const text = lnk.textContent.trim();
-        if (text) nicks.add(text);
+        let text = '';
+        if (lnk.href) {
+          try {
+            const url = new URL(lnk.href, window.location.origin);
+            text = url.searchParams.get('player') || '';
+          } catch (e) {}
+        }
+        if (!text) text = lnk.textContent.trim();
+        if (text && isValidNickname(text)) nicks.add(text);
       });
       row.querySelectorAll('a strong').forEach(el => {
         const text = el.textContent.trim();
-        if (text) nicks.add(text);
+        if (text && isValidNickname(text)) nicks.add(text);
       });
       const textContent = (row.cells[1]?.textContent || '') + ' ' + (row.cells[2]?.textContent || '');
-      const nickRegex = /\b[A-Za-z0-9]+_[A-Za-z0-9]+\b/g;
+      const nickRegex = /\b[A-Z][a-zA-Z0-9]*_[A-Za-z0-9_]+\b/g;
       const matches = textContent.match(nickRegex);
       if (matches) {
-        matches.forEach(m => nicks.add(m));
+        matches.forEach(m => {
+          if (isValidNickname(m)) nicks.add(m);
+        });
       }
       return Array.from(nicks);
     }
 
+    function parseLogRowTime(row) {
+      const cell = row.cells[0];
+      if (!cell) return null;
+      const text = cell.textContent.trim();
+      const m = text.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})/);
+      if (m) {
+        return new Date(`${m[1]}T${m[2]}`);
+      }
+      return null;
+    }
+
     function extractIpsFromRow(row) {
       const ips = new Set();
-      const ipCell = row.cells[3];
+      const ipCell = getIpCellFromRow(row);
       if (!ipCell) return [];
       
       if (typeof parseAllIpsFromCell === 'function') {
@@ -6552,7 +6990,7 @@
       rows.forEach(row => {
         const nicks = extractNicksFromRow(row);
         const ips = extractIpsFromRow(row);
-        if (nicks.length === 0 || ips.length === 0) return;
+        if (ips.length === 0) return;
         
         ips.forEach(ip => {
           const key = getIpKey(ip, mode);
@@ -6568,39 +7006,41 @@
             };
           }
           groups[key].ips.add(ip);
-          nicks.forEach(n => {
-            groups[key].nicks.add(n);
-            
-            let distanceText = '';
-            const ipCell = row.cells[3];
-            if (ipCell && typeof parseAllIpsFromCell === 'function') {
-              const pairs = parseAllIpsFromCell(ipCell);
-              if (pairs && pairs[0]) {
-                const pair = pairs[0];
-                const regData = pair.regIp ? ipDetailsCache[pair.regIp] : null;
-                const lastData = pair.lastIp ? ipDetailsCache[pair.lastIp] : null;
-                if (regData && lastData && regData.lat && regData.lon && lastData.lat && lastData.lon) {
-                  const dist = calculateHaversineDistance(regData.lat, regData.lon, lastData.lat, lastData.lon);
-                  if (dist !== null) {
-                    distanceText = `~${Math.round(dist)}km`;
+          if (nicks.length > 0) {
+            nicks.forEach(n => {
+              groups[key].nicks.add(n);
+              
+              let distanceText = '';
+              const ipCell = getIpCellFromRow(row);
+              if (ipCell && typeof parseAllIpsFromCell === 'function') {
+                const pairs = parseAllIpsFromCell(ipCell);
+                if (pairs && pairs[0]) {
+                  const pair = pairs[0];
+                  const regData = pair.regIp ? ipDetailsCache[pair.regIp] : null;
+                  const lastData = pair.lastIp ? ipDetailsCache[pair.lastIp] : null;
+                  if (regData && lastData && regData.lat && regData.lon && lastData.lat && lastData.lon) {
+                    const dist = calculateHaversineDistance(regData.lat, regData.lon, lastData.lat, lastData.lon);
+                    if (dist !== null) {
+                      distanceText = `~${Math.round(dist)}km`;
+                    }
                   }
                 }
               }
-            }
-            if (distanceText) {
-              if (!groups[key].nickDistances[n]) {
-                groups[key].nickDistances[n] = new Set();
+              if (distanceText) {
+                if (!groups[key].nickDistances[n]) {
+                  groups[key].nickDistances[n] = new Set();
+                }
+                groups[key].nickDistances[n].add(distanceText);
               }
-              groups[key].nickDistances[n].add(distanceText);
-            }
-          });
+            });
+          }
           if (!groups[key].rows.includes(row)) {
             groups[key].rows.push(row);
           }
         });
       });
       
-      return Object.values(groups).filter(g => g.nicks.size > 1);
+      return Object.values(groups).filter(g => g.rows.length > 1 || g.nicks.size > 1);
     }
 
     function scanAndGroupRepeats(mode, threshold) {
@@ -6609,31 +7049,280 @@
       
       rows.forEach(row => {
         const nicks = extractNicksFromRow(row);
-        if (nicks.length === 0) return;
         
         const actionCell = row.cells[1];
         const dataCell = row.cells[2];
         if (!actionCell) return;
         
-        let actionText = actionCell.textContent.replace(/\s+/g, ' ').trim();
+        const cleanCell = (cell) => {
+          if (!cell) return '';
+          const clone = cell.cloneNode(true);
+          clone.querySelectorAll('.arz-row-actions-wrapper, .arz-cell-copy-btn, .arz-log-copy-menu-btn, .arz-col-eye-btn, .badge, .bi, svg, i, .az-geo-inserted, .arizona-ecosystem-badge').forEach(el => el.remove());
+          const ipGeoRegex = /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b(?:\s*\([^)]*\))?(?:\s*~\d+(?:\.\d+)?km)?/g;
+          return clone.textContent.replace(ipGeoRegex, '').replace(/\s+/g, ' ').trim();
+        };
+
+        let actionText = cleanCell(actionCell);
         if (mode === 'exact' && dataCell) {
-          actionText += ' | ' + dataCell.textContent.replace(/\s+/g, ' ').trim();
+          actionText += ' | ' + cleanCell(dataCell);
         }
+        if (!actionText) return;
         
-        nicks.forEach(nick => {
-          const key = nick + '::' + actionText;
+        if (nicks.length > 0) {
+          nicks.forEach(nick => {
+            const key = nick + '::' + actionText;
+            if (!groups[key]) {
+              groups[key] = {
+                nick: nick,
+                actionText: actionText,
+                rows: []
+              };
+            }
+            groups[key].rows.push(row);
+          });
+        } else {
+          const key = 'NO_NICK::' + actionText;
           if (!groups[key]) {
             groups[key] = {
-              nick: nick,
+              nick: 'Без ника',
               actionText: actionText,
               rows: []
             };
           }
           groups[key].rows.push(row);
-        });
+        }
       });
       
       return Object.values(groups).filter(g => g.rows.length >= threshold);
+    }
+
+    async function processSalesProbing(nicks, dateFrom, dateTo, type) {
+      let cancelBatch = false;
+
+      const progressOverlay = document.createElement('div');
+      progressOverlay.className = 'arz-modal-overlay';
+      progressOverlay.innerHTML = `
+        <div class="arz-modal-container" style="max-width: 400px; width: 90%;">
+          <div class="arz-modal-header">
+            <div class="arz-modal-icon-wrapper" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+            <div class="arz-modal-title-block">
+              <div class="arz-modal-title">Пробив продажи услуг</div>
+              <div class="arz-modal-subtitle">Анализ истории логов ${type === 'leader' ? 'лидеров' : 'админов'}...</div>
+            </div>
+          </div>
+          <div class="arz-modal-body" style="padding: 24px; text-align: center;">
+            <div id="arz-progress-player" style="font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 8px;">Запуск...</div>
+            <div id="arz-progress-status" style="font-size: 13px; color: #9aa0a6; margin-bottom: 20px;">Загрузка логов с сервера</div>
+            
+            <div class="arz-progress-bar-container" style="width: 100%; height: 6px; background: rgba(255, 255, 255, 0.08); border-radius: 3px; overflow: hidden; margin-bottom: 24px;">
+              <div id="arz-progress-bar-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #ef4444 0%, #ff7373 100%); transition: width 0.3s ease; border-radius: 3px;"></div>
+            </div>
+          </div>
+          <div class="arz-modal-footer">
+            <button id="arz-progress-cancel-btn" class="arz-btn-danger" style="flex: 1;"><i class="fa-solid fa-ban"></i> Отмена</button>
+          </div>
+        </div>
+      `;
+      openOverlay(progressOverlay);
+
+      const playerTextEl = progressOverlay.querySelector('#arz-progress-player');
+      const statusTextEl = progressOverlay.querySelector('#arz-progress-status');
+      const barFillEl = progressOverlay.querySelector('#arz-progress-bar-fill');
+      const cancelBtn = progressOverlay.querySelector('#arz-progress-cancel-btn');
+
+      cancelBtn.onclick = () => {
+        cancelBatch = true;
+        closeOverlay(progressOverlay);
+        window.ArizonaNotifications.show('Пробив отменен', 'warning');
+      };
+
+      const allMatches = [];
+
+      for (let i = 0; i < nicks.length; i++) {
+        if (cancelBatch) break;
+        const mainNick = nicks[i];
+
+        playerTextEl.textContent = mainNick;
+        statusTextEl.textContent = `Загрузка логов (${i + 1} из ${nicks.length})`;
+        barFillEl.style.width = `${Math.round((i / nicks.length) * 100)}%`;
+
+        try {
+          const fetchUrl = new URL(window.location.href);
+          fetchUrl.searchParams.set('player', mainNick);
+          fetchUrl.searchParams.set('limit', '1000');
+          fetchUrl.searchParams.set('sort', 'desc');
+          fetchUrl.searchParams.delete('type[]');
+          fetchUrl.searchParams.delete('arz_online');
+          fetchUrl.searchParams.delete('arz_punish');
+
+          if (dateFrom) fetchUrl.searchParams.set('min_period', dateFrom + ' 00:00:00');
+          if (dateTo) fetchUrl.searchParams.set('max_period', dateTo + ' 23:59:59');
+
+          const response = await fetchWithRetry(fetchUrl.href);
+          if (!response.ok) {
+            throw new Error(`Ошибка запроса: ${response.status}`);
+          }
+          const htmlText = await response.text();
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(htmlText, 'text/html');
+
+          const rows = doc.querySelectorAll('table.table tbody tr');
+          const parsedLogs = [];
+
+          rows.forEach(row => {
+            const cells = row.cells;
+            if (cells.length < 2) return;
+            const timeStr = cells[0]?.textContent?.trim() || '';
+            const actionText = (cells[1]?.textContent || '').replace(/\s+/g, ' ').trim();
+            const dateObj = parseLogRowTime(row);
+            if (!dateObj) return;
+
+            const nicksInLine = extractNicksFromRow(row);
+
+            parsedLogs.push({
+              timeStr,
+              timestamp: dateObj.getTime(),
+              text: actionText,
+              nicks: nicksInLine
+            });
+          });
+
+          const actionRegex = type === 'leader' ? LEADER_ACTION_REGEX : ADMIN_ACTION_REGEX;
+          const actionLogs = parsedLogs.filter(p => actionRegex.test(p.text));
+          const transferLogs = parsedLogs.filter(p => TRANSFER_REGEX.test(p.text));
+
+          actionLogs.forEach(actLog => {
+            transferLogs.forEach(transLog => {
+              if (actLog === transLog) return;
+              const diffSec = Math.abs(actLog.timestamp - transLog.timestamp) / 1000;
+              if (diffSec <= 900) {
+                const commonNicks = actLog.nicks.filter(n => transLog.nicks.includes(n));
+                if (commonNicks.length >= 2) {
+                  allMatches.push({
+                    mainNick,
+                    actionLog: actLog,
+                    transferLog: transLog,
+                    nicks: commonNicks,
+                    diffSec: Math.round(diffSec)
+                  });
+                }
+              }
+            });
+          });
+
+        } catch (err) {
+          console.error(`Error probing sales for ${mainNick}:`, err);
+        }
+
+        await new Promise(r => setTimeout(r, 250));
+      }
+
+      if (!cancelBatch) {
+        closeOverlay(progressOverlay);
+        renderSalesResultsModal(allMatches, type);
+      }
+    }
+
+    function renderSalesResultsModal(matches, type) {
+      let cardsHtml = '';
+      const copyLines = [`Результаты пробива продажи ${type === 'leader' ? 'лидерских' : 'админских'} услуг:`];
+
+      if (matches.length === 0) {
+        cardsHtml = `
+          <div class="arz-empty-state">
+            <i class="fa-solid fa-circle-check" style="font-size: 28px; color: #10b981;"></i>
+            <span>Подозрительных совпадений за указанный период не обнаружено</span>
+          </div>
+        `;
+      } else {
+        matches.forEach((m, idx) => {
+          const timeDiffStr = m.diffSec < 60 ? `${m.diffSec} сек.` : `${Math.round(m.diffSec / 60)} мин.`;
+          const titleIcon = type === 'leader' ? 'fa-user-tie' : 'fa-user-ninja';
+
+          cardsHtml += `
+            <div class="arz-sales-card">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 13px; font-weight: 700; color: var(--az-text);">
+                  <i class="fa-solid ${titleIcon}" style="color: #ef4444; margin-right: 6px;"></i> ${m.nicks.join(' ↔ ')}
+                </span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span class="arz-sales-badge"><i class="fa-solid fa-stopwatch"></i> разница: ${timeDiffStr}</span>
+                  <button type="button" class="arz-btn-secondary arz-copy-pair-btn" data-index="${idx}" title="Скопировать эту пару логов" style="padding: 2px 8px !important; font-size: 11px !important; height: auto !important;">
+                    <i class="fa-regular fa-copy"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="arz-sales-log-item">
+                <div style="font-size: 10px; color: var(--az-text-secondary); margin-bottom: 2px;">${m.actionLog.timeStr}</div>
+                <div>${window.ArizonaUtils.escapeHtml(m.actionLog.text)}</div>
+              </div>
+              <div class="arz-sales-log-item transfer">
+                <div style="font-size: 10px; color: var(--az-text-secondary); margin-bottom: 2px;">${m.transferLog.timeStr}</div>
+                <div>${window.ArizonaUtils.escapeHtml(m.transferLog.text)}</div>
+              </div>
+            </div>
+          `;
+
+          copyLines.push(`${m.actionLog.timeStr} | ${m.actionLog.text}\n${m.transferLog.timeStr} | ${m.transferLog.text}\n`);
+        });
+      }
+
+      const copyText = copyLines.join('\n');
+
+      const overlay = document.createElement('div');
+      overlay.className = 'arz-modal-overlay';
+      overlay.innerHTML = `
+        <div class="arz-modal-container" style="max-width: 680px; width: 95%;">
+          <div class="arz-modal-header">
+            <div class="arz-modal-icon-wrapper" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <div class="arz-modal-title-block">
+              <div class="arz-modal-title">Результаты пробива продажи услуг</div>
+              <div class="arz-modal-subtitle">Обнаружено совпадений: ${matches.length}</div>
+            </div>
+            <button id="arz-sales-results-close-header" class="arz-modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <div class="online-result-table-wrapper" style="max-height: 420px; overflow-y: auto; padding: 16px; background: var(--az-input-bg); border-bottom: 1px solid var(--az-border);">
+            ${cardsHtml}
+          </div>
+          <div class="arz-modal-footer">
+            <button id="arz-sales-copy-btn" class="arz-btn-primary" style="flex: 2;"><i class="fa-regular fa-copy"></i> Скопировать все найденные логи</button>
+            <button id="arz-sales-close-btn" class="arz-btn-danger" style="flex: 1;"><i class="fa-solid fa-xmark"></i> Закрыть</button>
+          </div>
+        </div>
+      `;
+
+      openOverlay(overlay);
+
+      overlay.querySelector('#arz-sales-close-btn').onclick = () => closeOverlay(overlay);
+      overlay.querySelector('#arz-sales-results-close-header').onclick = () => closeOverlay(overlay);
+      
+      overlay.querySelectorAll('.arz-copy-pair-btn').forEach(btn => {
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          const idx = parseInt(btn.getAttribute('data-index'), 10);
+          const item = matches[idx];
+          if (!item) return;
+
+          const pairText = `${item.actionLog.timeStr} | ${item.actionLog.text}\n${item.transferLog.timeStr} | ${item.transferLog.text}`;
+          navigator.clipboard.writeText(pairText).then(() => {
+            const icon = btn.querySelector('i');
+            if (icon) icon.className = 'fa-solid fa-check';
+            btn.style.color = '#28c76f';
+            setTimeout(() => {
+              if (icon) icon.className = 'fa-regular fa-copy';
+              btn.style.color = '';
+            }, 1500);
+          });
+        };
+      });
+
+      overlay.querySelector('#arz-sales-copy-btn').onclick = () => {
+        navigator.clipboard.writeText(copyText).then(() => {
+          const btn = overlay.querySelector('#arz-sales-copy-btn');
+          btn.innerHTML = '<i class="fa-solid fa-check"></i> Скопировано!';
+          setTimeout(() => btn.innerHTML = '<i class="fa-regular fa-copy"></i> Скопировать все найденные логи', 2000);
+        });
+      };
     }
 
     function renderIPs(modal, groups) {
@@ -6669,13 +7358,16 @@
           return nick;
         }).join(', ');
         
+        const countText = group.nicks.size > 0 ? `${group.nicks.size} акк.` : `${group.rows.length} лог.`;
+        const accountListText = formattedNicks.length > 0 ? formattedNicks : `${group.rows.length} записей`;
+
         card.innerHTML = `
           <div class="arz-similar-group-title">
             <span><i class="fa-solid fa-network-wired" style="color: var(--az-accent-hover); margin-right: 6px;"></i> ${group.key}</span>
-            <span class="badge" style="background: rgba(var(--az-accent-rgb), 0.1); color: var(--az-accent-hover); border: 1px solid rgba(var(--az-accent-rgb), 0.2);">${group.nicks.size} акк.</span>
+            <span class="badge" style="background: rgba(var(--az-accent-rgb), 0.1); color: var(--az-accent-hover); border: 1px solid rgba(var(--az-accent-rgb), 0.2);">${countText}</span>
           </div>
           <div class="arz-similar-group-nicks">
-            Аккаунты: <strong>${formattedNicks}</strong>
+            Аккаунты: <strong>${accountListText}</strong>
           </div>
           <div class="arz-similar-group-ips">
             IP: ${sortedIps}
@@ -6751,39 +7443,10 @@
 
     async function setupModal(modal) {
       modal.querySelector('#arz-analytics-close').onclick = () => closeOverlay(modal);
-      modal.onclick = (e) => { if (e.target === modal) closeOverlay(modal); };
-      
-      const hasSimilar = settings.tools?.similarIPsFinder !== false;
-      const hasRepeats = settings.tools?.actionRepeatsFinder !== false;
-
-      const tabHeader = modal.querySelector('.arz-lookup-tabs');
-      const tabSimilarBtn = modal.querySelector('[data-tab="similar-ips"]');
-      const tabRepeatsBtn = modal.querySelector('[data-tab="repeats"]');
-      
-      if (!hasSimilar) {
-        tabSimilarBtn.remove();
-        modal.querySelector('#arz-analytics-tab-similar-ips').style.display = 'none';
-        modal.querySelector('#arz-analytics-tab-repeats').style.display = 'flex';
-        tabRepeatsBtn.classList.add('active');
-        tabHeader.style.display = 'none';
-        activeTab = 'repeats';
-      } else if (!hasRepeats) {
-        tabRepeatsBtn.remove();
-        modal.querySelector('#arz-analytics-tab-similar-ips').style.display = 'flex';
-        modal.querySelector('#arz-analytics-tab-repeats').style.display = 'none';
-        tabSimilarBtn.classList.add('active');
-        tabHeader.style.display = 'none';
-        activeTab = 'similar-ips';
-      } else {
-        tabHeader.style.display = 'flex';
-        tabSimilarBtn.classList.add('active');
-        tabRepeatsBtn.classList.remove('active');
-        modal.querySelector('#arz-analytics-tab-similar-ips').style.display = 'flex';
-        modal.querySelector('#arz-analytics-tab-repeats').style.display = 'none';
-        activeTab = 'similar-ips';
-      }
 
       const tabs = modal.querySelectorAll('.arz-tab-btn');
+      const footer = modal.querySelector('.arz-modal-footer');
+      
       tabs.forEach(tab => {
         tab.onclick = () => {
           tabs.forEach(t => t.classList.remove('active'));
@@ -6792,8 +7455,97 @@
           
           modal.querySelector('#arz-analytics-tab-similar-ips').style.display = activeTab === 'similar-ips' ? 'flex' : 'none';
           modal.querySelector('#arz-analytics-tab-repeats').style.display = activeTab === 'repeats' ? 'flex' : 'none';
+          modal.querySelector('#arz-analytics-tab-leader-sales').style.display = activeTab === 'leader-sales' ? 'flex' : 'none';
+          modal.querySelector('#arz-analytics-tab-admin-sales').style.display = activeTab === 'admin-sales' ? 'flex' : 'none';
+
+          if (footer) {
+            if (activeTab === 'similar-ips' || activeTab === 'repeats') {
+              footer.style.display = 'flex';
+            } else {
+              footer.style.display = 'none';
+            }
+          }
         };
       });
+
+      const leaderTabContainer = modal.querySelector('#arz-analytics-tab-leader-sales');
+      const adminTabContainer = modal.querySelector('#arz-analytics-tab-admin-sales');
+      
+      if (leaderTabContainer) setupDateShortcuts(leaderTabContainer, 'arz-leader-sales-date-from', 'arz-leader-sales-date-to');
+      if (adminTabContainer) setupDateShortcuts(adminTabContainer, 'arz-admin-sales-date-from', 'arz-admin-sales-date-to');
+      
+      if (typeof setupNickCounter === 'function') {
+        setupNickCounter(modal, '#arz-leader-sales-nicks', 'arz-leader-sales-count-num');
+        setupNickCounter(modal, '#arz-admin-sales-nicks', 'arz-admin-sales-count-num');
+      }
+
+      const setupExtractBtn = (btnId, textareaId) => {
+        const btn = modal.querySelector('#' + btnId);
+        if (btn) {
+          btn.onclick = (e) => {
+            e.preventDefault();
+            const textarea = modal.querySelector('#' + textareaId);
+            if (!textarea) return;
+            const text = textarea.value;
+            const nickRegex = /\b[A-Z][a-zA-Z0-9]*_[A-Za-z0-9_]+\b/g;
+            const matches = text.match(nickRegex);
+            const validMatches = matches ? matches.filter(isValidNickname) : [];
+            if (validMatches.length === 0) {
+              window.ArizonaNotifications.show('Никнеймы Nick_Name не найдены!', 'error');
+              return;
+            }
+            const uniqueNicks = Array.from(new Set(validMatches));
+            textarea.value = uniqueNicks.join(',');
+            textarea.dispatchEvent(new Event('input'));
+            window.ArizonaNotifications.show(`Извлечено никнеймов: ${uniqueNicks.length}`, 'success');
+          };
+        }
+      };
+
+      setupExtractBtn('arz-leader-extract-btn', 'arz-leader-sales-nicks');
+      setupExtractBtn('arz-admin-extract-btn', 'arz-admin-sales-nicks');
+
+      const params = new URLSearchParams(window.location.search);
+      const urlMin = params.get('min_period');
+      const urlMax = params.get('max_period');
+      if (urlMin) {
+        modal.querySelector('#arz-leader-sales-date-from').value = urlMin.split(' ')[0];
+        modal.querySelector('#arz-admin-sales-date-from').value = urlMin.split(' ')[0];
+      }
+      if (urlMax) {
+        modal.querySelector('#arz-leader-sales-date-to').value = urlMax.split(' ')[0];
+        modal.querySelector('#arz-admin-sales-date-to').value = urlMax.split(' ')[0];
+      }
+
+      modal.querySelector('#arz-start-leader-sales-btn').onclick = () => {
+        const val = modal.querySelector('#arz-leader-sales-nicks').value.trim();
+        const nicks = val.split(/[\n,]+/).map(n => n.trim()).filter(Boolean);
+        if (nicks.length === 0) {
+          window.ArizonaNotifications.show('Введите хотя бы один ник лидера', 'error');
+          return;
+        }
+        const df = modal.querySelector('#arz-leader-sales-date-from').value;
+        const dt = modal.querySelector('#arz-leader-sales-date-to').value;
+        closeOverlay(modal);
+        processSalesProbing(nicks, df, dt, 'leader');
+      };
+
+      modal.querySelector('#arz-start-admin-sales-btn').onclick = () => {
+        const val = modal.querySelector('#arz-admin-sales-nicks').value.trim();
+        const nicks = val.split(/[\n,]+/).map(n => n.trim()).filter(Boolean);
+        if (nicks.length === 0) {
+          window.ArizonaNotifications.show('Введите хотя бы один ник админа', 'error');
+          return;
+        }
+        const df = modal.querySelector('#arz-admin-sales-date-from').value;
+        const dt = modal.querySelector('#arz-admin-sales-date-to').value;
+        closeOverlay(modal);
+        processSalesProbing(nicks, df, dt, 'admin');
+      };
+
+      modal.querySelector('[data-tab="similar-ips"]').classList.add('active');
+      modal.querySelector('#arz-analytics-tab-similar-ips').style.display = 'flex';
+      if (footer) footer.style.display = 'flex';
 
       if (typeof loadIpDetailsCache === 'function') {
         await loadIpDetailsCache();
@@ -6864,33 +7616,21 @@
 
         if (activeTab === 'similar-ips') {
           const groups = scanAndGroupIPs(currentModeIP);
-          groups.forEach(g => {
-            g.rows.forEach(r => allMatchingRows.add(r));
-          });
-          tableRows.forEach(row => {
-            if (allMatchingRows.has(row)) {
-              row.style.display = '';
-              shown++;
-            } else {
-              row.style.display = 'none';
-            }
-          });
-          window.ArizonaNotifications.show(`Показано ${shown} совпадающих логов по IP`, 'success');
-        } else {
+          groups.forEach(g => g.rows.forEach(r => allMatchingRows.add(r)));
+        } else if (activeTab === 'repeats') {
           const groups = scanAndGroupRepeats(currentModeRepeats, currentThresholdRepeats);
-          groups.forEach(g => {
-            g.rows.forEach(r => allMatchingRows.add(r));
-          });
-          tableRows.forEach(row => {
-            if (allMatchingRows.has(row)) {
-              row.style.display = '';
-              shown++;
-            } else {
-              row.style.display = 'none';
-            }
-          });
-          window.ArizonaNotifications.show(`Показано ${shown} логов с повторами`, 'success');
+          groups.forEach(g => g.rows.forEach(r => allMatchingRows.add(r)));
         }
+
+        tableRows.forEach(row => {
+          if (allMatchingRows.has(row)) {
+            row.style.display = '';
+            shown++;
+          } else {
+            row.style.display = 'none';
+          }
+        });
+        window.ArizonaNotifications.show(`Показано ${shown} совпадающих логов`, 'success');
         closeOverlay(modal);
       };
 
@@ -7017,9 +7757,18 @@
       return clone.textContent;
     }
 
+    function isRowVisible(row) {
+      if (!row) return false;
+      if (row.classList.contains('arz-row-hidden')) return false;
+      if (row.style.display === 'none') return false;
+      const style = window.getComputedStyle(row);
+      return style && style.display !== 'none' && style.visibility !== 'hidden';
+    }
+
     function copyTable(rows) {
+      const visibleRows = (rows || []).filter(isRowVisible);
       const tbl = document.querySelector('table.table');
-      if (!tbl) return;
+      if (!tbl || visibleRows.length === 0) return;
       const headers = tbl.querySelectorAll('thead th');
       const visible = [];
       headers.forEach((th, idx) => {
@@ -7030,7 +7779,7 @@
 
       let html = '<table width="100%" cellpadding="3" cellspacing="0" border="0" style="border-collapse: collapse; font-family: Nunito, sans-serif; font-size: 13px;">';
       let plain = '';
-      rows.forEach(row => {
+      visibleRows.forEach(row => {
         html += '<tr>';
         const cells = row.querySelectorAll('td');
         const plainCells = [];
@@ -7099,7 +7848,7 @@
       copyAllPageLogs: function () {
         const tbl = document.querySelector('table.table');
         if (!tbl) return;
-        const rows = Array.from(tbl.querySelectorAll('tbody tr'));
+        const rows = Array.from(tbl.querySelectorAll('tbody tr')).filter(isRowVisible);
         if (rows.length === 0) return;
 
         const formattedLines = [];
@@ -7127,8 +7876,78 @@
       copyAllLogs: function () {
         const tbl = document.querySelector('table.table');
         if (!tbl) return;
-        const rows = Array.from(tbl.querySelectorAll('tbody tr'));
+        const rows = Array.from(tbl.querySelectorAll('tbody tr')).filter(isRowVisible);
         if (rows.length > 0) copyTable(rows);
+      }
+    };
+  })();
+
+  window.ArizonaSidebarManager = (function () {
+    let settings = {};
+
+    return {
+      init: function (s) {
+        settings = s || {};
+        this.update();
+      },
+      updateSettings: function (s) {
+        settings = s || {};
+        this.update();
+      },
+      update: function () {
+        const isToggleEnabled = currentSettings['extension-toggle'] !== false && currentSettings['visual-toggle-sidebar'] !== false;
+        const btn = document.getElementById('arz-sidebar-toggle-btn');
+
+        if (isToggleEnabled) {
+          document.body.classList.add('arz-toggle-sidebar-active');
+          if (!btn) {
+            this.createButton();
+          }
+          const savedState = localStorage.getItem('arz_sidebar_collapsed');
+          if (savedState === 'true') {
+            document.body.classList.add('arz-sidebar-collapsed');
+            this.updateButtonLabel(true);
+          } else {
+            document.body.classList.remove('arz-sidebar-collapsed');
+            this.updateButtonLabel(false);
+          }
+        } else {
+          document.body.classList.remove('arz-toggle-sidebar-active', 'arz-sidebar-collapsed');
+          if (btn) btn.remove();
+        }
+      },
+      createButton: function () {
+        if (document.getElementById('arz-sidebar-toggle-btn')) return;
+        const btn = document.createElement('button');
+        btn.id = 'arz-sidebar-toggle-btn';
+        btn.type = 'button';
+        btn.title = 'Открыть / скрыть боковое меню';
+        btn.innerHTML = `<i class="fa-solid fa-bars-staggered" style="font-size: 13px;"></i> <span class="arz-sidebar-btn-text" style="font-size: 12px;">Меню</span>`;
+        btn.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const isCollapsed = document.body.classList.toggle('arz-sidebar-collapsed');
+          localStorage.setItem('arz_sidebar_collapsed', isCollapsed ? 'true' : 'false');
+          this.updateButtonLabel(isCollapsed);
+        };
+
+        const logoContainer = document.querySelector('.app-nav-logo, .navbar-brand.logo, .navbar-brand');
+        if (logoContainer) {
+          logoContainer.prepend(btn);
+        } else {
+          const nav = document.querySelector('.app-nav, .app-header');
+          if (nav) nav.prepend(btn);
+          else document.body.appendChild(btn);
+        }
+      },
+      updateButtonLabel: function (isCollapsed) {
+        const btn = document.getElementById('arz-sidebar-toggle-btn');
+        if (!btn) return;
+        if (isCollapsed) {
+          btn.innerHTML = `<i class="fa-solid fa-bars" style="font-size: 13px; color: var(--az-accent-hover);"></i> <span class="arz-sidebar-btn-text" style="font-size: 12px;">Меню</span>`;
+        } else {
+          btn.innerHTML = `<i class="fa-solid fa-bars-staggered" style="font-size: 13px;"></i> <span class="arz-sidebar-btn-text" style="font-size: 12px;">Меню</span>`;
+        }
       }
     };
   })();
@@ -7138,13 +7957,71 @@
     let templates = [];
     let currentModal = null;
 
+    function getCurrentFilterState() {
+      const state = {
+        formParams: {},
+        formParamSummary: [],
+        searchText: '',
+        searchMode: 'show',
+        searchAuto: false
+      };
+
+      const form = document.querySelector('form.filter');
+      if (form) {
+        const formData = new FormData(form);
+        for (const [key, value] of formData.entries()) {
+          if (value !== '') {
+            if (!state.formParams[key]) {
+              state.formParams[key] = [];
+            }
+            state.formParams[key].push(value);
+          }
+        }
+
+        const selectedTypeLabels = [];
+        form.querySelectorAll('select[name*="type"] option:checked, select[name*="types"] option:checked').forEach(opt => {
+          const txt = opt.textContent.trim();
+          if (txt && !selectedTypeLabels.includes(txt)) selectedTypeLabels.push(txt);
+        });
+
+        form.querySelectorAll('.select2-selection__choice, .tag-item, .badge, .label').forEach(b => {
+          const txt = b.textContent.replace('×', '').trim();
+          if (txt && !selectedTypeLabels.includes(txt) && !txt.includes('Сбросить') && !txt.includes('Применить')) {
+            selectedTypeLabels.push(txt);
+          }
+        });
+
+        const playerInput = form.querySelector('input[name="player"]');
+        if (playerInput && playerInput.value.trim()) {
+          state.formParamSummary.push(`Игрок: ${playerInput.value.trim()}`);
+        }
+
+        if (selectedTypeLabels.length > 0) {
+          state.formParamSummary.push(`Типы: ${selectedTypeLabels.slice(0, 3).join(', ')}${selectedTypeLabels.length > 3 ? '...' : ''}`);
+        } else if (state.formParams['type[]'] || state.formParams['types[]'] || state.formParams['type'] || state.formParams['types']) {
+          const arr = state.formParams['type[]'] || state.formParams['types[]'] || state.formParams['type'] || state.formParams['types'];
+          state.formParamSummary.push(`Типов: ${arr.length}`);
+        }
+      }
+
+      const filterTa = document.getElementById('arz-filter-logs');
+      if (filterTa && filterTa.value.trim()) {
+        state.searchText = filterTa.value.trim();
+        state.searchMode = document.querySelector('input[name="arz-filter-logs-mode"]:checked')?.value || 'show';
+        state.searchAuto = !!document.getElementById('arz-filter-logs-auto')?.checked;
+        state.formParamSummary.push(`Поиск: ${state.searchText}`);
+      }
+
+      return state;
+    }
+
     function render() {
       const container = document.getElementById('arz-templates-list');
       const search = document.getElementById('arz-templates-search');
       if (!container) return;
 
       const term = search ? search.value.toLowerCase() : '';
-      const filtered = templates.filter(t => t.name.toLowerCase().includes(term) || t.filters.toLowerCase().includes(term));
+      const filtered = templates.filter(t => t.name.toLowerCase().includes(term) || (t.filters && t.filters.toLowerCase().includes(term)));
       document.getElementById('arz-templates-total-count').textContent = templates.length;
 
       if (filtered.length === 0) {
@@ -7153,10 +8030,10 @@
       }
 
       container.innerHTML = filtered.map(t => `
-        <div class="arz-template-card" data-id="${t.id}" data-filters="${window.ArizonaUtils.escapeHtml(t.filters)}">
+        <div class="arz-template-card" data-id="${t.id}">
           <div style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;">
             <div class="arz-template-card-title">${window.ArizonaUtils.escapeHtml(t.name)}</div>
-            <div class="arz-template-card-subtitle">${window.ArizonaUtils.escapeHtml(t.filters)}</div>
+            <div class="arz-template-card-subtitle">${window.ArizonaUtils.escapeHtml(t.filters || 'Шаблон фильтров')}</div>
           </div>
           <div style="display:flex;align-items:center;">
             <button class="btn-delete arz-list-item-btn" data-id="${t.id}"><i class="fa-regular fa-trash-can"></i></button>
@@ -7174,13 +8051,59 @@
             window.ArizonaNotifications.show('Шаблон удален', 'info');
             return;
           }
-          const filters = card.dataset.filters;
+          const id = parseInt(card.dataset.id);
+          const t = templates.find(item => item.id === id);
+          if (!t) return;
+
+          if (t.formParams && Object.keys(t.formParams).length > 0) {
+            const targetUrl = new URL(window.location.origin + window.location.pathname);
+
+            const currentUrl = new URL(window.location.href);
+            if (currentUrl.searchParams.get('server_number') && !t.formParams['server_number']) {
+              targetUrl.searchParams.set('server_number', currentUrl.searchParams.get('server_number'));
+            }
+
+            for (const key in t.formParams) {
+              const vals = t.formParams[key];
+              if (Array.isArray(vals)) {
+                vals.forEach(v => targetUrl.searchParams.append(key, v));
+              } else if (vals) {
+                targetUrl.searchParams.append(key, vals);
+              }
+            }
+
+            if (t.searchFilter) {
+              chrome.storage.local.set({
+                arzLogFilter: {
+                  text: t.searchFilter.text || '',
+                  mode: t.searchFilter.mode || 'show',
+                  auto: t.searchFilter.auto !== false
+                }
+              });
+            }
+
+            window.ArizonaNotifications.show('Применение шаблона...', 'info');
+            closeModal();
+            setTimeout(() => {
+              window.location.href = targetUrl.toString();
+            }, 50);
+            return;
+          }
+
+          const filterText = t.searchFilter?.text || t.filters || '';
           const ta = document.getElementById('arz-filter-logs');
-          if (ta && filters) {
-            ta.value = filters;
+          if (ta && filterText) {
+            ta.value = filterText;
+            if (t.searchFilter?.mode) {
+              const rad = document.querySelector(`input[name="arz-filter-logs-mode"][value="${t.searchFilter.mode}"]`);
+              if (rad) rad.checked = true;
+            }
             ta.dispatchEvent(new Event('input', { bubbles: true }));
             ta.dispatchEvent(new Event('change', { bubbles: true }));
             window.ArizonaNotifications.show('Шаблон применен', 'success');
+            closeModal();
+          } else {
+            window.ArizonaNotifications.show('Шаблон применен', 'info');
             closeModal();
           }
         };
@@ -7277,22 +8200,46 @@
           el.querySelector('#arz-add-template-btn').onclick = () => {
             const nameInput = el.querySelector('#arz-new-template-name');
             const name = nameInput.value.trim();
-            const filterTa = document.getElementById('arz-filter-logs');
-            const filters = filterTa ? filterTa.value.trim() : '';
-            if (!name) { window.ArizonaNotifications.show('Введите название', 'error'); return; }
-            if (!filters) { window.ArizonaNotifications.show('Фильтр пуст', 'error'); return; }
-            templates.unshift({ id: Date.now(), name, filters });
+            if (!name) { window.ArizonaNotifications.show('Введите название шаблона', 'error'); return; }
+
+            const state = getCurrentFilterState();
+            const hasFormParams = Object.keys(state.formParams).some(k => state.formParams[k].length > 0);
+            const hasSearch = !!state.searchText;
+
+            if (!hasFormParams && !hasSearch) {
+              window.ArizonaNotifications.show('Фильтры не установлены!', 'error');
+              return;
+            }
+
+            let summaryText = state.formParamSummary.join(' | ');
+            if (!summaryText) {
+              summaryText = state.searchText ? `Поиск: ${state.searchText}` : 'Сохраненные фильтры';
+            }
+
+            templates.unshift({
+              id: Date.now(),
+              name: name,
+              filters: summaryText,
+              formParams: state.formParams,
+              searchFilter: {
+                text: state.searchText,
+                mode: state.searchMode,
+                auto: state.searchAuto
+              }
+            });
+
             localStorage.setItem('filter_templates', JSON.stringify(templates));
             nameInput.value = '';
             render();
-            window.ArizonaNotifications.show('Шаблон сохранен', 'success');
+            window.ArizonaNotifications.show('Шаблон сохранен!', 'success');
           };
-          el.onclick = (e) => { if (e.target === el) closeModal(); };
         };
         container.appendChild(btn);
       }
     };
   })();
+
+
 
   let resetBtnElement = null;
   let originalResetBtnHTML = null;
@@ -7304,20 +8251,16 @@
     const container = document.querySelector('.filter-buttons');
     if (!container) return;
 
-    const filterForm = document.querySelector('form.filter');
-    if (!filterForm) return;
-
     if (resetBtnElement && !document.body.contains(resetBtnElement)) {
       resetBtnElement = null;
     }
 
     let resetBtn = resetBtnElement;
     if (!resetBtn) {
-      const candidates = Array.from(document.querySelectorAll('form.filter a, form.filter button, .filter-buttons a, .filter-buttons button'));
+      const candidates = Array.from(document.querySelectorAll('form a, form button, .filter-buttons a, .filter-buttons button, a[href*="logsparser"]'));
       resetBtn = candidates.find(el => {
-        if (el.id && el.id.startsWith('arz-')) {
-          return false;
-        }
+        if (el.id && el.id.startsWith('arz-')) return false;
+        if (el.getAttribute('type') === 'submit') return false;
         const text = el.textContent.trim().toLowerCase();
         return text.includes('сбросить') || text.includes('очистить') || el.getAttribute('type') === 'reset';
       });
@@ -7350,52 +8293,428 @@
 
     resetBtn.classList.remove('btn-danger', 'btn-outline-danger', 'btn-default');
     resetBtn.classList.add('btn', 'btn-success');
+    resetBtn.style.color = 'white !important';
+
+    if (!resetBtn.querySelector('i')) {
+      const text = resetBtn.textContent.replace(/\s+/g, ' ').trim();
+      resetBtn.innerHTML = `<i class="fa-solid fa-rotate-left" style="margin-right: 6px;"></i> ${text}`;
+    }
 
     if (resetBtn.parentElement !== container) {
-      resetBtn.style.cssText = 'margin-left: 10px !important; color: white !important;';
-      if (!resetBtn.querySelector('i')) {
-        resetBtn.innerHTML = `<i class="fa-solid fa-rotate-left" style="margin-right: 6px;"></i> ${resetBtn.textContent.trim()}`;
-      }
-      container.appendChild(resetBtn);
+      container.insertBefore(resetBtn, container.children[1] || null);
     }
   }
 
-  function fixSubmitLag() {
-    const form = document.querySelector('form.filter');
-    if (!form) return;
-
-    const submitBtn = form.querySelector('button[type="submit"]');
-    if (!submitBtn) return;
-
-    submitBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopImmediatePropagation();
-
-      const originalHtml = submitBtn.innerHTML;
-      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Загрузка...';
-      submitBtn.style.pointerEvents = 'none';
-
-      setTimeout(() => {
-        const url = new URL(window.location.origin + window.location.pathname);
-        const formData = new FormData(form);
-
-        for (const [key, value] of formData.entries()) {
-          if (value !== '') {
-            url.searchParams.append(key, value);
-          }
-        }
-
-        const limitSelect = document.querySelector('select[name="limit"]');
-        if (limitSelect && limitSelect.value) {
-          url.searchParams.set('limit', limitSelect.value);
-        }
-
-        window.location.href = url.toString();
-      }, 10);
-    }, true);
+  function isRealSubmitButton(el) {
+    if (!el) return false;
+    if (el.id && el.id.startsWith('arz-')) return false;
+    if (el.tagName === 'A') return false;
+    if (el.getAttribute('type') === 'submit') return true;
+    if (el.tagName === 'BUTTON' && el.classList.contains('btn-success') && !el.id && (el.closest('form.filter') || el.closest('.filter-buttons'))) {
+      return true;
+    }
+    return false;
   }
 
+  function handleFilterSubmit(form, submitBtn) {
+    if (!submitBtn) {
+      submitBtn = form ? form.querySelector('button[type="submit"]:not([id^="arz-"]), input[type="submit"]:not([id^="arz-"])') : null;
+    }
+    if (!submitBtn) {
+      submitBtn = document.querySelector('.filter-buttons button[type="submit"]:not([id^="arz-"]), .filter-buttons button.btn-success:not([id^="arz-"])');
+    }
+
+    if (submitBtn && isRealSubmitButton(submitBtn)) {
+      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Загрузка...';
+      submitBtn.style.pointerEvents = 'none';
+    }
+
+    const currentUrl = new URL(window.location.href);
+    const targetUrl = new URL(window.location.origin + window.location.pathname);
+
+    currentUrl.searchParams.forEach((value, key) => {
+      targetUrl.searchParams.append(key, value);
+    });
+
+    const actualForm = form || document.querySelector('form.filter');
+    if (actualForm) {
+      const formData = new FormData(actualForm);
+      
+      const formKeys = new Set(formData.keys());
+      formKeys.forEach(key => {
+        targetUrl.searchParams.delete(key);
+      });
+
+      for (const [key, value] of formData.entries()) {
+        if (value !== '') {
+          targetUrl.searchParams.append(key, value);
+        }
+      }
+    }
+
+    const limitSelect = document.querySelector('select[name="limit"]');
+    if (limitSelect && limitSelect.value) {
+      targetUrl.searchParams.set('limit', limitSelect.value);
+    }
+
+    setTimeout(() => {
+      window.location.href = targetUrl.toString();
+    }, 20);
+  }
+
+  function fixSubmitLag() {
+    const forms = document.querySelectorAll('form.filter');
+    forms.forEach(form => {
+      if (form.getAttribute('data-arz-submit-bound') === 'true') return;
+      form.setAttribute('data-arz-submit-bound', 'true');
+
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const btn = form.querySelector('button[type="submit"]:not([id^="arz-"]), input[type="submit"]:not([id^="arz-"])');
+        handleFilterSubmit(form, btn);
+      }, true);
+    });
+
+    const buttons = document.querySelectorAll('form.filter button:not([id^="arz-"]), .filter-buttons button:not([id^="arz-"])');
+    buttons.forEach(btn => {
+      if (!isRealSubmitButton(btn)) return;
+      if (btn.getAttribute('data-arz-click-bound') === 'true') return;
+      btn.setAttribute('data-arz-click-bound', 'true');
+
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const form = btn.closest('form.filter') || document.querySelector('form.filter');
+        handleFilterSubmit(form, btn);
+      }, true);
+    });
+  }
+
+  document.addEventListener('submit', (e) => {
+    const form = e.target;
+    if (form && form.matches('form.filter')) {
+      e.preventDefault();
+      e.stopPropagation();
+      const btn = form.querySelector('button[type="submit"]:not([id^="arz-"]), input[type="submit"]:not([id^="arz-"])');
+      handleFilterSubmit(form, btn);
+    }
+  }, true);
+
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('button, input[type="submit"]');
+    if (btn && isRealSubmitButton(btn) && (btn.closest('form.filter') || btn.closest('.filter-buttons'))) {
+      e.preventDefault();
+      e.stopPropagation();
+      const form = btn.closest('form.filter') || document.querySelector('form.filter');
+      handleFilterSubmit(form, btn);
+    }
+  }, true);
+
   let isInitialized = false;
+
+  window.ArizonaMultiSelectManager = (function () {
+    let isEnabled = true;
+    let barElement = null;
+
+    function createBar() {
+      if (document.getElementById('arz-bulk-actions-bar')) return;
+      barElement = document.createElement('div');
+      barElement.id = 'arz-bulk-actions-bar';
+      barElement.innerHTML = `
+        <div class="arz-bulk-bar-count">
+          <i class="fa-solid fa-check-double" style="color: var(--az-accent-hover);"></i>
+          Выделено логов: <strong id="arz-bulk-count-num">0</strong>
+        </div>
+        <div class="arz-bulk-bar-actions">
+          <button type="button" class="arz-btn-secondary" id="arz-bulk-copy-logs" title="Копировать в формате Время + Лог">
+            <i class="fa-regular fa-copy"></i> Время + Лог
+          </button>
+          <button type="button" class="arz-btn-secondary" id="arz-bulk-copy-nicks" title="Скопировать никнеймы">
+            <i class="fa-solid fa-user"></i> Никнеймы
+          </button>
+          <button type="button" class="arz-btn-secondary" id="arz-bulk-copy-full" title="Скопировать всю информацию">
+            <i class="fa-solid fa-align-left"></i> Вся инфо
+          </button>
+          <button type="button" class="arz-btn-secondary" id="arz-bulk-download-txt" title="Скачать выделенные логи в файл .txt">
+            <i class="fa-solid fa-file-arrow-down"></i> В .txt
+          </button>
+          <button type="button" class="arz-btn-secondary" id="arz-bulk-show" title="Показать скрытые логи">
+            <i class="fa-solid fa-eye"></i> Показать
+          </button>
+          <button type="button" class="arz-btn-secondary" id="arz-bulk-hide" title="Скрыть выделенные логи">
+            <i class="fa-solid fa-eye-slash"></i> Скрыть
+          </button>
+          <button type="button" class="arz-btn-danger" id="arz-bulk-deselect" title="Снять выделение со всех">
+            <i class="fa-solid fa-xmark"></i> Отмена
+          </button>
+        </div>
+      `;
+      document.body.appendChild(barElement);
+
+      barElement.querySelector('#arz-bulk-copy-logs').onclick = copyLogsTimeText;
+      barElement.querySelector('#arz-bulk-copy-nicks').onclick = copyNicks;
+      barElement.querySelector('#arz-bulk-copy-full').onclick = copyFullInfo;
+      barElement.querySelector('#arz-bulk-download-txt').onclick = downloadSelectedAsTxt;
+      barElement.querySelector('#arz-bulk-show').onclick = showSelected;
+      barElement.querySelector('#arz-bulk-hide').onclick = hideSelected;
+      barElement.querySelector('#arz-bulk-deselect').onclick = deselectAll;
+    }
+
+    function updateBarVisibility() {
+      if (!barElement) createBar();
+      const selectedCheckboxes = document.querySelectorAll('table.table tbody tr input.arz-row-checkbox:checked');
+      const count = selectedCheckboxes.length;
+      const numEl = document.getElementById('arz-bulk-count-num');
+      if (numEl) numEl.textContent = count;
+
+      const isMultiEnabled = currentSettings['extension-toggle'] !== false && currentSettings['tweak-multi-select'] !== false;
+      if (count > 0 && isMultiEnabled) {
+        barElement.classList.add('visible');
+      } else {
+        if (barElement) barElement.classList.remove('visible');
+      }
+    }
+
+    function injectCheckbox(tr) {
+      const isMultiEnabled = currentSettings['extension-toggle'] !== false && currentSettings['tweak-multi-select'] !== false;
+      if (!isMultiEnabled) return;
+      if (tr.querySelector('.arz-row-checkbox')) return;
+      const firstCell = tr.cells[0];
+      if (!firstCell) return;
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.className = 'arz-row-checkbox';
+      cb.title = 'Выделить лог';
+
+      cb.addEventListener('change', (e) => {
+        e.stopPropagation();
+        tr.classList.toggle('arz-row-selected', cb.checked);
+        updateBarVisibility();
+      });
+
+      firstCell.insertBefore(cb, firstCell.firstChild);
+    }
+
+    function getSelectedRows() {
+      const checked = document.querySelectorAll('table.table tbody tr input.arz-row-checkbox:checked');
+      return Array.from(checked).map(cb => cb.closest('tr')).filter(Boolean);
+    }
+
+    function copyLogsTimeText() {
+      const rows = getSelectedRows();
+      if (rows.length === 0) return;
+      const lines = rows.map(tr => {
+        const date = getCleanCellText(tr.cells[0]);
+        const action = getCleanCellText(tr.cells[1]);
+        return `[${date}] ${action}`;
+      });
+      writeToClipboard(lines.join('\n')).then(() => {
+        window.ArizonaNotifications.show(`Скопировано логов: ${lines.length}`, 'success');
+      });
+    }
+
+    function copyNicks() {
+      const rows = getSelectedRows();
+      if (rows.length === 0) return;
+      const nicksSet = new Set();
+      rows.forEach(tr => {
+        const actionCell = tr.cells[1];
+        if (actionCell) {
+          actionCell.querySelectorAll('a[href*="player="], a strong').forEach(el => {
+            const text = el.textContent.trim();
+            if (isValidNickname(text)) nicksSet.add(text);
+          });
+          const textContent = actionCell.textContent || '';
+          const matches = textContent.match(/\b[A-Z][a-zA-Z0-9]*_[A-Za-z0-9_]+\b/g);
+          if (matches) {
+            matches.forEach(m => { if (isValidNickname(m)) nicksSet.add(m); });
+          }
+        }
+      });
+      const nicks = Array.from(nicksSet);
+      if (nicks.length === 0) {
+        window.ArizonaNotifications.show('Никнеймы в выделенных логах не найдены', 'warning');
+        return;
+      }
+      writeToClipboard(nicks.join('\n')).then(() => {
+        window.ArizonaNotifications.show(`Скопировано уникальных никнеймов: ${nicks.length}`, 'success');
+      });
+    }
+
+    function copyFullInfo() {
+      const rows = getSelectedRows();
+      if (rows.length === 0) return;
+      const lines = rows.map(tr => {
+        const date = getCleanCellText(tr.cells[0]);
+        const action = getCleanCellText(tr.cells[1]);
+        const data = getCleanCellText(tr.cells[2]);
+        const ipCell = getIpCellFromRow(tr);
+        const ip = getCleanCellText(ipCell, true);
+
+        const parts = [date, action, data, ip].map(x => x.trim());
+        while (parts.length > 0 && !parts[parts.length - 1]) {
+          parts.pop();
+        }
+        return parts.join(' | ');
+      });
+
+      writeToClipboard(lines.join('\n')).then(() => {
+        window.ArizonaNotifications.show(`Скопировано полных строк: ${lines.length}`, 'success');
+      });
+    }
+
+    function downloadTxtFile(filename, text) {
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function downloadSelectedAsTxt() {
+      const rows = getSelectedRows();
+      if (rows.length === 0) return;
+
+      const lines = rows.map(tr => {
+        const date = getCleanCellText(tr.cells[0]);
+        const action = getCleanCellText(tr.cells[1]);
+        return `[${date}] ${action}`;
+      });
+
+      const textToSave = lines.join('\r\n');
+
+      const serverNum = new URLSearchParams(window.location.search).get('server_number') || '0';
+      const now = new Date();
+      const dateStr = now.toISOString().slice(0, 10);
+      const timeStr = now.toTimeString().slice(0, 8).replace(/:/g, '-');
+      const filename = `logs_server_${serverNum}_${dateStr}_${timeStr}.txt`;
+
+      downloadTxtFile(filename, textToSave);
+      window.ArizonaNotifications.show(`Сохранено логов в файл: ${lines.length}`, 'success');
+    }
+
+    function showSelected() {
+      const rows = getSelectedRows();
+      if (rows.length === 0) return;
+      let count = 0;
+      rows.forEach(tr => {
+        if (tr.classList.contains('arz-row-hidden')) {
+          tr.classList.remove('arz-row-hidden');
+          count++;
+        }
+      });
+
+      if (count > 0) {
+        window.ArizonaNotifications.show(`Раскрыто скрытых логов: ${count}`, 'success');
+      } else {
+        window.ArizonaNotifications.show('Среди выделенных нет скрытых логов', 'info');
+      }
+      deselectAll();
+    }
+
+    function hideSelected() {
+      const rows = getSelectedRows();
+      if (rows.length === 0) return;
+      rows.forEach(tr => {
+        tr.classList.add('arz-row-hidden');
+      });
+      window.ArizonaNotifications.show(`Скрыто логов: ${rows.length}`, 'info');
+      deselectAll();
+    }
+
+    function deselectAll() {
+      document.querySelectorAll('table.table tbody tr input.arz-row-checkbox').forEach(cb => {
+        cb.checked = false;
+        const tr = cb.closest('tr');
+        if (tr) tr.classList.remove('arz-row-selected');
+      });
+      updateBarVisibility();
+    }
+
+    function selectAllVisible() {
+      const rows = document.querySelectorAll('table.table tbody tr');
+      let count = 0;
+      rows.forEach(tr => {
+        if (tr.style.display !== 'none') {
+          const cb = tr.querySelector('.arz-row-checkbox');
+          if (cb) {
+            cb.checked = true;
+            tr.classList.add('arz-row-selected');
+            count++;
+          }
+        }
+      });
+      updateBarVisibility();
+      window.ArizonaNotifications.show(`Выделено логов: ${count}`, 'info');
+    }
+
+    function injectSelectAllButton() {
+      const isMultiEnabled = currentSettings['extension-toggle'] !== false && currentSettings['tweak-multi-select'] !== false;
+      const existingBtn = document.getElementById('arz-select-all-logs-btn');
+      if (!isMultiEnabled) {
+        if (existingBtn) existingBtn.remove();
+        return;
+      }
+      if (existingBtn) return;
+
+      const container = document.querySelector('.filter-buttons');
+      if (!container) return;
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.id = 'arz-select-all-logs-btn';
+      btn.className = 'btn btn-secondary';
+      btn.style.cssText = 'margin-left: 10px;';
+      btn.innerHTML = `<i class="fa-solid fa-check-double" style="margin-right: 6px;"></i> Выделить всё на странице`;
+      btn.onclick = () => selectAllVisible();
+
+      const copyPageBtn = document.getElementById('arz-copy-page-logs-btn');
+      if (copyPageBtn && copyPageBtn.parentNode) {
+        copyPageBtn.parentNode.insertBefore(btn, copyPageBtn.nextSibling);
+      } else {
+        container.appendChild(btn);
+      }
+    }
+
+    function removeUI() {
+      document.querySelectorAll('.arz-row-checkbox').forEach(cb => cb.remove());
+      document.querySelectorAll('tr.arz-row-selected').forEach(tr => tr.classList.remove('arz-row-selected'));
+      if (barElement) {
+        barElement.remove();
+        barElement = null;
+      }
+      const btn = document.getElementById('arz-select-all-logs-btn');
+      if (btn) btn.remove();
+    }
+
+    return {
+      init: function (s) {
+        this.update();
+      },
+      updateSettings: function (s) {
+        this.update();
+      },
+      update: function () {
+        const isMultiEnabled = currentSettings['extension-toggle'] !== false && currentSettings['tweak-multi-select'] !== false;
+        if (isMultiEnabled) {
+          createBar();
+          runWhenElementExists('.filter-buttons', () => injectSelectAllButton());
+        } else {
+          removeUI();
+        }
+      },
+      injectCheckbox: injectCheckbox,
+      updateBarVisibility: updateBarVisibility,
+      selectAllVisible: selectAllVisible,
+      deselectAll: deselectAll
+    };
+  })();
 
   async function init() {
     if (isInitialized) return;
@@ -7435,11 +8754,15 @@
       try { window.ArizonaLookupManager.init(arizonaSettings); } catch (e) { console.error('Error in ArizonaLookupManager.init:', e); }
       try { window.ArizonaDateShortcut.init(arizonaSettings); } catch (e) { console.error('Error in ArizonaDateShortcut.init:', e); }
       try { window.ArizonaIdenticalIpHighlight.init(arizonaSettings); } catch (e) { console.error('Error in ArizonaIdenticalIpHighlight.init:', e); }
-      
+
       try { window.ArizonaAnalyticsManager.init(arizonaSettings); } catch (e) { console.error('Error in ArizonaAnalyticsManager.init:', e); }
       try { window.ArizonaTemplatesManager.init(arizonaSettings, arizonaTemplates); } catch (e) { console.error('Error in ArizonaTemplatesManager.init:', e); }
       try { window.ArizonaThemeManager.init(arizonaSettings); } catch (e) { console.error('Error in ArizonaThemeManager.init:', e); }
       try { window.ArizonaCopyLogsManager.init(arizonaSettings); } catch (e) { console.error('Error in ArizonaCopyLogsManager.init:', e); }
+      try { window.ArizonaSidebarManager.init(arizonaSettings); } catch (e) { console.error('Error in ArizonaSidebarManager.init:', e); }
+
+      try { window.ArizonaMultiSelectManager.init(arizonaSettings); } catch (e) { console.error('Error in ArizonaMultiSelectManager.init:', e); }
+      try { window.ArizonaLoadMoreManager.init(arizonaSettings); } catch (e) { console.error('Error in ArizonaLoadMoreManager.init:', e); }
 
       document.addEventListener('copy', (e) => {
         try {
@@ -7621,8 +8944,12 @@
               if (window.ArizonaLookupManager) window.ArizonaLookupManager.updateSettings(arizonaSettings);
               if (window.ArizonaTemplatesManager) window.ArizonaTemplatesManager.updateSettings(arizonaSettings);
               if (window.ArizonaFormsManager) window.ArizonaFormsManager.updateSettings(arizonaSettings);
-              
+
               if (window.ArizonaAnalyticsManager) window.ArizonaAnalyticsManager.updateSettings(arizonaSettings);
+              if (window.ArizonaLogFilter) window.ArizonaLogFilter.updateSettings(arizonaSettings);
+              if (window.ArizonaSidebarManager) window.ArizonaSidebarManager.updateSettings(arizonaSettings);
+              if (window.ArizonaMultiSelectManager) window.ArizonaMultiSelectManager.updateSettings(arizonaSettings);
+              if (window.ArizonaLoadMoreManager) window.ArizonaLoadMoreManager.updateSettings(arizonaSettings);
               styleResetButton();
             }
           }
@@ -7790,6 +9117,20 @@
       }
     }
   }
+
+  setInterval(() => {
+    try {
+      const isEnabled = currentSettings['extension-toggle'] !== false;
+      if (!isEnabled) return;
+      const table = document.querySelector('table.table');
+      if (table) {
+        const unprocessed = table.querySelectorAll('tbody tr:not([data-arz-processed="true"])');
+        if (unprocessed.length > 0) {
+          processTable();
+        }
+      }
+    } catch (e) { }
+  }, 1000);
 
   function checkAndInit() {
     if (document.body) {

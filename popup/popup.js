@@ -45,17 +45,21 @@ document.addEventListener('DOMContentLoaded', () => {
     'visual-sticky-navbar': true,
     'visual-sticky-headers': true,
     'visual-hide-sidebar': false,
+    'visual-toggle-sidebar': false,
     'visual-vertical-borders': false,
     'visual-replace-favicon': false,
     'visual-remove-top-padding': false,
     'tweak-floating-filter': true,
+    'tweak-load-more': true,
+    'tweak-show-filled-filters': true,
     'tweak-ip-info': false,
     'tweak-always-limit': 'none',
     'tweak-copy-btn-visibility': 'hover',
     'visual-logo-customization': 'default',
     'tweak-copy-row': true,
     'tweak-hide-row': true,
-    'tweak-copy-cells': true
+    'tweak-copy-cells': true,
+    'tweak-multi-select': true
   };
 
   const settingIds = Object.keys(defaultSettings);

@@ -15,7 +15,7 @@
   <div class="app-container">
     <header class="app-header">
       <div class="logo-area">
-        <img class="logo-img" src="../icons/icon48.png" alt="ARIZONA Logo">
+        <img class="logo-img" src="../icons/icon128.png" alt="ARIZONA Logo">
         <div class="logo-text">
           <h1>ARIZONA</h1>
           <span class="logo-sub">LOGSPARSER HELPER</span>
@@ -100,6 +100,13 @@
           <div class="control-group-title"><i class="fa-solid fa-sliders menu-icon"></i>Интерфейс сайта</div>
           <div class="control-card">
             <div class="control-row">
+              <label><i class="fa-solid fa-angles-down menu-icon"></i>Кнопка "Загрузить ещё" логов</label>
+              <label class="switch">
+                <input type="checkbox" id="tweak-load-more" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
+            <div class="control-row">
               <label><i class="fa-solid fa-thumbtack menu-icon"></i>Закрепить навбар</label>
               <label class="switch">
                 <input type="checkbox" id="visual-sticky-navbar" checked>
@@ -117,6 +124,13 @@
               <label><i class="fa-solid fa-columns menu-icon"></i>Скрыть боковое меню</label>
               <label class="switch">
                 <input type="checkbox" id="visual-hide-sidebar">
+                <span class="slider round"></span>
+              </label>
+            </div>
+            <div class="control-row">
+              <label><i class="fa-solid fa-bars-staggered menu-icon"></i>Кнопка сворачивания меню</label>
+              <label class="switch">
+                <input type="checkbox" id="visual-toggle-sidebar">
                 <span class="slider round"></span>
               </label>
             </div>
@@ -153,6 +167,13 @@
 
           <div class="control-group-title"><i class="fa-solid fa-eye menu-icon"></i>Отображение элементов</div>
           <div class="control-card">
+            <div class="control-row">
+              <label><i class="fa-solid fa-eye menu-icon"></i>Показывать заполненные скрытые поля</label>
+              <label class="switch">
+                <input type="checkbox" id="tweak-show-filled-filters" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
             <div class="control-row">
               <label><i class="fa-regular fa-eye menu-icon"></i>Кнопка копирования лога</label>
               <select id="tweak-copy-btn-visibility" class="arz-select">
@@ -246,6 +267,13 @@
           <div class="control-group-title"><i class="fa-solid fa-copy menu-icon"></i>Автоматизация и копирование</div>
           <div class="control-card">
             <div class="control-row">
+              <label><i class="fa-solid fa-list-check menu-icon"></i>Выбор нескольких логов</label>
+              <label class="switch">
+                <input type="checkbox" id="tweak-multi-select" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
+            <div class="control-row">
               <label><i class="fa-solid fa-table-list menu-icon"></i>Менеджер форм команд</label>
               <label class="switch">
                 <input type="checkbox" id="tools-formsEnabled" checked>
@@ -267,7 +295,7 @@
               </label>
             </div>
             <div class="control-row">
-              <label><i class="fa-solid fa-filter-list menu-icon"></i>Панель быстрого фильтра</label>
+              <label><i class="fa-solid fa-magnifying-glass menu-icon"></i>Фильтр для поиска в логах</label>
               <label class="switch">
                 <input type="checkbox" id="tools-filterWindow" checked>
                 <span class="slider round"></span>
@@ -492,7 +520,7 @@
         <span class="active-theme-label">совместно с Filipp Malyj</span>
       </div>
       <div class="footer-links">
-        <span class="app-version">v1.5</span>
+        <span class="app-version">v1.6</span>
 
         <a href="https://chromewebstore.google.com/detail/imobodagdnhdmjjlpfajidiofikmmpgi?utm_source=item-share-cb"
           target="_blank" class="footer-link-btn" title="Страница расширения в Chrome Web Store">

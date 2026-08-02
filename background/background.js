@@ -808,6 +808,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .catch(err => sendResponse({ success: false, error: err.message }));
     return true;
   }
+
+  return false;
 });
 
 setInterval(() => {
