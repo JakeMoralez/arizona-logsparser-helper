@@ -416,18 +416,42 @@ async function syncDataWithServer(type, localData) {
   }
 }
 
-async function fetchEcosystemApi() {
-  const urls = [
-    'https://arizona-ai.ru/ecosystem_api/info',
-    'https://arizona-ai.tech/ecosystem_api/info'
+let cachedWorkingDomain = null;
+
+async function getWorkingEcosystemDomain() {
+  if (cachedWorkingDomain) return cachedWorkingDomain;
+  const domains = [
+    'https://arizona-ai.ru',
+    'https://arizona-ai.tech'
   ];
-  for (const url of urls) {
+  for (const domain of domains) {
     try {
+      const response = await fetch(`${domain}/ecosystem_api/info`);
+      if (response.ok) {
+        cachedWorkingDomain = domain;
+        return domain;
+      }
+    } catch (e) {
+      console.warn(`[Background] Failed domain check for ${domain}:`, e);
+    }
+  }
+  return 'https://arizona-ai.ru';
+}
+
+async function fetchEcosystemApi() {
+  const domains = [
+    'https://arizona-ai.ru',
+    'https://arizona-ai.tech'
+  ];
+  for (const domain of domains) {
+    try {
+      const url = `${domain}/ecosystem_api/info`;
       const response = await fetch(url);
       if (!response.ok) throw new Error(`HTTP status: ${response.status}`);
       const json = await response.json();
       if (json && json.status === 'success' && Array.isArray(json.users)) {
-        return json;
+        cachedWorkingDomain = domain;
+        return { ...json, workingDomain: domain };
       }
     } catch (e) {
       console.warn(`[Background] Failed to fetch from ${url}:`, e);
@@ -442,6 +466,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .then(data => sendResponse({ success: true, data }))
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true; 
+  }
+
+  if (message.type === 'OPEN_ECOSYSTEM_GUIDE') {
+    getWorkingEcosystemDomain().then(domain => {
+      const targetUrl = `${domain}/faq#faq-nickname-guide`;
+      chrome.tabs.create({ url: targetUrl });
+      sendResponse({ success: true, url: targetUrl });
+    }).catch(() => {
+      const fallbackUrl = 'https://arizona-ai.ru/faq#faq-nickname-guide';
+      chrome.tabs.create({ url: fallbackUrl });
+      sendResponse({ success: true, url: fallbackUrl });
+    });
+    return true;
   }
 
   if (message.action) {

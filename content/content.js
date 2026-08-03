@@ -32,6 +32,7 @@
   let arizonaTemplates = [];
   let ecosystemApiData = null;
   let ecosystemLookupMap = new Map();
+  let ecosystemWorkingDomain = 'https://arizona-ai.ru';
 
   let isProcessingTable = false;
   let isProcessingIps = false;
@@ -789,9 +790,33 @@
     }
   }
 
+  function injectMarkHandle(tr) {
+    if (!tr || !tr.cells || !tr.cells[0]) return;
+    const firstCell = tr.cells[0];
+    if (firstCell.querySelector('.arz-row-mark-handle')) return;
+
+    firstCell.style.setProperty('position', 'relative', 'important');
+    firstCell.style.setProperty('padding-left', '14px', 'important');
+    const handle = document.createElement('div');
+    handle.className = 'arz-row-mark-handle';
+    handle.title = 'Отметить / снять метку с лога';
+
+    handle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      const isMarked = tr.classList.toggle('arz-row-marked');
+      if (window.ArizonaNotifications) {
+        window.ArizonaNotifications.show(isMarked ? 'Лог отмечен' : 'Метка снята', isMarked ? 'success' : 'info');
+      }
+    });
+
+    firstCell.insertBefore(handle, firstCell.firstChild);
+  }
+
   function processRow(tr) {
     if (!tr || !tr.cells || !tr.cells[1]) return;
 
+    try { injectMarkHandle(tr); } catch (e) { }
     try { window.ArizonaMultiSelectManager.injectCheckbox(tr); } catch (e) { }
 
     if (window.ArizonaMaskingManager && typeof window.ArizonaMaskingManager.maskRow === 'function') {
@@ -6643,6 +6668,142 @@
       window.ArizonaNotifications.show(`Установлен конец периода: ${max.value}`, 'success');
     }
 
+    function setSortOrder(val) {
+      const container = document.querySelector('.js_component_filter_item_sort');
+      if (!container) return;
+      const select = container.querySelector('select[name="sort"]') || container.querySelector('select');
+      if (!select) return;
+
+      select.value = val;
+      ['change', 'input'].forEach(eName => {
+        select.dispatchEvent(new Event(eName, { bubbles: true }));
+      });
+
+      if (window.jQuery) {
+        window.jQuery(select).val(val).trigger('change');
+      }
+
+      const valLabel = val === 'desc' ? 'Сначала новые' : 'Сначала старые';
+      if (window.ArizonaNotifications) {
+        window.ArizonaNotifications.show(`Сортировка: ${valLabel}`, 'success');
+      }
+    }
+
+    function getMyNickname() {
+      const el = document.querySelector('a#navbarDropdown');
+      if (!el) return '';
+      let text = '';
+      for (const node of el.childNodes) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          text += node.textContent;
+        }
+      }
+      text = text.trim();
+      if (!text) {
+        text = el.textContent.split('\n')[0].trim();
+      }
+      return text;
+    }
+
+    async function readClipboardText() {
+      try {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          const text = await navigator.clipboard.readText();
+          if (text) return text.trim();
+        }
+      } catch (e) {
+        console.warn('[Content] Failed to read clipboard:', e);
+      }
+      return '';
+    }
+
+    function setPlayerInputValue(input, val) {
+      if (!input) return;
+      input.value = val;
+      ['input', 'change', 'keyup'].forEach(eName => {
+        input.dispatchEvent(new Event(eName, { bubbles: true }));
+      });
+      input.focus();
+    }
+
+    function getPlayerContainers() {
+      const containers = [];
+      const selectors = [
+        '.js_component_filter_item_player',
+        '.js_component_filter_item_target',
+        '.js_component_filter_item_player1',
+        '.js_component_filter_item_player2'
+      ];
+      selectors.forEach(sel => {
+        document.querySelectorAll(sel).forEach(el => {
+          if (!containers.includes(el)) containers.push(el);
+        });
+      });
+
+      document.querySelectorAll('.js_component_filter_item').forEach(item => {
+        if (!containers.includes(item)) {
+          const input = item.querySelector('input[name="player"], input[name="target"], input[name="player1"], input[name="player2"]');
+          if (input) containers.push(item);
+        }
+      });
+
+      return containers;
+    }
+
+    function getTypeContainers() {
+      const containers = [];
+      const selectors = [
+        '.js_component_filter_item_type',
+        '.js_component_filter_item_types',
+        '.js_component_filter_item_type_id',
+        '.js_component_filter_item_action',
+        '.js_component_filter_item_actions'
+      ];
+      selectors.forEach(sel => {
+        document.querySelectorAll(sel).forEach(el => {
+          if (!containers.includes(el)) containers.push(el);
+        });
+      });
+
+      document.querySelectorAll('.js_component_filter_item').forEach(item => {
+        if (!containers.includes(item)) {
+          const label = item.querySelector('label');
+          const input = item.querySelector('input, select, textarea');
+          if (label && /Тип|Типы|Action/i.test(label.textContent.trim())) {
+            containers.push(item);
+          } else if (input && /type|action/i.test(input.name || '')) {
+            containers.push(item);
+          }
+        }
+      });
+
+      return containers;
+    }
+
+    function appendEmojiToType(container, emoji) {
+      const select2Selection = container.querySelector('.select2-selection');
+      if (select2Selection && !document.querySelector('.select2-container--open')) {
+        select2Selection.click();
+      }
+
+      setTimeout(() => {
+        const openSelect2Input = document.querySelector('.select2-container--open .select2-search__field');
+        const containerInput = container.querySelector('.select2-search__field, input[type="text"], input:not([type="hidden"]), textarea');
+        const targetInput = openSelect2Input || containerInput;
+
+        if (targetInput) {
+          targetInput.focus();
+          const val = targetInput.value || '';
+          const newVal = val ? (val.endsWith(' ') ? val + emoji : val + ' ' + emoji) : emoji;
+          targetInput.value = newVal;
+
+          ['input', 'change', 'keyup', 'keydown'].forEach(eventType => {
+            targetInput.dispatchEvent(new Event(eventType, { bubbles: true }));
+          });
+        }
+      }, select2Selection ? 60 : 0);
+    }
+
     function createShortcutLink(label, onClick) {
       const btn = document.createElement('a');
       btn.href = '#';
@@ -6662,13 +6823,63 @@
       return btn;
     }
 
+    function createEmojiShortcutButton(item, onClick) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'arz-type-emoji-btn';
+      btn.textContent = item.char;
+      btn.title = item.title;
+      btn.style.cssText = `
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 6px;
+        padding: 3px 8px;
+        font-size: 13px;
+        line-height: 1.2;
+        cursor: pointer;
+        user-select: none;
+        transition: all 0.15s ease;
+      `;
+      btn.onmouseover = () => {
+        btn.style.background = 'rgba(255, 255, 255, 0.14)';
+        btn.style.borderColor = 'var(--az-accent-hover, #ff4d4d)';
+        btn.style.transform = 'translateY(-1px)';
+      };
+      btn.onmouseout = () => {
+        btn.style.background = 'rgba(255, 255, 255, 0.06)';
+        btn.style.borderColor = 'rgba(255, 255, 255, 0.14)';
+        btn.style.transform = 'none';
+      };
+      btn.onclick = (e) => {
+        e.preventDefault();
+        onClick();
+      };
+      return btn;
+    }
+
     return {
       init: function (s) {
         settings = s || {};
         if (settings.tools?.dateShortcutEnabled) {
-          runWhenElementExists('.js_component_filter_item_sort', () => this.addButton());
+          runWhenElementExists('.js_component_filter_item_sort', () => {
+            this.addButton();
+            this.addSortShortcuts();
+          });
           runWhenElementExists('.js_component_filter_item_min_period', () => this.addMinPeriodButtons());
           runWhenElementExists('.js_component_filter_item_max_period', () => this.addMaxPeriodButtons());
+          this.addTypeEmojiButtons();
+          this.addPlayerShortcuts();
+          setTimeout(() => {
+            this.addTypeEmojiButtons();
+            this.addPlayerShortcuts();
+          }, 500);
+          setTimeout(() => {
+            this.addTypeEmojiButtons();
+            this.addPlayerShortcuts();
+          }, 1500);
         }
       },
       addButton: function () {
@@ -6686,6 +6897,20 @@
         `;
         wrap.querySelector('#arz-date-shortcut-input').onchange = (e) => setDate(e.target.value);
         container.insertAdjacentElement('afterend', wrap);
+      },
+      addSortShortcuts: function () {
+        if (document.getElementById('arz-sort-shortcuts')) return;
+        const container = document.querySelector('.js_component_filter_item_sort');
+        if (!container) return;
+
+        const wrap = document.createElement('div');
+        wrap.id = 'arz-sort-shortcuts';
+        wrap.style.cssText = 'margin-top: 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px;';
+
+        wrap.appendChild(createShortcutLink('Сначала новые', () => setSortOrder('desc')));
+        wrap.appendChild(createShortcutLink('Сначала старые', () => setSortOrder('asc')));
+
+        container.appendChild(wrap);
       },
       addMinPeriodButtons: function () {
         if (document.getElementById('arz-min-period-shortcuts')) return;
@@ -6721,11 +6946,76 @@
 
         formGroup.insertAdjacentElement('afterend', wrap);
       },
+      addTypeEmojiButtons: function () {
+        const typeContainers = getTypeContainers();
+        typeContainers.forEach((container, idx) => {
+          if (container.querySelector('.arz-type-emoji-shortcuts')) return;
+
+          const formGroup = container.querySelector('.form-group') || container;
+          const wrap = document.createElement('div');
+          wrap.className = 'arz-type-emoji-shortcuts';
+          wrap.style.cssText = 'margin-top: 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 5px;';
+
+          const emojis = [
+            { char: '➕', title: 'Прибавление / Взял / Получил' },
+            { char: '➖', title: 'Потерял / Положил / Отдал' },
+            { char: '🎒', title: 'Инвентарь / Предметы' },
+            { char: '💰', title: 'Деньги / Наличные / Перевод' },
+            { char: '🏦', title: 'Банк / Банковский счет' },
+            { char: '🤝', title: 'Трейд / Сделка / Обмен' }
+          ];
+
+          emojis.forEach(item => {
+            const btn = createEmojiShortcutButton(item, () => appendEmojiToType(container, item.char));
+            wrap.appendChild(btn);
+          });
+
+          formGroup.insertAdjacentElement('beforeend', wrap);
+        });
+      },
+      addPlayerShortcuts: function () {
+        const playerContainers = getPlayerContainers();
+        playerContainers.forEach((container) => {
+          if (container.querySelector('.arz-player-shortcuts')) return;
+
+          const input = container.querySelector('input[type="text"], input:not([type="hidden"])');
+          if (!input) return;
+
+          const wrap = document.createElement('div');
+          wrap.className = 'arz-player-shortcuts';
+          wrap.style.cssText = 'margin-top: 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px;';
+
+          wrap.appendChild(createShortcutLink('Из буфера', async () => {
+            const text = await readClipboardText();
+            if (text) {
+              setPlayerInputValue(input, text);
+              if (window.ArizonaNotifications) window.ArizonaNotifications.show(`Вставлено из буфера: ${text}`, 'success');
+            } else {
+              if (window.ArizonaNotifications) window.ArizonaNotifications.show('Буфер обмена пуст или доступ запрещён', 'warning');
+            }
+          }));
+
+          wrap.appendChild(createShortcutLink('Свой никнейм', () => {
+            const nick = getMyNickname();
+            if (nick) {
+              setPlayerInputValue(input, nick);
+              if (window.ArizonaNotifications) window.ArizonaNotifications.show(`Вставлен свой никнейм: ${nick}`, 'success');
+            } else {
+              if (window.ArizonaNotifications) window.ArizonaNotifications.show('Никнейм авторизованного пользователя не найден', 'warning');
+            }
+          }));
+
+          container.appendChild(wrap);
+        });
+      },
       reposition: function () {
         if (settings.tools?.dateShortcutEnabled) {
           this.addButton();
+          this.addSortShortcuts();
           this.addMinPeriodButtons();
           this.addMaxPeriodButtons();
+          this.addTypeEmojiButtons();
+          this.addPlayerShortcuts();
         }
       }
     };
@@ -8439,6 +8729,12 @@
           <button type="button" class="arz-btn-secondary" id="arz-bulk-download-txt" title="Скачать выделенные логи в файл .txt">
             <i class="fa-solid fa-file-arrow-down"></i> В .txt
           </button>
+          <button type="button" class="arz-btn-secondary" id="arz-bulk-mark" title="Отметить выделенные логи">
+            <i class="fa-solid fa-bookmark" style="color: #f59e0b;"></i> Отметить
+          </button>
+          <button type="button" class="arz-btn-secondary" id="arz-bulk-unmark" title="Снять метки с выделенных логов">
+            <i class="fa-regular fa-bookmark"></i> Снять метку
+          </button>
           <button type="button" class="arz-btn-secondary" id="arz-bulk-show" title="Показать скрытые логи">
             <i class="fa-solid fa-eye"></i> Показать
           </button>
@@ -8456,6 +8752,8 @@
       barElement.querySelector('#arz-bulk-copy-nicks').onclick = copyNicks;
       barElement.querySelector('#arz-bulk-copy-full').onclick = copyFullInfo;
       barElement.querySelector('#arz-bulk-download-txt').onclick = downloadSelectedAsTxt;
+      barElement.querySelector('#arz-bulk-mark').onclick = markSelected;
+      barElement.querySelector('#arz-bulk-unmark').onclick = unmarkSelected;
       barElement.querySelector('#arz-bulk-show').onclick = showSelected;
       barElement.querySelector('#arz-bulk-hide').onclick = hideSelected;
       barElement.querySelector('#arz-bulk-deselect').onclick = deselectAll;
@@ -8597,6 +8895,28 @@
 
       downloadTxtFile(filename, textToSave);
       window.ArizonaNotifications.show(`Сохранено логов в файл: ${lines.length}`, 'success');
+    }
+
+    function markSelected() {
+      const rows = getSelectedRows();
+      if (rows.length === 0) return;
+      rows.forEach(tr => {
+        tr.classList.add('arz-row-marked');
+      });
+      if (window.ArizonaNotifications) {
+        window.ArizonaNotifications.show(`Отмечено логов: ${rows.length}`, 'success');
+      }
+    }
+
+    function unmarkSelected() {
+      const rows = getSelectedRows();
+      if (rows.length === 0) return;
+      rows.forEach(tr => {
+        tr.classList.remove('arz-row-marked');
+      });
+      if (window.ArizonaNotifications) {
+        window.ArizonaNotifications.show(`Сняты метки с логов: ${rows.length}`, 'info');
+      }
     }
 
     function showSelected() {
@@ -8983,6 +9303,20 @@
     });
   }
 
+  function openNicknameGuideCard() {
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+      chrome.runtime.sendMessage({ type: 'OPEN_ECOSYSTEM_GUIDE' }, (response) => {
+        if (chrome.runtime.lastError || !response || !response.success) {
+          const domain = ecosystemWorkingDomain || 'https://arizona-ai.ru';
+          window.open(`${domain}/faq#faq-nickname-guide`, '_blank');
+        }
+      });
+    } else {
+      const domain = ecosystemWorkingDomain || 'https://arizona-ai.ru';
+      window.open(`${domain}/faq#faq-nickname-guide`, '_blank');
+    }
+  }
+
   function initEcosystemApi() {
     if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.local) {
       ecosystemApiData = [];
@@ -8997,14 +9331,21 @@
 
       if (cached && cached.timestamp && (now - cached.timestamp < oneHour) && cached.users) {
         ecosystemApiData = cached.users;
+        if (cached.workingDomain) {
+          ecosystemWorkingDomain = cached.workingDomain;
+        }
         buildLookupMap();
         renderEcosystemBadges();
       } else {
         chrome.runtime.sendMessage({ type: 'FETCH_ECOSYSTEM_API' }, (response) => {
           if (response && response.success && response.data && response.data.users) {
+            if (response.data.workingDomain) {
+              ecosystemWorkingDomain = response.data.workingDomain;
+            }
             const dataToSave = {
               timestamp: Date.now(),
-              users: response.data.users
+              users: response.data.users,
+              workingDomain: ecosystemWorkingDomain
             };
             chrome.storage.local.set({ 'arizona_ecosystem_api_data': dataToSave }, () => {
               ecosystemApiData = response.data.users;
@@ -9087,6 +9428,12 @@
       badge.appendChild(icon);
       badge.title = `${user.icon_description}\n(ArizonaAI Ecosystem, добавлено расширением Arizona LogsParser Helper)`;
 
+      badge.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openNicknameGuideCard();
+      });
+
       el.appendChild(badge);
 
       if (user.achievements) {
@@ -9111,6 +9458,12 @@
           } else {
             achBadge.title = `${ach.name}\n(ArizonaAI Ecosystem, добавлено расширением Arizona LogsParser Helper)`;
           }
+
+          achBadge.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openNicknameGuideCard();
+          });
 
           el.appendChild(achBadge);
         });

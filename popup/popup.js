@@ -255,8 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     'visual-theme-mode': 'theme',
     'visual-theme-color': 'colorScheme',
-    'visual-theme-radius': 'borderRadius',
-    'visual-theme-fontsize': 'fontSize'
+    'visual-theme-radius': 'borderRadius'
   };
 
   const colorSchemes = {
@@ -464,8 +463,6 @@ document.addEventListener('DOMContentLoaded', () => {
               if (valEl) {
                 valEl.textContent = val + (elId.includes('Delay') ? ' мс' : elId.includes('Width') ? ' px' : '');
               }
-            } else if (elId === 'visual-theme-fontsize') {
-              val = parseInt(el.value);
             } else {
               val = el.value;
             }
