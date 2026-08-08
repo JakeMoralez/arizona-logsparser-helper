@@ -144,6 +144,14 @@
           fromDate.setDate(toDate.getDate() - 6);
         } else if (range === 'month') {
           fromDate.setMonth(toDate.getMonth() - 1);
+        } else if (range === 'start-week') {
+          const day = fromDate.getDay();
+          const diff = fromDate.getDate() - day + (day === 0 ? -6 : 1);
+          fromDate.setDate(diff);
+        } else if (range === 'start-month') {
+          fromDate.setDate(1);
+        } else if (range === 'start-year') {
+          fromDate.setMonth(0, 1);
         }
 
         const dateFromInput = container.querySelector('#' + dateFromId);
@@ -1077,7 +1085,7 @@
             }
           }
         }
-      } catch (err) {}
+      } catch (err) { }
     }
 
     isCacheLoaded = true;
@@ -3628,10 +3636,13 @@
                 <input type="date" id="arz-online-date-to" class="arz-input">
               </div>
             </div>
-            <div class="arz-date-shortcuts" style="display: flex; gap: 8px; width: 100%; box-sizing: border-box; margin-top: -4px;">
+            <div class="arz-date-shortcuts" style="display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 6px !important; width: 100% !important; box-sizing: border-box !important; margin-top: -4px !important;">
               <button type="button" class="arz-btn-shortcut" data-range="day">За день</button>
               <button type="button" class="arz-btn-shortcut" data-range="week">За неделю</button>
               <button type="button" class="arz-btn-shortcut" data-range="month">За месяц</button>
+              <button type="button" class="arz-btn-shortcut" data-range="start-week">С начала недели</button>
+              <button type="button" class="arz-btn-shortcut" data-range="start-month">С начала месяца</button>
+              <button type="button" class="arz-btn-shortcut" data-range="start-year">С начала года</button>
             </div>
             <div class="arz-modal-form-group" style="margin-top: 12px; display: flex; align-items: center; gap: 8px;">
               <input type="checkbox" id="arz-online-stealth" style="cursor: pointer; width: 16px; height: 16px; accent-color: var(--az-accent);">
@@ -3854,7 +3865,7 @@
             <div class="online-result-total" style="font-size: 38px; font-weight: 700; color: var(--az-accent-hover); font-family: monospace;">${secsToHMS(total)}</div>
             <div class="online-result-sub" style="color: var(--az-text-secondary); font-size: 13px; margin-top: 6px;">за <strong>${allDays.length}</strong> дн. · <strong>${avg}</strong> ч/день</div>
           </div>
-          <div class="online-result-table-wrapper" style="max-height: 320px; overflow-y: auto; background: var(--az-input-bg); border-bottom: 1px solid var(--az-border);"><table class="online-result-table" style="width: 100%; border-collapse: collapse;"><thead><tr style="border-bottom: 1px solid var(--az-border); background: var(--az-bg-sidebar); position: sticky; top: 0;"><th style="text-align: left; padding: 12px 20px; color: var(--az-text-secondary); font-size: 11px; text-transform: uppercase;">Дата</th><th style="text-align: left; padding: 12px 20px; color: var(--az-text-secondary); font-size: 11px; text-transform: uppercase;">Онлайн</th></tr></thead><tbody>${rowsHtml}</tbody></table></div>
+          <div class="online-result-table-wrapper" style="max-height: 550px; overflow-y: auto; background: var(--az-input-bg); border-bottom: 1px solid var(--az-border);"><table class="online-result-table" style="width: 100%; border-collapse: collapse;"><thead><tr style="border-bottom: 1px solid var(--az-border); background: var(--az-bg-sidebar); position: sticky; top: 0;"><th style="text-align: left; padding: 12px 20px; color: var(--az-text-secondary); font-size: 11px; text-transform: uppercase;">Дата</th><th style="text-align: left; padding: 12px 20px; color: var(--az-text-secondary); font-size: 11px; text-transform: uppercase;">Онлайн</th></tr></thead><tbody>${rowsHtml}</tbody></table></div>
           <div class="arz-modal-footer">
             <button id="arz-online-copy-btn" class="arz-btn-primary" style="flex: 1;"><i class="fa-regular fa-copy"></i> Копировать</button>
             <button id="arz-online-reopen-btn" class="arz-btn-secondary" style="flex: 1;"><i class="fa-solid fa-rotate-left"></i> Новый расчет</button>
@@ -4209,7 +4220,7 @@
             </div>
             <button id="arz-online-multi-close-header-btn" class="arz-modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
           </div>
-          <div class="online-result-table-wrapper" style="max-height: 400px; overflow-y: auto; background: var(--az-input-bg); border-bottom: 1px solid var(--az-border);">
+          <div class="online-result-table-wrapper" style="max-height: 550px; overflow-y: auto; background: var(--az-input-bg); border-bottom: 1px solid var(--az-border);">
             <table class="online-result-table" style="width: 100%; border-collapse: collapse;">
               <thead>
                 <tr style="border-bottom: 1px solid var(--az-border); background: var(--az-bg-sidebar); position: sticky; top: 0; z-index: 1;">
@@ -4443,10 +4454,13 @@
                 <input type="date" id="arz-punish-date-to" class="arz-input">
               </div>
             </div>
-            <div class="arz-date-shortcuts" style="display: flex; gap: 8px; width: 100%; box-sizing: border-box; margin-top: -4px;">
+            <div class="arz-date-shortcuts" style="display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 6px !important; width: 100% !important; box-sizing: border-box !important; margin-top: -4px !important;">
               <button type="button" class="arz-btn-shortcut" data-range="day">За день</button>
               <button type="button" class="arz-btn-shortcut" data-range="week">За неделю</button>
               <button type="button" class="arz-btn-shortcut" data-range="month">За месяц</button>
+              <button type="button" class="arz-btn-shortcut" data-range="start-week">С начала недели</button>
+              <button type="button" class="arz-btn-shortcut" data-range="start-month">С начала месяца</button>
+              <button type="button" class="arz-btn-shortcut" data-range="start-year">С начала года</button>
             </div>
           </div>
           <div class="arz-modal-footer">
@@ -4538,7 +4552,7 @@
             </div>
             <button id="arz-punish-close-header-btn" class="arz-modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
           </div>
-          <div class="online-result-table-wrapper" style="max-height: 400px; overflow-y: auto; background: var(--az-input-bg); border-bottom: 1px solid var(--az-border);">
+          <div class="online-result-table-wrapper" style="max-height: 550px; overflow-y: auto; background: var(--az-input-bg); border-bottom: 1px solid var(--az-border);">
             <table class="online-result-table" style="width: 100%; border-collapse: collapse;">
               <thead>
                 <tr style="border-bottom: 1px solid var(--az-border); background: var(--az-bg-sidebar); position: sticky; top: 0; z-index: 1;">
@@ -4753,7 +4767,7 @@
             </div>
             <button id="arz-punish-multi-close-header-btn" class="arz-modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
           </div>
-          <div class="online-result-table-wrapper" style="max-height: 400px; overflow-y: auto; background: var(--az-input-bg); border-bottom: 1px solid var(--az-border);">
+          <div class="online-result-table-wrapper" style="max-height: 550px; overflow-y: auto; background: var(--az-input-bg); border-bottom: 1px solid var(--az-border);">
             <table class="online-result-table" style="width: 100%; border-collapse: collapse;">
               <thead>
                 <tr style="border-bottom: 1px solid var(--az-border); background: var(--az-bg-sidebar); position: sticky; top: 0; z-index: 1;">
@@ -5332,7 +5346,7 @@
             </div>
             <button id="arz-ip-multi-close-header-btn" class="arz-modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
           </div>
-          <div class="online-result-table-wrapper" style="max-height: 400px; overflow-y: auto; background: rgba(0, 0, 0, 0.1); border-bottom: 1px solid var(--az-border);">
+          <div class="online-result-table-wrapper" style="max-height: 550px; overflow-y: auto; background: rgba(0, 0, 0, 0.1); border-bottom: 1px solid var(--az-border);">
             <table class="online-result-table" style="width: 100%; border-collapse: collapse;">
               <thead>
                 <tr style="border-bottom: 1px solid var(--az-border); background: rgba(255,255,255,0.02); position: sticky; top: 0; z-index: 1;">
@@ -5699,7 +5713,7 @@
             </div>
             <button id="arz-idnick-close-header-btn" class="arz-modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
           </div>
-          <div class="online-result-table-wrapper" style="max-height: 400px; overflow-y: auto; background: rgba(0, 0, 0, 0.1); border-bottom: 1px solid var(--az-border);">
+          <div class="online-result-table-wrapper" style="max-height: 550px; overflow-y: auto; background: rgba(0, 0, 0, 0.1); border-bottom: 1px solid var(--az-border);">
             <table class="online-result-table" style="width: 100%; border-collapse: collapse;">
               <thead>
                 <tr style="border-bottom: 1px solid var(--az-border); background: rgba(255,255,255,0.02); position: sticky; top: 0; z-index: 1;">
@@ -5787,7 +5801,92 @@
         btn.onclick = openModal;
         container.appendChild(btn);
       },
-      processMultipleInputs: processMultipleInputs
+      processMultipleInputs: processMultipleInputs,
+      resolveSingle: async function (query) {
+        const isId = /^\d+$/.test(query);
+        const fetchUrl = new URL(window.location.href);
+        fetchUrl.searchParams.set('player', query);
+        fetchUrl.searchParams.delete('type[]');
+        fetchUrl.searchParams.append('type[]', 'disconnect');
+        fetchUrl.searchParams.set('limit', '5');
+        fetchUrl.searchParams.set('sort', 'desc');
+        fetchUrl.searchParams.delete('arz_online');
+        fetchUrl.searchParams.delete('arz_punish');
+
+        let currentDate = new Date();
+        let attempts = 0;
+        const maxAttempts = 10;
+        let doc = document;
+
+        const getFormattedDate = (date) => {
+          const y = date.getFullYear();
+          const m = String(date.getMonth() + 1).padStart(2, '0');
+          const d = String(date.getDate()).padStart(2, '0');
+          return `${y}-${m}-${d}`;
+        };
+
+        while (attempts < maxAttempts) {
+          let maxDateStr = getFormattedDate(currentDate);
+          currentDate.setMonth(currentDate.getMonth() - 6);
+          let minDateStr = getFormattedDate(currentDate);
+
+          fetchUrl.searchParams.set('min_period', minDateStr + ' 00:00:00');
+          fetchUrl.searchParams.set('max_period', maxDateStr + ' 23:59:59');
+
+          try {
+            const response = await fetchWithRetry(fetchUrl.href);
+            if (response.ok) {
+              const htmlText = await response.text();
+              const parser = new DOMParser();
+              doc = parser.parseFromString(htmlText, 'text/html');
+              const rows = doc.querySelectorAll('table.table tbody tr');
+              if (rows.length > 0) break;
+            }
+          } catch (err) {
+            console.error(`Error resolving ID/Nick for ${query}:`, err);
+          }
+
+          currentDate.setDate(currentDate.getDate() - 1);
+          attempts++;
+          await new Promise(r => setTimeout(r, 100));
+        }
+
+        const rows = doc.querySelectorAll('table.table tbody tr');
+        if (rows.length === 0) return null;
+
+        const firstRow = rows[0];
+        const actionText = firstRow.cells[1] ? firstRow.cells[1].textContent.trim() : '';
+
+        let extractedNick = '';
+        const nickMatch = actionText.match(/\b([A-Za-z0-9]+_[A-Za-z0-9]+)\b/);
+        if (nickMatch) {
+          extractedNick = nickMatch[1];
+        }
+
+        let extractedId = '';
+        const idMatch = doc.body.innerHTML.match(/ID аккаунта\s*:\s*(\d+)/i) || doc.body.innerHTML.match(/ID\s*аккаунта\s*:\s*<[^>]+>\s*(\d+)/i);
+        if (idMatch) {
+          extractedId = idMatch[1];
+        } else {
+          const btn = firstRow.querySelector('.btn-info, [data-toggle="modal"], button, a');
+          if (btn) {
+            const targetSelector = btn.getAttribute('data-target');
+            if (targetSelector) {
+              const modalEl = doc.querySelector(targetSelector);
+              if (modalEl) {
+                const mMatch = modalEl.innerHTML.match(/ID аккаунта\s*:\s*(\d+)/i) || modalEl.innerHTML.match(/ID\s*аккаунта\s*:\s*<[^>]+>\s*(\d+)/i);
+                if (mMatch) extractedId = mMatch[1];
+              }
+            }
+          }
+        }
+
+        return {
+          query,
+          nickname: extractedNick || (isId ? null : query),
+          accountId: extractedId || (isId ? query : null)
+        };
+      }
     };
   })();
 
@@ -5917,7 +6016,7 @@
           <div style="padding: 12px 16px; border-bottom: 1px solid var(--az-border); display: flex; gap: 12px; background: var(--az-bg-sidebar);">
             <input type="text" id="arz-reports-search" class="arz-input" placeholder="Поиск по игроку, вопросу или ответу..." style="width: 100%; box-sizing: border-box; font-size: 13px; padding: 8px 12px;">
           </div>
-          <div class="online-result-table-wrapper" style="max-height: 400px; overflow-y: auto; background: var(--az-input-bg); border-bottom: 1px solid var(--az-border);">
+          <div class="online-result-table-wrapper" style="max-height: 550px; overflow-y: auto; background: var(--az-input-bg); border-bottom: 1px solid var(--az-border);">
             <table class="online-result-table" style="width: 100%; border-collapse: collapse;">
               <thead>
                 <tr style="border-bottom: 1px solid var(--az-border); background: var(--az-bg-sidebar); position: sticky; top: 0; z-index: 1;">
@@ -6159,7 +6258,7 @@
           <div style="padding: 12px 16px; border-bottom: 1px solid var(--az-border); display: flex; gap: 12px; background: var(--az-bg-sidebar);">
             <input type="text" id="arz-reports-multi-search" class="arz-input" placeholder="Поиск по имени администратора..." style="width: 100%; box-sizing: border-box; font-size: 13px; padding: 8px 12px;">
           </div>
-          <div class="online-result-table-wrapper" style="max-height: 400px; overflow-y: auto; background: var(--az-input-bg); border-bottom: 1px solid var(--az-border);">
+          <div class="online-result-table-wrapper" style="max-height: 550px; overflow-y: auto; background: var(--az-input-bg); border-bottom: 1px solid var(--az-border);">
             <table class="online-result-table" style="width: 100%; border-collapse: collapse;">
               <thead>
                 <tr style="border-bottom: 1px solid var(--az-border); background: var(--az-bg-sidebar); position: sticky; top: 0; z-index: 1;">
@@ -6289,7 +6388,7 @@
 
     const modalHTML = `
       <div id="arz-lookup-overlay" class="arz-modal-overlay">
-        <div class="arz-modal-container" style="max-width: 580px; width: 95%;">
+        <div class="arz-modal-container" style="max-width: 850px; width: 95%;">
           <div class="arz-modal-header">
             <div class="arz-modal-icon-wrapper"><i class="fa-solid fa-user-shield"></i></div>
             <div class="arz-modal-title-block">
@@ -6311,9 +6410,10 @@
             <div class="arz-modal-form-group">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                 <label class="arz-modal-label" id="arz-lookup-input-label" style="margin: 0;"><i class="fa-solid fa-users"></i> Ник(и) игрока(ов)</label>
-                <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                   <span style="font-size: 11px; color: var(--az-text-secondary); background: var(--az-input-bg); border: 1px solid var(--az-border); padding: 2px 8px; border-radius: 12px; white-space: nowrap;">Введено: <strong id="arz-lookup-count-num" style="color: var(--az-accent-hover);">0</strong></span>
                   <span id="arz-lookup-extract-btn" style="font-size: 11px; color: var(--az-accent-hover); cursor: pointer; display: flex; align-items: center; gap: 4px; user-select: none; border-bottom: 1px dashed currentColor; white-space: nowrap;" title="Извлечь ники Nick_Name из любого текста"><i class="fa-solid fa-wand-magic-sparkles"></i> Извлечь ники</span>
+                  <span id="arz-lookup-my-nick-btn" style="font-size: 11px; color: var(--az-accent-hover); cursor: pointer; display: flex; align-items: center; gap: 4px; user-select: none; border-bottom: 1px dashed currentColor; white-space: nowrap;" title="Добавить ваш авторизованный никнейм"><i class="fa-solid fa-user-plus"></i> Свой никнейм</span>
                 </div>
               </div>
               <textarea id="arz-lookup-nicks" class="arz-textarea" rows="4" placeholder="Введите никнеймы (каждый с новой строки или через запятую) или вставьте текст для извлечения"></textarea>
@@ -6330,10 +6430,13 @@
                   <input type="date" id="arz-lookup-date-to" class="arz-input">
                 </div>
               </div>
-              <div class="arz-date-shortcuts" style="display: flex; gap: 8px; width: 100%; box-sizing: border-box; margin-top: -4px;">
+              <div class="arz-date-shortcuts" style="display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 6px !important; width: 100% !important; box-sizing: border-box !important; margin-top: -4px !important;">
                 <button type="button" class="arz-btn-shortcut" data-range="day">За день</button>
                 <button type="button" class="arz-btn-shortcut" data-range="week">За неделю</button>
                 <button type="button" class="arz-btn-shortcut" data-range="month">За месяц</button>
+                <button type="button" class="arz-btn-shortcut" data-range="start-week">С начала недели</button>
+                <button type="button" class="arz-btn-shortcut" data-range="start-month">С начала месяца</button>
+                <button type="button" class="arz-btn-shortcut" data-range="start-year">С начала года</button>
               </div>
             </div>
 
@@ -6523,6 +6626,41 @@
         window.ArizonaNotifications.show(`Извлечено никнеймов: ${uniqueNicks.length}`, 'success');
       };
 
+      overlay.querySelector('#arz-lookup-my-nick-btn').onclick = (e) => {
+        e.preventDefault();
+
+        const getNavNick = () => {
+          const el = document.querySelector('a#navbarDropdown');
+          if (!el) return '';
+          let text = '';
+          for (const node of el.childNodes) {
+            if (node.nodeType === Node.TEXT_NODE) text += node.textContent;
+          }
+          text = text.trim();
+          return text || el.textContent.split('\n')[0].trim();
+        };
+
+        const myNick = getNavNick();
+        if (!myNick) {
+          window.ArizonaNotifications.show('Никнейм авторизованного пользователя не найден', 'error');
+          return;
+        }
+
+        const textarea = overlay.querySelector('#arz-lookup-nicks');
+        const currentVal = textarea.value.trim();
+        const nicksList = currentVal ? currentVal.split(/[\n,]+/).map(n => n.trim()).filter(Boolean) : [];
+
+        if (nicksList.includes(myNick)) {
+          window.ArizonaNotifications.show('Ваш никнейм уже есть в списке!', 'info');
+          return;
+        }
+
+        nicksList.push(myNick);
+        textarea.value = nicksList.join('\n');
+        textarea.dispatchEvent(new Event('input'));
+        window.ArizonaNotifications.show(`Добавлен никнейм: ${myNick}`, 'success');
+      };
+
       overlay.querySelectorAll('.arz-tab-btn').forEach(btn => {
         btn.onclick = () => {
           switchTab(overlay, btn.dataset.tab);
@@ -6615,7 +6753,18 @@
 
   window.ArizonaDateShortcut = (function () {
     let settings = {};
+
+    function getRelativeDateStr(daysAgo) {
+      const d = new Date();
+      d.setDate(d.getDate() - daysAgo);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
     function setDate(date) {
+      if (!date) return;
       const min = document.querySelector('input[name="min_period"]');
       const max = document.querySelector('input[name="max_period"]');
       if (min && max) {
@@ -6644,6 +6793,8 @@
         date.setFullYear(date.getFullYear() - 1);
       } else if (range === '3m') {
         date.setMonth(date.getMonth() - 3);
+      } else if (range === '1w') {
+        date.setDate(date.getDate() - 7);
       }
       min.value = formatDate(date, '00:00:00');
       ['change', 'input'].forEach(e => {
@@ -6660,6 +6811,8 @@
         date.setFullYear(date.getFullYear() - 1);
       } else if (range === '3m') {
         date.setMonth(date.getMonth() - 3);
+      } else if (range === '1w') {
+        date.setDate(date.getDate() - 7);
       }
       max.value = formatDate(date, '23:59:59');
       ['change', 'input'].forEach(e => {
@@ -6892,10 +7045,26 @@
         wrap.innerHTML = `
           <label class="mb-1 mt-2 text-muted">Выбор конкретной даты</label>
           <div class="form-group">
-            <input id="arz-date-shortcut-input" type="date" class="form-control" style="background: var(--az-input-bg); border: 1px solid var(--az-input-border); color: var(--az-accent); border-radius: var(--az-border-radius-small); padding: 8px;">
+            <input id="arz-date-shortcut-input" type="text" placeholder="год-месяц-день" class="form-control" style="background: var(--az-input-bg); border: 1px solid var(--az-input-border); color: var(--az-accent); border-radius: var(--az-border-radius-small); padding: 8px;">
           </div>
+          <div id="arz-specific-date-shortcuts" style="margin-top: 6px; display: flex; flex-wrap: wrap;"></div>
         `;
-        wrap.querySelector('#arz-date-shortcut-input').onchange = (e) => setDate(e.target.value);
+
+        const input = wrap.querySelector('#arz-date-shortcut-input');
+        input.onchange = (e) => setDate(e.target.value.trim());
+
+        const shortcutsWrap = wrap.querySelector('#arz-specific-date-shortcuts');
+        const applySpecificDate = (daysAgo) => {
+          const dateStr = getRelativeDateStr(daysAgo);
+          input.value = dateStr;
+          setDate(dateStr);
+        };
+
+        shortcutsWrap.appendChild(createShortcutLink('Сегодня', () => applySpecificDate(0)));
+        shortcutsWrap.appendChild(createShortcutLink('Вчера', () => applySpecificDate(1)));
+        shortcutsWrap.appendChild(createShortcutLink('Позавчера', () => applySpecificDate(2)));
+        shortcutsWrap.appendChild(createShortcutLink('Неделю назад', () => applySpecificDate(7)));
+
         container.insertAdjacentElement('afterend', wrap);
       },
       addSortShortcuts: function () {
@@ -6925,6 +7094,7 @@
 
         wrap.appendChild(createShortcutLink('От 1 год назад', () => setMinPeriod('1y')));
         wrap.appendChild(createShortcutLink('От 3 месяца назад', () => setMinPeriod('3m')));
+        wrap.appendChild(createShortcutLink('От 1 недели назад', () => setMinPeriod('1w')));
         wrap.appendChild(createShortcutLink('От сегодня 00:00', () => setMinPeriod('today')));
 
         formGroup.insertAdjacentElement('afterend', wrap);
@@ -6941,6 +7111,7 @@
         wrap.style.cssText = 'margin-top: 6px; display: flex; flex-wrap: wrap;';
 
         wrap.appendChild(createShortcutLink('До сегодня', () => setMaxPeriod('today')));
+        wrap.appendChild(createShortcutLink('До 1 недели назад', () => setMaxPeriod('1w')));
         wrap.appendChild(createShortcutLink('До 3 месяца назад', () => setMaxPeriod('3m')));
         wrap.appendChild(createShortcutLink('До 1 год назад', () => setMaxPeriod('1y')));
 
@@ -6962,7 +7133,9 @@
             { char: '🎒', title: 'Инвентарь / Предметы' },
             { char: '💰', title: 'Деньги / Наличные / Перевод' },
             { char: '🏦', title: 'Банк / Банковский счет' },
-            { char: '🤝', title: 'Трейд / Сделка / Обмен' }
+            { char: '🤝', title: 'Трейд / Сделка / Обмен' },
+            { char: '🪙', title: 'AZ-Coins' },
+            { char: '🚗', title: 'Действия с багажником' }
           ];
 
           emojis.forEach(item => {
@@ -7002,6 +7175,40 @@
               if (window.ArizonaNotifications) window.ArizonaNotifications.show(`Вставлен свой никнейм: ${nick}`, 'success');
             } else {
               if (window.ArizonaNotifications) window.ArizonaNotifications.show('Никнейм авторизованного пользователя не найден', 'warning');
+            }
+          }));
+
+          wrap.appendChild(createShortcutLink('Конверт в ID/Никнейм', async () => {
+            const currentVal = input.value.trim();
+            if (!currentVal) {
+              if (window.ArizonaNotifications) window.ArizonaNotifications.show('Введите Никнейм или ID в поле!', 'warning');
+              return;
+            }
+
+            if (window.ArizonaNotifications) window.ArizonaNotifications.show(`Поиск данных для ${currentVal}...`, 'info');
+
+            const isId = /^\d+$/.test(currentVal);
+            const res = await window.ArizonaIdNickManager.resolveSingle(currentVal);
+
+            if (!res) {
+              if (window.ArizonaNotifications) window.ArizonaNotifications.show(`Не удалось найти данные для ${currentVal}`, 'error');
+              return;
+            }
+
+            if (isId) {
+              if (res.nickname && res.nickname !== '—') {
+                setPlayerInputValue(input, res.nickname);
+                if (window.ArizonaNotifications) window.ArizonaNotifications.show(`ID ${currentVal} ➔ Ник: ${res.nickname}`, 'success');
+              } else {
+                if (window.ArizonaNotifications) window.ArizonaNotifications.show(`Никнейм не найден для ID ${currentVal}`, 'error');
+              }
+            } else {
+              if (res.accountId && res.accountId !== '—') {
+                setPlayerInputValue(input, res.accountId);
+                if (window.ArizonaNotifications) window.ArizonaNotifications.show(`Ник ${currentVal} ➔ ID: ${res.accountId}`, 'success');
+              } else {
+                if (window.ArizonaNotifications) window.ArizonaNotifications.show(`ID аккаунта не найден для ника ${currentVal}`, 'error');
+              }
             }
           }));
 
@@ -7060,7 +7267,7 @@
 
     const modalHTML = `
       <div id="arz-analytics-overlay" class="arz-modal-overlay">
-        <div class="arz-modal-container" style="max-width: 680px; width: 95%;">
+        <div class="arz-modal-container" style="max-width: 950px; width: 95%;">
           <div class="arz-modal-header">
             <div class="arz-modal-icon-wrapper">
               <i class="fa-solid fa-chart-simple"></i>
@@ -7095,7 +7302,7 @@
                   <label class="arz-modal-label"><i class="fa-solid fa-list-check"></i> Найденные совпадения</label>
                   <span id="arz-similar-groups-count" style="background: linear-gradient(135deg, var(--az-accent) 0%, var(--az-accent-hover) 100%); color: white; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 30px;">0 групп</span>
                 </div>
-                <div id="arz-similar-groups-list" class="arz-list-container" style="max-height: 230px; overflow-y: auto;"></div>
+                <div id="arz-similar-groups-list" class="arz-list-container" style="max-height: 450px; overflow-y: auto;"></div>
               </div>
             </div>
 
@@ -7119,7 +7326,7 @@
                   <label class="arz-modal-label"><i class="fa-solid fa-list-check"></i> Обнаруженные повторы</label>
                   <span id="arz-repeats-groups-count" style="background: linear-gradient(135deg, var(--az-accent) 0%, var(--az-accent-hover) 100%); color: white; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 30px;">0 групп</span>
                 </div>
-                <div id="arz-repeats-groups-list" class="arz-list-container" style="max-height: 230px; overflow-y: auto;"></div>
+                <div id="arz-repeats-groups-list" class="arz-list-container" style="max-height: 450px; overflow-y: auto;"></div>
               </div>
             </div>
 
@@ -7148,10 +7355,13 @@
                   <input type="date" id="arz-leader-sales-date-to" class="arz-input">
                 </div>
               </div>
-              <div class="arz-date-shortcuts" style="display: flex; gap: 8px; width: 100%; box-sizing: border-box; margin-top: -4px;">
+              <div class="arz-date-shortcuts" style="display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 6px !important; width: 100% !important; box-sizing: border-box !important; margin-top: -4px !important;">
                 <button type="button" class="arz-btn-shortcut" data-range="day">За день</button>
                 <button type="button" class="arz-btn-shortcut" data-range="week">За неделю</button>
                 <button type="button" class="arz-btn-shortcut" data-range="month">За месяц</button>
+                <button type="button" class="arz-btn-shortcut" data-range="start-week">С начала недели</button>
+                <button type="button" class="arz-btn-shortcut" data-range="start-month">С начала месяца</button>
+                <button type="button" class="arz-btn-shortcut" data-range="start-year">С начала года</button>
               </div>
               <button type="button" id="arz-start-leader-sales-btn" class="arz-btn-primary" style="margin-top: 4px;"><i class="fa-solid fa-magnifying-glass"></i> Пробить логи лидеров</button>
             </div>
@@ -7181,10 +7391,13 @@
                   <input type="date" id="arz-admin-sales-date-to" class="arz-input">
                 </div>
               </div>
-              <div class="arz-date-shortcuts" style="display: flex; gap: 8px; width: 100%; box-sizing: border-box; margin-top: -4px;">
+              <div class="arz-date-shortcuts" style="display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 6px !important; width: 100% !important; box-sizing: border-box !important; margin-top: -4px !important;">
                 <button type="button" class="arz-btn-shortcut" data-range="day">За день</button>
                 <button type="button" class="arz-btn-shortcut" data-range="week">За неделю</button>
                 <button type="button" class="arz-btn-shortcut" data-range="month">За месяц</button>
+                <button type="button" class="arz-btn-shortcut" data-range="start-week">С начала недели</button>
+                <button type="button" class="arz-btn-shortcut" data-range="start-month">С начала месяца</button>
+                <button type="button" class="arz-btn-shortcut" data-range="start-year">С начала года</button>
               </div>
               <button type="button" id="arz-start-admin-sales-btn" class="arz-btn-primary" style="margin-top: 4px;"><i class="fa-solid fa-magnifying-glass"></i> Пробить логи админов</button>
             </div>
@@ -7206,7 +7419,7 @@
           try {
             const url = new URL(lnk.href, window.location.origin);
             text = url.searchParams.get('player') || '';
-          } catch (e) {}
+          } catch (e) { }
         }
         if (!text) text = lnk.textContent.trim();
         if (text && isValidNickname(text)) nicks.add(text);
@@ -7241,7 +7454,7 @@
       const ips = new Set();
       const ipCell = getIpCellFromRow(row);
       if (!ipCell) return [];
-      
+
       if (typeof parseAllIpsFromCell === 'function') {
         const pairs = parseAllIpsFromCell(ipCell);
         if (pairs && pairs.length > 0) {
@@ -7251,13 +7464,13 @@
           });
         }
       }
-      
+
       const ipRegex = /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g;
       const textMatches = ipCell.textContent.match(ipRegex);
       if (textMatches) {
         textMatches.forEach(ip => ips.add(ip));
       }
-      
+
       return Array.from(ips);
     }
 
@@ -7273,19 +7486,56 @@
       return ip;
     }
 
+    function extractNickIpPairsFromRow(row) {
+      const nicks = extractNicksFromRow(row);
+      const ipCell = getIpCellFromRow(row);
+      if (!ipCell || nicks.length === 0) return [];
+
+      const pairs = typeof parseAllIpsFromCell === 'function' ? parseAllIpsFromCell(ipCell) : [];
+      const result = [];
+
+      if (pairs.length > 0) {
+        pairs.forEach((pair, idx) => {
+          let targetNick = null;
+          const prefix = (pair.prefix || '').toUpperCase();
+
+          if (prefix.includes('II') || prefix.includes('2')) {
+            targetNick = nicks[1] || null;
+          } else if (prefix.includes('I') || prefix.includes('1') || idx === 0) {
+            targetNick = nicks[0] || null;
+          }
+
+          if (targetNick) {
+            if (pair.lastIp && !pair.lastIp.includes('*')) {
+              result.push({ nick: targetNick, ip: pair.lastIp });
+            }
+            if (pair.regIp && !pair.regIp.includes('*') && pair.regIp !== '255.255.255.255') {
+              result.push({ nick: targetNick, ip: pair.regIp });
+            }
+          }
+        });
+      } else {
+        const rawIps = extractIpsFromRow(row);
+        if (nicks[0] && rawIps.length > 0) {
+          rawIps.forEach(ip => result.push({ nick: nicks[0], ip: ip }));
+        }
+      }
+
+      return result;
+    }
+
     function scanAndGroupIPs(mode) {
       const rows = document.querySelectorAll('table.table tbody tr');
       const groups = {};
-      
+
       rows.forEach(row => {
-        const nicks = extractNicksFromRow(row);
-        const ips = extractIpsFromRow(row);
-        if (ips.length === 0) return;
-        
-        ips.forEach(ip => {
+        const nickIpPairs = extractNickIpPairsFromRow(row);
+        if (nickIpPairs.length === 0) return;
+
+        nickIpPairs.forEach(({ nick, ip }) => {
           const key = getIpKey(ip, mode);
           if (!key) return;
-          
+
           if (!groups[key]) {
             groups[key] = {
               key: key,
@@ -7296,54 +7546,51 @@
             };
           }
           groups[key].ips.add(ip);
-          if (nicks.length > 0) {
-            nicks.forEach(n => {
-              groups[key].nicks.add(n);
-              
-              let distanceText = '';
-              const ipCell = getIpCellFromRow(row);
-              if (ipCell && typeof parseAllIpsFromCell === 'function') {
-                const pairs = parseAllIpsFromCell(ipCell);
-                if (pairs && pairs[0]) {
-                  const pair = pairs[0];
-                  const regData = pair.regIp ? ipDetailsCache[pair.regIp] : null;
-                  const lastData = pair.lastIp ? ipDetailsCache[pair.lastIp] : null;
-                  if (regData && lastData && regData.lat && regData.lon && lastData.lat && lastData.lon) {
-                    const dist = calculateHaversineDistance(regData.lat, regData.lon, lastData.lat, lastData.lon);
-                    if (dist !== null) {
-                      distanceText = `~${Math.round(dist)}km`;
-                    }
-                  }
+          groups[key].nicks.add(nick);
+
+          let distanceText = '';
+          const ipCell = getIpCellFromRow(row);
+          if (ipCell && typeof parseAllIpsFromCell === 'function') {
+            const pairs = parseAllIpsFromCell(ipCell);
+            if (pairs && pairs[0]) {
+              const pair = pairs[0];
+              const regData = pair.regIp ? ipDetailsCache[pair.regIp] : null;
+              const lastData = pair.lastIp ? ipDetailsCache[pair.lastIp] : null;
+              if (regData && lastData && regData.lat && regData.lon && lastData.lat && lastData.lon) {
+                const dist = calculateHaversineDistance(regData.lat, regData.lon, lastData.lat, lastData.lon);
+                if (dist !== null) {
+                  distanceText = `~${Math.round(dist)}km`;
                 }
               }
-              if (distanceText) {
-                if (!groups[key].nickDistances[n]) {
-                  groups[key].nickDistances[n] = new Set();
-                }
-                groups[key].nickDistances[n].add(distanceText);
-              }
-            });
+            }
           }
+          if (distanceText) {
+            if (!groups[key].nickDistances[nick]) {
+              groups[key].nickDistances[nick] = new Set();
+            }
+            groups[key].nickDistances[nick].add(distanceText);
+          }
+
           if (!groups[key].rows.includes(row)) {
             groups[key].rows.push(row);
           }
         });
       });
-      
-      return Object.values(groups).filter(g => g.rows.length > 1 || g.nicks.size > 1);
+
+      return Object.values(groups).filter(g => g.nicks.size > 1);
     }
 
     function scanAndGroupRepeats(mode, threshold) {
       const rows = document.querySelectorAll('table.table tbody tr');
       const groups = {};
-      
+
       rows.forEach(row => {
         const nicks = extractNicksFromRow(row);
-        
+
         const actionCell = row.cells[1];
         const dataCell = row.cells[2];
         if (!actionCell) return;
-        
+
         const cleanCell = (cell) => {
           if (!cell) return '';
           const clone = cell.cloneNode(true);
@@ -7357,7 +7604,7 @@
           actionText += ' | ' + cleanCell(dataCell);
         }
         if (!actionText) return;
-        
+
         if (nicks.length > 0) {
           nicks.forEach(nick => {
             const key = nick + '::' + actionText;
@@ -7382,7 +7629,7 @@
           groups[key].rows.push(row);
         }
       });
-      
+
       return Object.values(groups).filter(g => g.rows.length >= threshold);
     }
 
@@ -7562,7 +7809,7 @@
       const overlay = document.createElement('div');
       overlay.className = 'arz-modal-overlay';
       overlay.innerHTML = `
-        <div class="arz-modal-container" style="max-width: 680px; width: 95%;">
+        <div class="arz-modal-container" style="max-width: 950px; width: 95%;">
           <div class="arz-modal-header">
             <div class="arz-modal-icon-wrapper" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;"><i class="fa-solid fa-triangle-exclamation"></i></div>
             <div class="arz-modal-title-block">
@@ -7585,7 +7832,7 @@
 
       overlay.querySelector('#arz-sales-close-btn').onclick = () => closeOverlay(overlay);
       overlay.querySelector('#arz-sales-results-close-header').onclick = () => closeOverlay(overlay);
-      
+
       overlay.querySelectorAll('.arz-copy-pair-btn').forEach(btn => {
         btn.onclick = (e) => {
           e.stopPropagation();
@@ -7619,10 +7866,10 @@
       const listContainer = modal.querySelector('#arz-similar-groups-list');
       const countBadge = modal.querySelector('#arz-similar-groups-count');
       if (!listContainer) return;
-      
+
       listContainer.innerHTML = '';
       countBadge.textContent = `${groups.length} групп`;
-      
+
       if (groups.length === 0) {
         listContainer.innerHTML = `
           <div class="arz-empty-state">
@@ -7632,12 +7879,12 @@
         `;
         return;
       }
-      
+
       groups.forEach(group => {
         const card = document.createElement('div');
         card.className = 'arz-similar-group-card';
         card.style.cursor = 'pointer';
-        
+
         const sortedIps = Array.from(group.ips).join(', ');
         const formattedNicks = Array.from(group.nicks).map(nick => {
           const distSet = group.nickDistances && group.nickDistances[nick];
@@ -7647,7 +7894,7 @@
           }
           return nick;
         }).join(', ');
-        
+
         const countText = group.nicks.size > 0 ? `${group.nicks.size} акк.` : `${group.rows.length} лог.`;
         const accountListText = formattedNicks.length > 0 ? formattedNicks : `${group.rows.length} записей`;
 
@@ -7663,7 +7910,7 @@
             IP: ${sortedIps}
           </div>
         `;
-        
+
         card.onclick = () => {
           const tableRows = document.querySelectorAll('table.table tbody tr');
           tableRows.forEach(row => {
@@ -7676,7 +7923,7 @@
           window.ArizonaNotifications.show(`Показано ${group.rows.length} логов для ${group.key}`, 'success');
           closeOverlay(modal);
         };
-        
+
         listContainer.appendChild(card);
       });
     }
@@ -7685,10 +7932,10 @@
       const listContainer = modal.querySelector('#arz-repeats-groups-list');
       const countBadge = modal.querySelector('#arz-repeats-groups-count');
       if (!listContainer) return;
-      
+
       listContainer.innerHTML = '';
       countBadge.textContent = `${groups.length} групп`;
-      
+
       if (groups.length === 0) {
         listContainer.innerHTML = `
           <div class="arz-empty-state">
@@ -7698,12 +7945,12 @@
         `;
         return;
       }
-      
+
       groups.forEach(group => {
         const card = document.createElement('div');
         card.className = 'arz-repeat-group-card';
         card.style.cursor = 'pointer';
-        
+
         card.innerHTML = `
           <div class="arz-repeat-group-title">
             <span><i class="fa-solid fa-user" style="color: var(--az-accent-hover); margin-right: 6px;"></i> ${group.nick}</span>
@@ -7713,7 +7960,7 @@
             Действие: <strong>${window.ArizonaUtils.escapeHtml(group.actionText)}</strong>
           </div>
         `;
-        
+
         card.onclick = () => {
           const tableRows = document.querySelectorAll('table.table tbody tr');
           tableRows.forEach(row => {
@@ -7726,7 +7973,7 @@
           window.ArizonaNotifications.show(`Показано ${group.rows.length} повторов для ${group.nick}`, 'success');
           closeOverlay(modal);
         };
-        
+
         listContainer.appendChild(card);
       });
     }
@@ -7736,13 +7983,13 @@
 
       const tabs = modal.querySelectorAll('.arz-tab-btn');
       const footer = modal.querySelector('.arz-modal-footer');
-      
+
       tabs.forEach(tab => {
         tab.onclick = () => {
           tabs.forEach(t => t.classList.remove('active'));
           tab.classList.add('active');
           activeTab = tab.dataset.tab;
-          
+
           modal.querySelector('#arz-analytics-tab-similar-ips').style.display = activeTab === 'similar-ips' ? 'flex' : 'none';
           modal.querySelector('#arz-analytics-tab-repeats').style.display = activeTab === 'repeats' ? 'flex' : 'none';
           modal.querySelector('#arz-analytics-tab-leader-sales').style.display = activeTab === 'leader-sales' ? 'flex' : 'none';
@@ -7760,10 +8007,10 @@
 
       const leaderTabContainer = modal.querySelector('#arz-analytics-tab-leader-sales');
       const adminTabContainer = modal.querySelector('#arz-analytics-tab-admin-sales');
-      
+
       if (leaderTabContainer) setupDateShortcuts(leaderTabContainer, 'arz-leader-sales-date-from', 'arz-leader-sales-date-to');
       if (adminTabContainer) setupDateShortcuts(adminTabContainer, 'arz-admin-sales-date-from', 'arz-admin-sales-date-to');
-      
+
       if (typeof setupNickCounter === 'function') {
         setupNickCounter(modal, '#arz-leader-sales-nicks', 'arz-leader-sales-count-num');
         setupNickCounter(modal, '#arz-admin-sales-nicks', 'arz-admin-sales-count-num');
@@ -7840,7 +8087,7 @@
       if (typeof loadIpDetailsCache === 'function') {
         await loadIpDetailsCache();
       }
-      
+
       const similarModeButtons = modal.querySelectorAll('.similar-mode-btn');
       similarModeButtons.forEach(btn => {
         btn.onclick = async () => {
@@ -7852,7 +8099,7 @@
           btn.classList.add('active');
           btn.style.background = 'linear-gradient(135deg, var(--az-accent) 0%, var(--az-accent-hover) 100%)';
           btn.style.color = 'white';
-          
+
           currentModeIP = btn.dataset.mode;
           if (typeof loadIpDetailsCache === 'function') {
             await loadIpDetailsCache();
@@ -7884,7 +8131,7 @@
           btn.classList.add('active');
           btn.style.background = 'linear-gradient(135deg, var(--az-accent) 0%, var(--az-accent-hover) 100%)';
           btn.style.color = 'white';
-          
+
           currentModeRepeats = btn.dataset.mode;
           const groups = scanAndGroupRepeats(currentModeRepeats, currentThresholdRepeats);
           renderRepeats(modal, groups);
@@ -7944,7 +8191,7 @@
         const hasSimilar = settings.tools?.similarIPsFinder !== false;
         const hasRepeats = settings.tools?.actionRepeatsFinder !== false;
         const isEnabled = currentSettings['extension-toggle'] !== false && (hasSimilar || hasRepeats);
-        
+
         const existingBtn = document.getElementById('arz-analytics-btn');
         if (isEnabled) {
           runWhenElementExists('.filter-buttons', () => this.injectButton());
@@ -7956,14 +8203,14 @@
         if (document.getElementById('arz-analytics-btn')) return;
         const container = document.querySelector('.filter-buttons');
         if (!container) return;
-        
+
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.id = 'arz-analytics-btn';
         btn.className = 'btn btn-success';
         btn.style.cssText = 'margin-left: 10px;';
         btn.innerHTML = `<i class="fa-solid fa-chart-simple" style="margin-right: 6px;"></i> Аналитика`;
-        
+
         btn.onclick = async () => {
           const overlay = document.createElement('div');
           overlay.className = 'arz-modal-overlay';
@@ -7972,7 +8219,7 @@
           openOverlay(el);
           await setupModal(el);
         };
-        
+
         container.appendChild(btn);
       }
     };
@@ -8547,12 +8794,21 @@
 
     let resetBtn = resetBtnElement;
     if (!resetBtn) {
-      const candidates = Array.from(document.querySelectorAll('form a, form button, .filter-buttons a, .filter-buttons button, a[href*="logsparser"]'));
+      const candidates = Array.from(document.querySelectorAll('.filter-buttons a, .filter-buttons button, form a, form button'));
       resetBtn = candidates.find(el => {
         if (el.id && el.id.startsWith('arz-')) return false;
         if (el.getAttribute('type') === 'submit') return false;
+
         const text = el.textContent.trim().toLowerCase();
-        return text.includes('сбросить') || text.includes('очистить') || el.getAttribute('type') === 'reset';
+        const href = (el.getAttribute('href') || '').toLowerCase();
+
+        return text.includes('сбросить') ||
+          text.includes('очистить') ||
+          el.getAttribute('type') === 'reset' ||
+          href === 'http://arizonarp.logsparser.info' ||
+          href === 'https://arizonarp.logsparser.info' ||
+          href === 'http://arizonarp.logsparser.info/' ||
+          href === 'https://arizonarp.logsparser.info/';
       });
       if (resetBtn) {
         resetBtnElement = resetBtn;
@@ -8629,10 +8885,20 @@
     const actualForm = form || document.querySelector('form.filter');
     if (actualForm) {
       const formData = new FormData(actualForm);
-      
-      const formKeys = new Set(formData.keys());
-      formKeys.forEach(key => {
+
+      const allFormNames = new Set(formData.keys());
+      actualForm.querySelectorAll('[name]').forEach(el => {
+        const name = el.getAttribute('name');
+        if (name) allFormNames.add(name);
+      });
+
+      allFormNames.forEach(key => {
         targetUrl.searchParams.delete(key);
+        if (key.endsWith('[]')) {
+          targetUrl.searchParams.delete(key.slice(0, -2));
+        } else {
+          targetUrl.searchParams.delete(`${key}[]`);
+        }
       });
 
       for (const [key, value] of formData.entries()) {
