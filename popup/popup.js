@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'extension-toggle': true,
     'visual-sticky-navbar': true,
     'visual-sticky-headers': true,
+    'visual-theme-enabled': true,
     'visual-hide-sidebar': false,
     'visual-toggle-sidebar': false,
     'visual-vertical-borders': false,
@@ -59,6 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'tweak-copy-row': true,
     'tweak-hide-row': true,
     'tweak-copy-cells': true,
+    'tweak-block-copy': true,
     'tweak-multi-select': true
   };
 
@@ -153,6 +155,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const ARIZONA_STORAGE_KEY = 'arizonaSettings';
 
+  const defaultCustomTheme = {
+    dark: {
+      accent: '#d40d0d',
+      accentHover: '#ff4d4d',
+      bg: '#0c0e12',
+      bgSidebar: '#13171e',
+      bgNav: '#13171e',
+      cardBg: '#1c212a',
+      tableBg: '#181c24',
+      text: '#e2e8f0',
+      textSecondary: '#94a3b8',
+      border: '#334155'
+    },
+    light: {
+      accent: '#d40d0d',
+      accentHover: '#b91c1c',
+      bg: '#f8fafc',
+      bgSidebar: '#ffffff',
+      bgNav: '#ffffff',
+      cardBg: '#ffffff',
+      tableBg: '#ffffff',
+      text: '#0f172a',
+      textSecondary: '#64748b',
+      border: '#e2e8f0'
+    }
+  };
+
   const defaultArizonaSettings = {
     templatesEnabled: true,
     ipLookupEnabled: true,
@@ -170,18 +199,64 @@ document.addEventListener('DOMContentLoaded', () => {
       filterWindow: true,
       formsEnabled: true,
       online: true,
+      punishment: true,
+      ipBatch: true,
+      idNick: true,
+      report: true,
+      lookup: true,
+      analytics: true,
       dateShortcutEnabled: true,
       styleResetButtonEnabled: true,
       copyAllLogsEnabled: true,
-      tgVkDetectorEnabled: true
+      tgVkDetectorEnabled: true,
+      markLogsEnabled: true,
+      multiPlayersEnabled: true
+      ,duplicatePaginationTop: true
     },
     theme: 'dark',
     fontSize: 14,
     colorScheme: 'red',
     borderRadius: '8px',
+    backgroundColor: null,
+    backgroundImage: null,
+    backgroundImageUrl: null,
+    backgroundImageBlur: 0,
+    cardOpacity: 100,
+    cardBodyBorder: false,
+    customThemeEnabled: false,
+    customTheme: defaultCustomTheme,
     customTriggerIcon: null,
     customTriggerEnabled: false
   };
+
+  function isPlainObject(value) {
+    return value && typeof value === 'object' && !Array.isArray(value);
+  }
+
+  function deepMerge(base, override) {
+    const result = { ...base };
+    if (!isPlainObject(override)) return result;
+    Object.entries(override).forEach(([key, value]) => {
+      result[key] = isPlainObject(value) && isPlainObject(result[key])
+        ? deepMerge(result[key], value)
+        : value;
+    });
+    return result;
+  }
+
+  function getMergedArizonaSettings(value) {
+    return deepMerge(defaultArizonaSettings, value || {});
+  }
+
+  function getCustomThemePalette(settings, mode) {
+    const fallback = defaultCustomTheme[mode] || defaultCustomTheme.dark;
+    const saved = settings?.customTheme?.[mode] || {};
+    const palette = { ...fallback, ...saved };
+    Object.keys(fallback).forEach(key => {
+      if (!/^#[0-9a-f]{6}$/i.test(palette[key])) palette[key] = fallback[key];
+    });
+    return palette;
+  }
 
   function getArizonaElementValue(path, settingsObj) {
     const parts = path.split('.');
@@ -248,15 +323,234 @@ document.addEventListener('DOMContentLoaded', () => {
     'tools-filterWindow': 'tools.filterWindow',
     'tools-formsEnabled': 'tools.formsEnabled',
     'tools-online': 'tools.online',
+    'tools-punishment': 'tools.punishment',
+    'tools-ipBatch': 'tools.ipBatch',
+    'tools-idNick': 'tools.idNick',
+    'tools-report': 'tools.report',
+    'tools-lookup': 'tools.lookup',
+    'tools-analytics': 'tools.analytics',
     'tools-dateShortcutEnabled': 'tools.dateShortcutEnabled',
     'tools-styleResetButtonEnabled': 'tools.styleResetButtonEnabled',
     'tools-copyAllLogsEnabled': 'tools.copyAllLogsEnabled',
     'tools-tgVkDetectorEnabled': 'tools.tgVkDetectorEnabled',
+    'tools-markLogsEnabled': 'tools.markLogsEnabled',
+    'tools-multiPlayersEnabled': 'tools.multiPlayersEnabled',
+    'tools-duplicatePaginationTop': 'tools.duplicatePaginationTop',
 
     'visual-theme-mode': 'theme',
+    'visual-theme-enabled': 'themeEnabled',
+    'visual-custom-theme-enabled': 'customThemeEnabled',
     'visual-theme-color': 'colorScheme',
-    'visual-theme-radius': 'borderRadius'
+    'visual-theme-radius': 'borderRadius',
+    'visual-background-color': 'backgroundColor',
+    'visual-background-image-url': 'backgroundImageUrl',
+    'visual-card-opacity': 'cardOpacity',
+    'visual-background-blur': 'backgroundImageBlur',
+    'visual-card-body-border': 'cardBodyBorder'
   };
+
+  const backgroundImageInput = document.getElementById('visual-background-image');
+  const backgroundImageButton = document.getElementById('visual-background-image-btn');
+  const backgroundImageReset = document.getElementById('visual-background-image-reset');
+  const backgroundImageUrl = document.getElementById('visual-background-image-url');
+  const backgroundImageUrlButton = document.getElementById('visual-background-image-url-btn');
+  const backgroundReset = document.getElementById('visual-background-reset');
+  const customThemeEditor = document.getElementById('custom-theme-editor');
+  const customThemeModeButtons = document.querySelectorAll('[data-custom-theme-mode]');
+  const customThemeColorInputs = document.querySelectorAll('[data-custom-theme-color]');
+  const customThemeReset = document.getElementById('custom-theme-reset');
+  const customThemeCopyPreset = document.getElementById('custom-theme-copy-preset');
+  let customThemeMode = 'dark';
+  let customThemeSaveTimer = null;
+
+  function saveAppearanceValues(values) {
+    chrome.storage.local.get([ARIZONA_STORAGE_KEY], (result) => {
+      const current = getMergedArizonaSettings(result[ARIZONA_STORAGE_KEY]);
+      Object.entries(values).forEach(([path, value]) => setArizonaElementValue(path, value, current));
+      chrome.storage.local.set({ [ARIZONA_STORAGE_KEY]: current }, () => {
+        applyThemeToPopup(current);
+      });
+    });
+  }
+
+  function saveAppearanceValue(path, value) {
+    saveAppearanceValues({ [path]: value });
+  }
+
+  function scheduleCustomThemeSave(values) {
+    clearTimeout(customThemeSaveTimer);
+    customThemeSaveTimer = setTimeout(() => saveAppearanceValues(values), 80);
+  }
+
+  function setCustomThemeEditorVisible(enabled) {
+    if (customThemeEditor) customThemeEditor.hidden = !enabled;
+  }
+
+  function setCustomThemeMode(mode) {
+    customThemeMode = mode === 'light' ? 'light' : 'dark';
+    customThemeModeButtons.forEach(button => {
+      button.classList.toggle('active', button.dataset.customThemeMode === customThemeMode);
+    });
+    const settings = getMergedArizonaSettings(window.__arizonaPopupSettings);
+    const palette = getCustomThemePalette(settings, customThemeMode);
+    const backgroundColorInput = document.getElementById('visual-background-color');
+    const backgroundValue = settings.customThemeEnabled === true
+      ? palette.bg
+      : (settings.backgroundColor || defaultCustomTheme[customThemeMode].bg);
+    if (backgroundColorInput && /^#[0-9a-f]{6}$/i.test(backgroundValue || '')) {
+      backgroundColorInput.value = backgroundValue;
+    }
+    renderCustomThemeEditor(settings);
+  }
+
+  function renderCustomThemePreview(palette) {
+    const preview = document.querySelector('.custom-theme-preview');
+    if (!preview) return;
+    const previewStyle = preview.style;
+    previewStyle.setProperty('--custom-preview-accent', palette.accent);
+    previewStyle.setProperty('--custom-preview-bg', palette.bg);
+    previewStyle.setProperty('--custom-preview-card', palette.cardBg);
+    previewStyle.setProperty('--custom-preview-border', palette.border);
+    previewStyle.setProperty('--custom-preview-text', palette.text);
+    previewStyle.setProperty('--custom-preview-text-secondary', palette.textSecondary);
+  }
+
+  function renderCustomThemeEditor(settings) {
+    const merged = getMergedArizonaSettings(settings);
+    const palette = getCustomThemePalette(merged, customThemeMode);
+    customThemeColorInputs.forEach(input => {
+      const value = palette[input.dataset.customThemeColor];
+      if (value) input.value = value;
+    });
+    renderCustomThemePreview(palette);
+    setCustomThemeEditorVisible(merged.customThemeEnabled === true);
+  }
+
+  function readCustomThemePalette() {
+    const palette = {};
+    customThemeColorInputs.forEach(input => {
+      palette[input.dataset.customThemeColor] = input.value;
+    });
+    palette.bgNav = palette.bgSidebar;
+    return palette;
+  }
+
+  function getPresetPalette(theme, colorSchemeName) {
+    const scheme = colorSchemes[colorSchemeName] || colorSchemes.red;
+    const mode = scheme[theme] || scheme.dark;
+    const isLight = theme === 'light';
+    return {
+      ...defaultCustomTheme[theme],
+      accent: scheme.accent,
+      accentHover: scheme.accentHover,
+      bg: mode.bg,
+      cardBg: mode.cardBg,
+      tableBg: mode.cardBg,
+      bgSidebar: isLight ? '#ffffff' : mode.cardBg,
+      bgNav: isLight ? '#ffffff' : mode.cardBg,
+      text: isLight ? '#0f172a' : '#e2e8f0',
+      textSecondary: isLight ? '#64748b' : '#94a3b8',
+      border: isLight ? '#e2e8f0' : '#334155'
+    };
+  }
+
+  function updateCustomThemePalette(mode, palette) {
+    const cleanPalette = {};
+    Object.entries(palette).forEach(([key, value]) => {
+      if (/^#[0-9a-f]{6}$/i.test(value)) cleanPalette[key] = value;
+    });
+    scheduleCustomThemeSave({ [`customTheme.${mode}`]: cleanPalette });
+    const nextSettings = getMergedArizonaSettings(window.__arizonaPopupSettings);
+    nextSettings.customTheme[mode] = { ...nextSettings.customTheme[mode], ...cleanPalette };
+    window.__arizonaPopupSettings = nextSettings;
+    renderCustomThemePreview(nextSettings.customTheme[mode]);
+  }
+
+  if (backgroundReset) backgroundReset.addEventListener('click', () => {
+    const activeMode = (window.__arizonaPopupSettings?.theme || 'dark') === 'light' ? 'light' : 'dark';
+    const defaultBackground = defaultCustomTheme[activeMode].bg;
+    document.getElementById('visual-background-color').value = defaultBackground;
+    if (window.__arizonaPopupSettings?.customThemeEnabled === true) {
+      saveAppearanceValues({
+        backgroundColor: null,
+        [`customTheme.${activeMode}.bg`]: defaultBackground
+      });
+    } else {
+      saveAppearanceValue('backgroundColor', null);
+    }
+  });
+  if (backgroundImageButton) backgroundImageButton.addEventListener('click', () => backgroundImageInput?.click());
+  if (backgroundImageInput) backgroundImageInput.addEventListener('change', () => {
+    const file = backgroundImageInput.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) return alert('Размер изображения не должен превышать 5 МБ.');
+    const reader = new FileReader();
+    reader.onload = () => {
+      saveAppearanceValues({ backgroundImage: reader.result, backgroundImageUrl: null });
+      if (backgroundImageUrl) backgroundImageUrl.value = '';
+    };
+    reader.readAsDataURL(file);
+  });
+  if (backgroundImageReset) backgroundImageReset.addEventListener('click', () => {
+    if (backgroundImageInput) backgroundImageInput.value = '';
+    saveAppearanceValues({ backgroundImage: null, backgroundImageUrl: null });
+    if (backgroundImageUrl) backgroundImageUrl.value = '';
+  });
+  if (backgroundImageUrlButton) backgroundImageUrlButton.addEventListener('click', () => {
+    const value = backgroundImageUrl?.value.trim() || '';
+    try {
+      const parsed = new URL(value);
+      if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error();
+    } catch {
+      alert('Введите корректную ссылку на изображение (http:// или https://).');
+      return;
+    }
+    saveAppearanceValues({ backgroundImageUrl: value, backgroundImage: null });
+    if (backgroundImageInput) backgroundImageInput.value = '';
+  });
+
+  customThemeModeButtons.forEach(button => {
+    button.addEventListener('click', () => setCustomThemeMode(button.dataset.customThemeMode));
+  });
+
+  customThemeColorInputs.forEach(input => {
+    input.addEventListener('input', () => {
+      const palette = readCustomThemePalette();
+      updateCustomThemePalette(customThemeMode, palette);
+    });
+  });
+
+  const backgroundColorInput = document.getElementById('visual-background-color');
+  if (backgroundColorInput) backgroundColorInput.addEventListener('input', () => {
+    const settings = getMergedArizonaSettings(window.__arizonaPopupSettings);
+    if (settings.customThemeEnabled !== true || !/^#[0-9a-f]{6}$/i.test(backgroundColorInput.value)) return;
+    const mode = settings.theme === 'light' ? 'light' : 'dark';
+    const palette = {
+      ...settings.customTheme[mode],
+      bg: backgroundColorInput.value
+    };
+    settings.customTheme[mode] = palette;
+    window.__arizonaPopupSettings = settings;
+    scheduleCustomThemeSave({ [`customTheme.${mode}`]: palette });
+    renderCustomThemePreview(palette);
+  });
+
+  if (customThemeReset) customThemeReset.addEventListener('click', () => {
+    const palette = { ...defaultCustomTheme[customThemeMode] };
+    window.__arizonaPopupSettings = getMergedArizonaSettings(window.__arizonaPopupSettings);
+    window.__arizonaPopupSettings.customTheme[customThemeMode] = palette;
+    scheduleCustomThemeSave({ [`customTheme.${customThemeMode}`]: palette });
+    renderCustomThemeEditor(window.__arizonaPopupSettings);
+  });
+
+  if (customThemeCopyPreset) customThemeCopyPreset.addEventListener('click', () => {
+    const settings = getMergedArizonaSettings(window.__arizonaPopupSettings);
+    const palette = getPresetPalette(customThemeMode, settings.colorScheme || 'red');
+    settings.customTheme[customThemeMode] = palette;
+    window.__arizonaPopupSettings = settings;
+    scheduleCustomThemeSave({ [`customTheme.${customThemeMode}`]: palette });
+    renderCustomThemeEditor(settings);
+  });
 
   const colorSchemes = {
     red: {
@@ -332,10 +626,12 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   function applyThemeToPopup(settings) {
-    const theme = settings.theme || 'dark';
-    const colorSchemeName = settings.colorScheme || 'red';
-    const borderRadiusVal = settings.borderRadius || '8px';
-    const fontSizeVal = settings.fontSize || 14;
+    const mergedSettings = getMergedArizonaSettings(settings);
+    window.__arizonaPopupSettings = mergedSettings;
+    const theme = mergedSettings.theme || 'dark';
+    const colorSchemeName = mergedSettings.colorScheme || 'red';
+    const borderRadiusVal = mergedSettings.borderRadius || '8px';
+    const fontSizeVal = mergedSettings.fontSize || 14;
 
     const body = document.body;
     if (theme === 'light') {
@@ -349,21 +645,39 @@ document.addEventListener('DOMContentLoaded', () => {
         body.classList.remove(cls);
       }
     });
-    body.classList.add('pop-theme-' + colorSchemeName);
+    body.classList.add('pop-theme-' + (mergedSettings.customThemeEnabled === true ? 'custom' : colorSchemeName));
 
     const scheme = colorSchemes[colorSchemeName] || colorSchemes.red;
     const modeColors = scheme[theme] || scheme.dark;
+    const customPalette = mergedSettings.customThemeEnabled === true
+      ? getCustomThemePalette(mergedSettings, theme)
+      : null;
+    const activePalette = customPalette
+      ? { ...modeColors, ...customPalette }
+      : modeColors;
 
     const rootStyle = document.documentElement.style;
-    rootStyle.setProperty('--pop-accent', scheme.accent);
-    rootStyle.setProperty('--pop-accent2', scheme.accentHover);
-    rootStyle.setProperty('--pop-accent-rgb', scheme.accentRgb);
-    rootStyle.setProperty('--pop-accent-gradient', `linear-gradient(135deg, ${scheme.accent} 0%, ${scheme.accentHover} 100%)`);
-    rootStyle.setProperty('--pop-bg', modeColors.bg);
-    rootStyle.setProperty('--pop-card-bg', theme === 'light' ? '#ffffff' : modeColors.cardBg);
+    const accent = customPalette?.accent || scheme.accent;
+    const accentHover = customPalette?.accentHover || scheme.accentHover;
+    const accentRgb = customPalette
+      ? accent.replace('#', '').match(/.{2}/g).map(part => parseInt(part, 16)).join(', ')
+      : scheme.accentRgb;
+    rootStyle.setProperty('--pop-accent', accent);
+    rootStyle.setProperty('--pop-accent2', accentHover);
+    rootStyle.setProperty('--pop-accent-rgb', accentRgb);
+    rootStyle.setProperty('--pop-accent-gradient', `linear-gradient(135deg, ${accent} 0%, ${accentHover} 100%)`);
+    rootStyle.setProperty('--pop-bg', activePalette.bg);
+    rootStyle.setProperty('--pop-card-bg', activePalette.cardBg || (theme === 'light' ? '#ffffff' : modeColors.cardBg));
     rootStyle.setProperty('--pop-radius', borderRadiusVal);
 
-    if (theme === 'light') {
+    if (customPalette) {
+      rootStyle.setProperty('--pop-text', customPalette.text);
+      rootStyle.setProperty('--pop-text-secondary', customPalette.textSecondary);
+      rootStyle.setProperty('--pop-border', customPalette.border);
+      rootStyle.setProperty('--pop-input-bg', customPalette.bgSidebar);
+      rootStyle.setProperty('--pop-input-border', customPalette.border);
+      rootStyle.setProperty('--pop-input-text', customPalette.text);
+    } else if (theme === 'light') {
       rootStyle.setProperty('--pop-text', '#0f172a');
       rootStyle.setProperty('--pop-text-secondary', '#64748b');
       rootStyle.setProperty('--pop-border', '#e2e8f0');
@@ -417,12 +731,13 @@ document.addEventListener('DOMContentLoaded', () => {
     rootStyle.setProperty('--pop-font-scale', scale);
 
     updateStatusText(document.getElementById('extension-toggle').checked);
+    setCustomThemeMode(theme);
   }
 
   function loadArizonaSettings() {
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
       chrome.storage.local.get([ARIZONA_STORAGE_KEY], (result) => {
-        const settings = { ...defaultArizonaSettings, ...result[ARIZONA_STORAGE_KEY] };
+        const settings = getMergedArizonaSettings(result[ARIZONA_STORAGE_KEY]);
         Object.keys(arizonaMappings).forEach(elId => {
           const el = document.getElementById(elId);
           if (el) {
@@ -435,7 +750,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (el.type === 'range' || el.type === 'color' || el.type === 'text') {
                   const valEl = document.getElementById(elId + '-val');
                   if (valEl) {
-                    valEl.textContent = val + (elId.includes('Delay') ? ' мс' : elId.includes('Width') ? ' px' : '');
+                    valEl.textContent = val + (elId.includes('Delay') ? ' мс' : elId.includes('Width') ? ' px' : elId === 'visual-card-opacity' ? '%' : '');
                   }
                 }
               }
@@ -450,7 +765,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function saveArizonaSettings() {
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
       chrome.storage.local.get([ARIZONA_STORAGE_KEY], (result) => {
-        const current = { ...defaultArizonaSettings, ...result[ARIZONA_STORAGE_KEY] };
+        const current = getMergedArizonaSettings(result[ARIZONA_STORAGE_KEY]);
         Object.keys(arizonaMappings).forEach(elId => {
           const el = document.getElementById(elId);
           if (el) {
@@ -461,7 +776,7 @@ document.addEventListener('DOMContentLoaded', () => {
               val = parseInt(el.value);
               const valEl = document.getElementById(elId + '-val');
               if (valEl) {
-                valEl.textContent = val + (elId.includes('Delay') ? ' мс' : elId.includes('Width') ? ' px' : '');
+                valEl.textContent = val + (elId.includes('Delay') ? ' мс' : elId.includes('Width') ? ' px' : elId === 'visual-card-opacity' ? '%' : '');
               }
             } else {
               val = el.value;
@@ -485,7 +800,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const val = el.value;
           const valEl = document.getElementById(elId + '-val');
           if (valEl) {
-            valEl.textContent = val + (elId.includes('Delay') ? ' мс' : elId.includes('Width') ? ' px' : '');
+            valEl.textContent = val + (elId.includes('Delay') ? ' мс' : elId.includes('Width') ? ' px' : elId === 'visual-card-opacity' ? '%' : '');
           }
         });
       }

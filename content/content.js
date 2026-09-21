@@ -10,6 +10,7 @@
     'extension-toggle': true,
     'visual-sticky-navbar': true,
     'visual-sticky-headers': true,
+    'visual-theme-enabled': true,
     'visual-hide-sidebar': false,
     'visual-toggle-sidebar': false,
     'visual-vertical-borders': false,
@@ -24,6 +25,7 @@
     'tweak-copy-row': true,
     'tweak-hide-row': true,
     'tweak-copy-cells': true,
+    'tweak-block-copy': true,
     'tweak-multi-select': true
   };
 
@@ -38,6 +40,18 @@
   let isProcessingIps = false;
   let isProcessingIdentical = false;
   let isProcessingTuning = false;
+
+  function clearCopyableSnippets() {
+    document.querySelectorAll('.arz-copyable-snippet').forEach((snippet) => {
+      snippet.replaceWith(document.createTextNode(snippet.textContent || ''));
+    });
+  }
+
+  function updateCopyBlockSetting(enabled) {
+    window.dispatchEvent(new CustomEvent('arizona-helper-copy-setting', {
+      detail: { enabled: enabled === true }
+    }));
+  }
 
   function isCurrentlyProcessing() {
     return isProcessingTable;
@@ -608,6 +622,7 @@
 
   function processSnippetsInElement(element) {
     if (!element) return;
+    if (currentSettings['tweak-copy-cells'] === false) return;
     if (element.querySelector('.arz-copyable-snippet') || element.classList.contains('arz-copyable-snippet')) return;
 
     const textNodes = [];
@@ -668,13 +683,23 @@
   }
 
   function initCopyButtonsLazy(settings) {
-    const isEnabled = settings['extension-toggle'] !== false;
+    const isEnabled = settings['extension-toggle'] !== false &&
+      settings['tweak-copy-btn-visibility'] !== 'off';
     if (!isEnabled) {
       document.removeEventListener('mouseover', handleRowHover);
       if (copyBtnObserver) {
         copyBtnObserver.disconnect();
         copyBtnObserver = null;
       }
+      document.querySelectorAll('.arz-log-copy-menu-btn').forEach(btn => btn.remove());
+      document.querySelectorAll('tr[data-arz-copy-btn-injected="true"]').forEach((tr) => {
+        tr.removeAttribute('data-arz-copy-btn-injected');
+        const cell = tr.cells?.[1];
+        if (cell) {
+          cell.style.removeProperty('position');
+          cell.style.removeProperty('padding-right');
+        }
+      });
       return;
     }
 
@@ -821,10 +846,22 @@
     firstCell.insertBefore(handle, firstCell.firstChild);
   }
 
+  function removeMarkHandle(tr) {
+    const handle = tr?.querySelector('.arz-row-mark-handle');
+    if (handle) handle.remove();
+    if (tr?.cells?.[0]) {
+      tr.cells[0].style.removeProperty('position');
+      tr.cells[0].style.removeProperty('padding-left');
+    }
+  }
+
   function processRow(tr) {
     if (!tr || !tr.cells || !tr.cells[1]) return;
 
-    try { injectMarkHandle(tr); } catch (e) { }
+    try {
+      if (arizonaSettings.tools?.markLogsEnabled !== false) injectMarkHandle(tr);
+      else removeMarkHandle(tr);
+    } catch (e) { }
     try { window.ArizonaMultiSelectManager.injectCheckbox(tr); } catch (e) { }
 
     if (window.ArizonaMaskingManager && typeof window.ArizonaMaskingManager.maskRow === 'function') {
@@ -835,9 +872,13 @@
     try { highlightTuningAHK(tr); } catch (e) { }
     try { injectRowActions(tr); } catch (e) { }
 
-    try { processSnippetsInElement(tr.cells[1]); } catch (e) { }
+    if (currentSettings['tweak-copy-cells'] !== false) {
+      try { processSnippetsInElement(tr.cells[1]); } catch (e) { }
+    }
     if (tr.cells[2]) {
-      try { processSnippetsInElement(tr.cells[2]); } catch (e) { }
+      if (currentSettings['tweak-copy-cells'] !== false) {
+        try { processSnippetsInElement(tr.cells[2]); } catch (e) { }
+      }
     }
 
     const isEnabled = currentSettings['extension-toggle'] !== false;
@@ -1934,9 +1975,48 @@
     }
   }
 
+  function refreshFeatureManagers() {
+    [
+      window.ArizonaColumnEyeButtons,
+      window.ArizonaLogFilter,
+      window.ArizonaFormsManager,
+      window.ArizonaOnlineManager,
+      window.ArizonaPunishmentManager,
+      window.ArizonaIpBatchManager,
+      window.ArizonaIdNickManager,
+      window.ArizonaReportManager,
+      window.ArizonaLookupManager,
+      window.ArizonaAnalyticsManager,
+      window.ArizonaTemplatesManager,
+      window.ArizonaCopyLogsManager,
+      window.ArizonaSidebarManager,
+      window.ArizonaMultiSelectManager,
+      window.ArizonaLoadMoreManager,
+      window.ArizonaMultiPlayersManager
+    ].forEach((manager) => {
+      if (manager && typeof manager.updateSettings === 'function') {
+        try { manager.updateSettings(arizonaSettings); } catch (e) { }
+      }
+    });
+
+    if (window.ArizonaThemeManager && typeof window.ArizonaThemeManager.updateSettings === 'function') {
+      try {
+        window.ArizonaThemeManager.updateSettings({
+          ...arizonaSettings,
+          themeEnabled: currentSettings['extension-toggle'] !== false &&
+            currentSettings['visual-theme-enabled'] !== false
+        });
+      } catch (e) { }
+    }
+  }
+
   function applySettings(settings) {
     initCopyButtonsLazy(settings);
     initIpRowsObserver(settings);
+    updateCopyBlockSetting(
+      settings['extension-toggle'] !== false && settings['tweak-block-copy'] !== false
+    );
+    refreshFeatureManagers();
     const isEnabled = settings['extension-toggle'] !== false;
 
     document.body.classList.remove(
@@ -1963,6 +2043,7 @@
     if (!isEnabled) {
       document.body.classList.add('arz-extension-disabled');
       clearIpDetailsFromPage();
+      clearCopyableSnippets();
       resetBadges();
       return;
     }
@@ -2003,6 +2084,10 @@
       initIpRowsObserver();
     } else {
       clearIpDetailsFromPage();
+    }
+
+    if (settings['tweak-copy-cells'] === false) {
+      clearCopyableSnippets();
     }
 
     if (window.ArizonaSidebarManager) {
@@ -2475,6 +2560,52 @@
   window.ArizonaThemeManager = (function () {
     let settings = {};
 
+    const defaultCustomTheme = {
+      dark: {
+        accent: '#d40d0d',
+        accentHover: '#ff4d4d',
+        bg: '#0c0e12',
+        bgSidebar: '#13171e',
+        bgNav: '#13171e',
+        cardBg: '#1c212a',
+        tableBg: '#181c24',
+        text: '#e2e8f0',
+        textSecondary: '#94a3b8',
+        border: '#334155'
+      },
+      light: {
+        accent: '#d40d0d',
+        accentHover: '#b91c1c',
+        bg: '#f8fafc',
+        bgSidebar: '#ffffff',
+        bgNav: '#ffffff',
+        cardBg: '#ffffff',
+        tableBg: '#ffffff',
+        text: '#0f172a',
+        textSecondary: '#64748b',
+        border: '#e2e8f0'
+      }
+    };
+
+    function isHexColor(value) {
+      return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value);
+    }
+
+    function hexToRgb(value, fallback) {
+      if (!isHexColor(value)) return fallback;
+      return value.slice(1).match(/.{2}/g).map(part => parseInt(part, 16)).join(', ');
+    }
+
+    function getCustomPalette(theme) {
+      const fallback = defaultCustomTheme[theme] || defaultCustomTheme.dark;
+      const saved = settings.customTheme && settings.customTheme[theme];
+      const palette = { ...fallback, ...(saved || {}) };
+      Object.keys(fallback).forEach((key) => {
+        if (!isHexColor(palette[key])) palette[key] = fallback[key];
+      });
+      return palette;
+    }
+
     const colorSchemes = {
       red: {
         accent: '#d40d0d',
@@ -2698,6 +2829,26 @@
         this.apply();
       },
       apply: function () {
+        if (settings.themeEnabled === false) {
+          document.body.classList.remove('az-light-theme', 'az-custom-bg-image-active');
+          document.body.classList.forEach(cls => {
+            if (cls.startsWith('az-theme-')) {
+              document.body.classList.remove(cls);
+            }
+          });
+          [
+            '--az-font-size', '--az-border-radius', '--az-border-radius-small',
+            '--az-accent', '--az-accent-rgb', '--az-accent-hover', '--az-bg',
+            '--az-custom-bg-image', '--az-custom-bg-blur', '--az-bg-sidebar',
+            '--az-bg-nav', '--az-card-bg', '--az-log-card-bg', '--az-log-table-bg',
+            '--az-log-card-border', '--az-log-card-body-border', '--az-table-bg',
+            '--az-table-row-hover', '--az-text', '--az-text-secondary', '--az-border',
+            '--az-input-bg', '--az-input-border', '--az-input-text',
+            '--az-btn-close-filter'
+          ].forEach(name => document.documentElement.style.removeProperty(name));
+          return;
+        }
+
         const theme = settings.theme || 'dark';
         const colorSchemeName = settings.colorScheme || 'red';
         const borderRadiusVal = settings.borderRadius || '8px';
@@ -2714,7 +2865,7 @@
             document.body.classList.remove(cls);
           }
         });
-        document.body.classList.add(`az-theme-${colorSchemeName}`);
+        document.body.classList.add(`az-theme-${settings.customThemeEnabled === true ? 'custom' : colorSchemeName}`);
 
         document.documentElement.style.setProperty('--az-font-size', `${fontSizeVal}px`);
         document.documentElement.style.setProperty('--az-border-radius', borderRadiusVal);
@@ -2724,19 +2875,60 @@
 
         const scheme = colorSchemes[colorSchemeName] || colorSchemes.red;
         const modeColors = scheme[theme] || scheme.dark;
+        const customPalette = settings.customThemeEnabled === true ? getCustomPalette(theme) : null;
+        const activeColors = customPalette ? { ...modeColors, ...customPalette } : modeColors;
+        const customBackground = settings.customThemeEnabled === true
+          ? (isHexColor(activeColors.bg) ? activeColors.bg : modeColors.bg)
+          : (isHexColor(settings.backgroundColor || '') ? settings.backgroundColor : modeColors.bg);
+        const cardOpacity = Math.min(100, Math.max(10, Number(settings.cardOpacity ?? 100))) / 100;
+        const backgroundImage = typeof settings.backgroundImage === 'string' && settings.backgroundImage.startsWith('data:image/')
+          ? settings.backgroundImage : 'none';
+        const backgroundImageUrl = typeof settings.backgroundImageUrl === 'string' && /^https?:\/\//i.test(settings.backgroundImageUrl)
+          ? settings.backgroundImageUrl : 'none';
+        const backgroundSource = backgroundImageUrl !== 'none' ? backgroundImageUrl : backgroundImage;
+        const backgroundImageBlur = Math.min(30, Math.max(0, Number(settings.backgroundImageBlur ?? 0)));
+        document.body.classList.toggle('az-custom-bg-image-active', backgroundSource !== 'none');
 
-        document.documentElement.style.setProperty('--az-accent', scheme.accent);
-        document.documentElement.style.setProperty('--az-accent-rgb', scheme.accentRgb);
-        document.documentElement.style.setProperty('--az-accent-hover', scheme.accentHover);
+        const accent = isHexColor(activeColors.accent) ? activeColors.accent : scheme.accent;
+        const accentHover = isHexColor(activeColors.accentHover) ? activeColors.accentHover : scheme.accentHover;
+        document.documentElement.style.setProperty('--az-accent', accent);
+        document.documentElement.style.setProperty('--az-accent-rgb', hexToRgb(accent, scheme.accentRgb));
+        document.documentElement.style.setProperty('--az-accent-hover', accentHover);
 
-        document.documentElement.style.setProperty('--az-bg', modeColors.bg);
-        document.documentElement.style.setProperty('--az-bg-sidebar', modeColors.bgSidebar);
-        document.documentElement.style.setProperty('--az-bg-nav', modeColors.bgNav);
-        document.documentElement.style.setProperty('--az-card-bg', modeColors.cardBg);
-        document.documentElement.style.setProperty('--az-table-bg', modeColors.tableBg);
-        document.documentElement.style.setProperty('--az-table-row-hover', modeColors.tableRowHover);
+        document.documentElement.style.setProperty('--az-bg', customBackground);
+        const safeBackgroundSource = backgroundSource.replace(/[\\"\r\n]/g, (character) => `\\${character}`);
+        document.documentElement.style.setProperty('--az-custom-bg-image', `url("${safeBackgroundSource}")`);
+        document.documentElement.style.setProperty('--az-custom-bg-blur', `${backgroundImageBlur}px`);
+        document.documentElement.style.setProperty('--az-bg-sidebar', activeColors.bgSidebar);
+        document.documentElement.style.setProperty('--az-bg-nav', activeColors.bgNav || activeColors.bgSidebar);
+        const cardMatch = activeColors.cardBg.match(/^#([0-9a-f]{6})$/i);
+        const cardColor = cardMatch
+          ? cardMatch[1].match(/.{2}/g).map(part => parseInt(part, 16)).join(', ')
+          : '28, 33, 42';
+        const tableMatch = typeof activeColors.tableBg === 'string' && activeColors.tableBg.match(/^#([0-9a-f]{6})$/i);
+        const tableColor = tableMatch
+          ? tableMatch[1].match(/.{2}/g).map(part => parseInt(part, 16)).join(', ')
+          : cardColor;
+        document.documentElement.style.setProperty('--az-card-bg', activeColors.cardBg);
+        document.documentElement.style.setProperty('--az-log-card-bg', `rgba(${cardColor}, ${cardOpacity})`);
+        document.documentElement.style.setProperty('--az-log-table-bg', `rgba(${tableColor}, ${cardOpacity})`);
+        document.documentElement.style.setProperty('--az-log-card-border', settings.cardBodyBorder === true ? '1px solid var(--az-border)' : 'none');
+        document.documentElement.style.setProperty('--az-log-card-body-border', settings.cardBodyBorder === true ? '1px solid var(--az-border)' : 'none');
+        document.documentElement.style.setProperty('--az-table-bg', activeColors.tableBg);
+        const hoverRgb = hexToRgb(accent, theme === 'light' ? '212, 13, 13' : '212, 13, 13');
+        document.documentElement.style.setProperty('--az-table-row-hover', customPalette
+          ? `rgba(${hoverRgb}, ${theme === 'light' ? '0.08' : '0.12'})`
+          : modeColors.tableRowHover);
 
-        if (theme === 'light') {
+        if (customPalette) {
+          document.documentElement.style.setProperty('--az-text', activeColors.text);
+          document.documentElement.style.setProperty('--az-text-secondary', activeColors.textSecondary);
+          document.documentElement.style.setProperty('--az-border', activeColors.border);
+          document.documentElement.style.setProperty('--az-input-bg', activeColors.bgSidebar);
+          document.documentElement.style.setProperty('--az-input-border', activeColors.border);
+          document.documentElement.style.setProperty('--az-input-text', activeColors.text);
+          document.documentElement.style.setProperty('--az-btn-close-filter', theme === 'light' ? 'none' : 'invert(1) grayscale(1) brightness(2)');
+        } else if (theme === 'light') {
           document.documentElement.style.setProperty('--az-text', '#0f172a');
           document.documentElement.style.setProperty('--az-text-secondary', '#64748b');
           document.documentElement.style.setProperty('--az-border', '#e2e8f0');
@@ -3317,7 +3509,17 @@
     function apply(toast = false) {
       const ta = document.getElementById('arz-filter-logs');
       if (!ta) return;
-      const filters = ta.value.split('\n').map(f => f.trim().toLowerCase()).filter(f => f.length > 0);
+      const useRegex = !!document.getElementById('arz-filter-logs-regex')?.checked;
+      const filters = ta.value.split('\n').map(f => f.trim()).filter(f => f.length > 0);
+      let regexFilters = [];
+      if (useRegex) {
+        try {
+          regexFilters = filters.map(f => new RegExp(f, 'i'));
+        } catch (error) {
+          if (toast && window.ArizonaNotifications) window.ArizonaNotifications.show(`Ошибка регулярного выражения: ${error.message}`, 'error');
+          return;
+        }
+      }
       const rows = document.querySelectorAll('table.table tbody tr');
       const mode = getMode();
       let shown = 0, hidden = 0;
@@ -3325,15 +3527,17 @@
       rows.forEach(row => {
         const cell = row.querySelector('td:nth-child(2)');
         if (!cell) return;
-        const text = cell.textContent.toLowerCase();
+        const text = cell.textContent;
         if (filters.length === 0) { row.style.display = ''; shown++; return; }
-        const match = filters.some(f => text.includes(f));
+        const match = useRegex
+          ? regexFilters.some(regex => regex.test(text))
+          : filters.some(f => text.toLowerCase().includes(f.toLowerCase()));
         const hide = mode === 'show' ? !match : match;
         row.style.display = hide ? 'none' : '';
         if (hide) hidden++; else shown++;
       });
       if (toast && filters.length > 0) window.ArizonaNotifications.show(`Показано: ${shown} / Скрыто: ${hidden}`, 'info');
-      chrome.storage.local.set({ arzLogFilter: { text: ta.value, mode: mode, auto: document.getElementById('arz-filter-logs-auto')?.checked } });
+      chrome.storage.local.set({ arzLogFilter: { text: ta.value, mode: mode, auto: document.getElementById('arz-filter-logs-auto')?.checked, regex: useRegex } });
     }
 
     return {
@@ -3398,6 +3602,15 @@
         taDiv.innerHTML = `
           <div style="font-weight: 500; font-size: 13px; margin-bottom: 6px; color: var(--az-text);"><i class="fa-solid fa-magnifying-glass" style="margin-right: 6px; color: var(--az-accent-hover);"></i>Фильтр для поиска среди логов на странице</div>
           <textarea id="arz-filter-logs" class="form-control" rows="3" placeholder="Фильтр для поиска в логах..." style="height:102px; background:var(--az-input-bg); border:1px solid var(--az-input-border); color:var(--az-input-text);"></textarea>
+          <div class="arz-log-filter-regex-row">
+            <label><input type="checkbox" id="arz-filter-logs-regex"> Регулярные выражения</label>
+            <span class="arz-regex-presets">
+              <button type="button" data-regex="\\b\\d{1,3}(?:\\.\\d{1,3}){3}\\b">IP</button>
+              <button type="button" data-regex="\\b\\d{1,2}:\\d{2}:\\d{2}\\b">Время</button>
+              <button type="button" data-regex="(?:получил|передал|отдал)">Действие</button>
+              <button type="button" data-regex="\\$\\s?\\d[\\d ,]*">Деньги</button>
+            </span>
+          </div>
         `;
 
         const row = container.closest('.row');
@@ -3409,6 +3622,8 @@
           if (ta) ta.value = '';
           const auto = document.getElementById('arz-filter-logs-auto');
           if (auto) auto.checked = false;
+          const regex = document.getElementById('arz-filter-logs-regex');
+          if (regex) regex.checked = false;
           const show = document.getElementById('arz-filter-mode-show');
           if (show) show.checked = true;
           document.querySelectorAll('table.table tbody tr').forEach(r => r.style.display = '');
@@ -3416,13 +3631,22 @@
         };
         const ta = document.getElementById('arz-filter-logs');
         if (ta) ta.oninput = autoApply;
+        const regex = document.getElementById('arz-filter-logs-regex');
+        if (regex) regex.onchange = autoApply;
+        document.querySelectorAll('.arz-regex-presets button').forEach(button => button.onclick = () => {
+          const value = button.dataset.regex || '';
+          ta.value = ta.value.trim() ? `${ta.value.trim()}\n${value}` : value;
+          if (regex) regex.checked = true;
+          autoApply();
+        });
         document.querySelectorAll('input[name="arz-filter-logs-mode"]').forEach(r => r.onchange = autoApply);
-        document.getElementById('arz-filter-logs-auto').onchange = () => chrome.storage.local.set({ arzLogFilter: { text: ta.value, mode: getMode(), auto: document.getElementById('arz-filter-logs-auto').checked } });
+        document.getElementById('arz-filter-logs-auto').onchange = () => chrome.storage.local.set({ arzLogFilter: { text: ta.value, mode: getMode(), auto: document.getElementById('arz-filter-logs-auto').checked, regex: !!regex?.checked } });
 
         chrome.storage.local.get(['arzLogFilter'], (res) => {
           if (res.arzLogFilter) {
             const data = res.arzLogFilter;
             if (ta) ta.value = data.text || '';
+            if (regex) regex.checked = !!data.regex;
             const rad = document.querySelector(`input[name="arz-filter-logs-mode"][value="${data.mode || 'show'}"]`);
             if (rad) rad.checked = true;
             const auto = document.getElementById('arz-filter-logs-auto');
@@ -4384,7 +4608,13 @@
     return {
       init: function (s) {
         settings = s || {};
-        if (settings.tools?.online) {
+        if (settings.tools?.online !== false) {
+          this.checkAutoCalculation();
+        }
+      },
+      updateSettings: function (s) {
+        settings = s || {};
+        if (settings.tools?.online !== false) {
           this.checkAutoCalculation();
         }
       },
@@ -4901,7 +5131,13 @@
     return {
       init: function (s) {
         settings = s || {};
-        if (settings.tools?.online) {
+        if (settings.tools?.online !== false && settings.tools?.punishment !== false) {
+          this.checkAutoCalculation();
+        }
+      },
+      updateSettings: function (s) {
+        settings = s || {};
+        if (settings.tools?.online !== false && settings.tools?.punishment !== false) {
           this.checkAutoCalculation();
         }
       },
@@ -4932,6 +5168,41 @@
   window.ArizonaLoadMoreManager = (function () {
     let settings = {};
     let isLoading = false;
+
+    function updateTopPagination() {
+      const enabled = currentSettings['extension-toggle'] !== false && settings.tools?.duplicatePaginationTop !== false;
+      const old = document.getElementById('arz-top-pagination');
+      const bottom = document.querySelector('nav[role="navigation"]:not(#arz-top-pagination)');
+      const table = document.querySelector('table.table');
+      const host = table?.closest('.table-responsive') || table?.parentElement;
+      if (!enabled) { old?.remove(); return; }
+      if (!bottom || !table || !host) return;
+
+      const top = bottom.cloneNode(true);
+      top.id = 'arz-top-pagination';
+
+      const topLoadMore = top.querySelector('#arz-load-more-btn');
+      if (topLoadMore) {
+        topLoadMore.id = 'arz-load-more-btn-top';
+        topLoadMore.onclick = () => loadNextPage();
+      } else if (currentSettings['tweak-load-more'] !== false) {
+        const bottomBtn = bottom.querySelector('#arz-load-more-btn');
+        if (bottomBtn) {
+          const btn = bottomBtn.cloneNode(true);
+          btn.id = 'arz-load-more-btn-top';
+          btn.onclick = () => loadNextPage();
+          const paginationUl = top.querySelector('.pagination');
+          if (paginationUl) paginationUl.parentElement.insertBefore(btn, paginationUl);
+        }
+      }
+
+      const bottomList = bottom.querySelector('.pagination');
+      const topList = top.querySelector('.pagination');
+      if (topList && bottomList) topList.innerHTML = bottomList.innerHTML;
+
+      if (old) old.remove();
+      host.insertBefore(top, table);
+    }
 
     function getNextPageUrl(doc = document) {
       const nextBtn = doc.querySelector('.pagination a[aria-label*="Вперёд"], .pagination a[aria-label*="Next"]');
@@ -4987,6 +5258,7 @@
       const parentDiv = paginationUl.parentElement;
       if (parentDiv) {
         parentDiv.insertBefore(btn, paginationUl);
+        updateTopPagination();
       }
     }
 
@@ -5041,6 +5313,7 @@
           if (currentUl && newUl) {
             currentUl.innerHTML = newUl.innerHTML;
           }
+          updateTopPagination();
         }
 
         if (typeof processTable === 'function') {
@@ -5082,6 +5355,11 @@
         } else {
           const btn = document.getElementById('arz-load-more-btn');
           if (btn) btn.remove();
+        }
+        if (currentSettings['extension-toggle'] !== false) {
+          runWhenElementExists('table.table', () => updateTopPagination());
+        } else {
+          document.getElementById('arz-top-pagination')?.remove();
         }
       },
       injectButton: injectButton,
@@ -5420,6 +5698,9 @@
 
     return {
       init: function (s) {
+        settings = s || {};
+      },
+      updateSettings: function (s) {
         settings = s || {};
       },
       injectButton: function () {
@@ -5786,6 +6067,9 @@
 
     return {
       init: function (s) {
+        settings = s || {};
+      },
+      updateSettings: function (s) {
         settings = s || {};
       },
       injectButton: function () {
@@ -6367,7 +6651,13 @@
     return {
       init: function (s) {
         settings = s || {};
-        if (settings.tools?.online) {
+        if (settings.tools?.online !== false && settings.tools?.report !== false) {
+          this.checkAutoCalculation();
+        }
+      },
+      updateSettings: function (s) {
+        settings = s || {};
+        if (settings.tools?.online !== false && settings.tools?.report !== false) {
           this.checkAutoCalculation();
         }
       },
@@ -6570,6 +6860,25 @@
       overlay.innerHTML = modalHTML;
       openOverlay(overlay);
 
+      const tabEnabled = {
+        online: settings.tools?.online !== false,
+        punish: settings.tools?.punishment !== false,
+        report: settings.tools?.report !== false,
+        ip: settings.tools?.ipBatch !== false,
+        idnick: settings.tools?.idNick !== false
+      };
+      overlay.querySelectorAll('.arz-tab-btn').forEach((button) => {
+        button.style.display = tabEnabled[button.dataset.tab] ? '' : 'none';
+      });
+      const firstEnabledTab = Object.keys(tabEnabled).find(tab => tabEnabled[tab]);
+      if (!firstEnabledTab) {
+        closeOverlay(overlay);
+        return;
+      }
+      if (!tabEnabled[activeTab]) {
+        activeTab = firstEnabledTab;
+      }
+
       setupNickCounter(overlay, '#arz-lookup-nicks', 'arz-lookup-count-num');
 
       const params = new URLSearchParams(window.location.search);
@@ -6726,7 +7035,15 @@
         this.update();
       },
       update: function () {
-        const isEnabled = currentSettings['extension-toggle'] !== false && settings.tools?.online !== false;
+        const hasLookupTab = [
+          settings.tools?.online,
+          settings.tools?.punishment,
+          settings.tools?.report,
+          settings.tools?.ipBatch,
+          settings.tools?.idNick
+        ].some(value => value !== false);
+        const isEnabled = currentSettings['extension-toggle'] !== false &&
+          settings.tools?.lookup !== false && hasLookupTab;
         const existingBtn = document.getElementById('arz-lookup-btn');
         if (isEnabled) {
           runWhenElementExists('.filter-buttons', () => this.injectButton());
@@ -7035,6 +7352,13 @@
           }, 1500);
         }
       },
+      createClearShortcut: function (onClick) {
+        const button = createShortcutLink('X', onClick);
+        button.classList.add('arz-filter-clear-shortcut');
+        button.title = 'Очистить поле';
+        button.innerHTML = '<i class="fa-solid fa-xmark" aria-hidden="true"></i>';
+        return button;
+      },
       addButton: function () {
         if (document.getElementById('arz-date-shortcut-wrap')) return;
         const container = document.querySelector('.js_component_filter_item_sort');
@@ -7064,6 +7388,7 @@
         shortcutsWrap.appendChild(createShortcutLink('Вчера', () => applySpecificDate(1)));
         shortcutsWrap.appendChild(createShortcutLink('Позавчера', () => applySpecificDate(2)));
         shortcutsWrap.appendChild(createShortcutLink('Неделю назад', () => applySpecificDate(7)));
+        shortcutsWrap.appendChild(this.createClearShortcut(() => { input.value = ''; setDate(''); }));
 
         container.insertAdjacentElement('afterend', wrap);
       },
@@ -7097,7 +7422,7 @@
         wrap.appendChild(createShortcutLink('От 1 недели назад', () => setMinPeriod('1w')));
         wrap.appendChild(createShortcutLink('От сегодня 00:00', () => setMinPeriod('today')));
 
-        formGroup.insertAdjacentElement('afterend', wrap);
+          formGroup.insertAdjacentElement('afterend', wrap);
       },
       addMaxPeriodButtons: function () {
         if (document.getElementById('arz-max-period-shortcuts')) return;
@@ -7115,7 +7440,9 @@
         wrap.appendChild(createShortcutLink('До 3 месяца назад', () => setMaxPeriod('3m')));
         wrap.appendChild(createShortcutLink('До 1 год назад', () => setMaxPeriod('1y')));
 
-        formGroup.insertAdjacentElement('afterend', wrap);
+          formGroup.insertAdjacentElement('afterend', wrap);
+          const clear = this.createClearShortcut(() => { const input = container.querySelector('input[name="max_period"]'); if (input) { input.value = ''; input.dispatchEvent(new Event('change', { bubbles: true })); } });
+          wrap.appendChild(clear);
       },
       addTypeEmojiButtons: function () {
         const typeContainers = getTypeContainers();
@@ -7144,6 +7471,13 @@
           });
 
           formGroup.insertAdjacentElement('beforeend', wrap);
+          wrap.appendChild(this.createClearShortcut(() => {
+            container.querySelectorAll('select').forEach(select => {
+              Array.from(select.options).forEach(option => option.selected = false);
+              select.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+            container.querySelectorAll('.select2-selection__rendered').forEach(el => el.textContent = '');
+          }));
         });
       },
       addPlayerShortcuts: function () {
@@ -7213,6 +7547,7 @@
           }));
 
           container.appendChild(wrap);
+          wrap.appendChild(this.createClearShortcut(() => setPlayerInputValue(input, '')));
         });
       },
       reposition: function () {
@@ -7223,6 +7558,192 @@
           this.addMaxPeriodButtons();
           this.addTypeEmojiButtons();
           this.addPlayerShortcuts();
+        }
+      }
+    };
+  })();
+
+  window.ArizonaMultiPlayersManager = (function () {
+    let settings = {};
+    let progressOverlay = null;
+    let loading = false;
+
+    async function readClipboardText() {
+      try {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          const text = await navigator.clipboard.readText();
+          return text ? text.trim() : '';
+        }
+      } catch (error) {
+        console.warn('[MultiPlayers] Failed to read clipboard:', error);
+      }
+      return '';
+    }
+
+    function getPlayerFields() {
+      return Array.from(document.querySelectorAll('input[name="player"], input[name="target"], input[name="player1"], input[name="player2"]'));
+    }
+
+    function setFieldsDisabled(disabled) {
+      getPlayerFields().forEach(field => {
+        field.disabled = disabled;
+        field.title = disabled ? 'Очистите поле нескольких ID/никнеймов, чтобы использовать это поле' : '';
+      });
+    }
+
+    function inject() {
+      if (document.getElementById('arz-multi-player-wrap')) return;
+      const ipContainer = document.querySelector('.js_component_filter_item_ip');
+      if (!ipContainer) return;
+      const wrap = document.createElement('div');
+      wrap.id = 'arz-multi-player-wrap';
+      wrap.className = 'col-sm-3 mb-2';
+      wrap.innerHTML = `<label class="mb-1 mt-2 text-muted"><i class="fa-solid fa-users"></i> Ввод нескольких ID/никнеймов</label><div class="form-group"><textarea id="arz-multi-player-input" class="form-control" rows="2" placeholder="Nick_One, Nick_Two Nick_Three&#10;Можно разделять пробелом или запятой" style="resize:vertical; background:var(--az-input-bg);border:1px solid var(--az-input-border);color:var(--az-input-text);"></textarea></div><div class="arz-multi-player-shortcuts"></div>`;
+      ipContainer.insertAdjacentElement('afterend', wrap);
+      const input = wrap.querySelector('#arz-multi-player-input');
+      const shortcuts = wrap.querySelector('.arz-multi-player-shortcuts');
+      try { input.value = sessionStorage.getItem('arzMultiPlayersInput') || ''; } catch (error) { }
+      shortcuts.appendChild(createShortcut('Из буфера', async () => {
+        const text = await readClipboardText();
+        if (text) { input.value = text; input.dispatchEvent(new Event('input', { bubbles: true })); }
+      }));
+      shortcuts.appendChild(createClearShortcut(() => {
+        input.value = '';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      }));
+      const update = () => setFieldsDisabled(input.value.trim().length > 0);
+      input.addEventListener('input', () => {
+        update();
+        try {
+          if (input.value.trim()) sessionStorage.setItem('arzMultiPlayersInput', input.value);
+          else sessionStorage.removeItem('arzMultiPlayersInput');
+        } catch (error) { }
+      });
+      update();
+    }
+
+    function createShortcut(label, onClick) {
+      const link = document.createElement('a');
+      link.href = '#';
+      link.className = 'arz-shortcut-link';
+      link.textContent = label;
+      link.onclick = (event) => { event.preventDefault(); onClick(); };
+      return link;
+    }
+
+    function createClearShortcut(onClick) {
+      const link = createShortcut('', onClick);
+      link.classList.add('arz-filter-clear-shortcut');
+      link.title = 'Очистить поле';
+      link.innerHTML = '<i class="fa-solid fa-xmark" aria-hidden="true"></i>';
+      return link;
+    }
+
+    function addIpShortcuts() {
+      const container = document.querySelector('.js_component_filter_item_ip');
+      if (!container || container.querySelector('.arz-ip-filter-shortcuts')) return;
+      const input = container.querySelector('input, textarea');
+      if (!input) return;
+      const shortcuts = document.createElement('div');
+      shortcuts.className = 'arz-ip-filter-shortcuts';
+      shortcuts.appendChild(createShortcut('Из буфера', async () => {
+        const text = await readClipboardText();
+        if (text) { input.value = text; ['input', 'change'].forEach(type => input.dispatchEvent(new Event(type, { bubbles: true }))); }
+      }));
+      shortcuts.appendChild(createClearShortcut(() => {
+        input.value = '';
+        ['input', 'change'].forEach(type => input.dispatchEvent(new Event(type, { bubbles: true })));
+      }));
+      container.appendChild(shortcuts);
+    }
+
+    function sortRowsByDate() {
+      const tbody = document.querySelector('table.table tbody');
+      if (!tbody) return;
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      const getTime = row => {
+        const value = row.querySelector('td:first-child')?.textContent.replace(/\s+/g, ' ').trim() || '';
+        const isoMatch = value.match(/(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})/);
+        if (isoMatch) return Date.parse(`${isoMatch[1]}T${isoMatch[2]}`);
+        const parsed = Date.parse(value);
+        return Number.isNaN(parsed) ? -Infinity : parsed;
+      };
+      rows.sort((a, b) => {
+        const difference = getTime(b) - getTime(a);
+        return Number.isNaN(difference) ? 0 : difference;
+      });
+      rows.forEach(row => tbody.appendChild(row));
+    }
+
+    function showProgress(total) {
+      progressOverlay = document.createElement('div');
+      progressOverlay.className = 'arz-modal-overlay';
+      progressOverlay.innerHTML = `<div class="arz-modal-container" style="max-width:420px;width:90%;"><div class="arz-modal-header"><div class="arz-modal-icon-wrapper"><i class="fa-solid fa-users"></i></div><div class="arz-modal-title-block"><div class="arz-modal-title">Загрузка логов игроков</div><div class="arz-modal-subtitle">Логи добавляются на текущую страницу</div></div></div><div class="arz-modal-body" style="text-align:center;"><div id="arz-multi-progress-text">Подготовка...</div><div style="height:7px;background:var(--az-input-bg);border-radius:4px;margin-top:14px;overflow:hidden;"><div id="arz-multi-progress-bar" style="height:100%;width:0;background:linear-gradient(90deg,var(--az-accent),var(--az-accent-hover));transition:width .25s ease;"></div></div></div><div class="arz-modal-footer"><button id="arz-multi-progress-cancel" class="arz-btn-danger" style="flex:1;"><i class="fa-solid fa-ban"></i> Отмена</button></div></div>`;
+      openOverlay(progressOverlay);
+      progressOverlay.querySelector('#arz-multi-progress-cancel').onclick = () => { loading = false; closeOverlay(progressOverlay); };
+    }
+
+    async function loadOthers(players) {
+      if (loading || players.length < 2 || !document.querySelector('table.table tbody')) return;
+      loading = true;
+      showProgress(players.length - 1);
+      const base = new URL(window.location.href);
+      base.searchParams.delete('player'); base.searchParams.delete('target'); base.searchParams.delete('page'); base.searchParams.set('limit', '1000');
+      const tbody = document.querySelector('table.table tbody');
+      const known = new Set(Array.from(tbody.querySelectorAll('tr')).map(row => row.innerHTML));
+      let done = 0;
+      for (const player of players.slice(1)) {
+        if (!loading) break;
+        const url = new URL(base.href);
+        url.searchParams.set('player', player);
+        try {
+          const response = await fetchWithRetry(url.href);
+          const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
+          doc.querySelectorAll('table.table tbody tr').forEach(row => {
+            if (!known.has(row.innerHTML)) { known.add(row.innerHTML); row.removeAttribute('data-arz-processed'); row.removeAttribute('data-arz-ip-processed'); tbody.appendChild(row); }
+          });
+          sortRowsByDate();
+        } catch (error) { console.warn('[Arizona] Ошибка загрузки игрока:', player, error); }
+        done++;
+        const text = progressOverlay?.querySelector('#arz-multi-progress-text');
+        const bar = progressOverlay?.querySelector('#arz-multi-progress-bar');
+        if (text) text.textContent = `Загружено игроков: ${done} из ${players.length - 1}`;
+        if (bar) bar.style.width = `${done / (players.length - 1) * 100}%`;
+        if (typeof processTable === 'function') processTable();
+      }
+      loading = false;
+      sortRowsByDate();
+      if (progressOverlay) closeOverlay(progressOverlay);
+      try { sessionStorage.removeItem('arzMultiPlayersQueue'); } catch (error) { }
+      if (window.ArizonaNotifications) window.ArizonaNotifications.show(`Загрузка завершена: добавлено игроков ${done}`, 'success');
+    }
+
+    return {
+      init(s) {
+        settings = s || {};
+        runWhenElementExists('.js_component_filter_item_ip', () => {
+          if (settings.tools?.multiPlayersEnabled !== false) inject();
+          addIpShortcuts();
+        });
+        if (settings.tools?.multiPlayersEnabled !== false) {
+          setTimeout(() => {
+            try {
+              const players = JSON.parse(sessionStorage.getItem('arzMultiPlayersQueue') || '[]');
+              if (players.length > 1) loadOthers(players);
+            } catch (error) { }
+          }, 800);
+        }
+      },
+      updateSettings(s) {
+        settings = s || {};
+        const disabled = settings.tools?.multiPlayersEnabled === false;
+        if (disabled) {
+          document.getElementById('arz-multi-player-wrap')?.remove();
+          setFieldsDisabled(false);
+        } else {
+          inject();
+          const input = document.getElementById('arz-multi-player-input');
+          if (input) setFieldsDisabled(input.value.trim().length > 0);
         }
       }
     };
@@ -8190,7 +8711,8 @@
       update: function () {
         const hasSimilar = settings.tools?.similarIPsFinder !== false;
         const hasRepeats = settings.tools?.actionRepeatsFinder !== false;
-        const isEnabled = currentSettings['extension-toggle'] !== false && (hasSimilar || hasRepeats);
+        const isEnabled = currentSettings['extension-toggle'] !== false &&
+          settings.tools?.analytics !== false && (hasSimilar || hasRepeats);
 
         const existingBtn = document.getElementById('arz-analytics-btn');
         if (isEnabled) {
@@ -8883,6 +9405,25 @@
     });
 
     const actualForm = form || document.querySelector('form.filter');
+    const multiInput = document.getElementById('arz-multi-player-input');
+    const multiPlayers = multiInput ? multiInput.value.split(/[\s,]+/).map(value => value.trim()).filter(Boolean) : [];
+    if (multiPlayers.length > 0) {
+      const firstPlayer = multiPlayers[0];
+      if (actualForm) {
+        const playerInput = actualForm.querySelector('input[name="player"]');
+        if (playerInput) {
+          playerInput.value = firstPlayer;
+          playerInput.disabled = false;
+        }
+      }
+      try {
+        sessionStorage.setItem('arzMultiPlayersQueue', JSON.stringify(multiPlayers));
+      } catch (error) {
+        console.warn('[Arizona] Не удалось сохранить очередь игроков:', error);
+      }
+    } else {
+      try { sessionStorage.removeItem('arzMultiPlayersQueue'); } catch (error) { }
+    }
     if (actualForm) {
       const formData = new FormData(actualForm);
 
@@ -8905,6 +9446,10 @@
         if (value !== '') {
           targetUrl.searchParams.append(key, value);
         }
+      }
+
+      if (multiPlayers.length > 0) {
+        targetUrl.searchParams.set('player', multiPlayers[0]);
       }
     }
 
@@ -9339,16 +9884,24 @@
       try { window.ArizonaReportManager.init(arizonaSettings); } catch (e) { console.error('Error in ArizonaReportManager.init:', e); }
       try { window.ArizonaLookupManager.init(arizonaSettings); } catch (e) { console.error('Error in ArizonaLookupManager.init:', e); }
       try { window.ArizonaDateShortcut.init(arizonaSettings); } catch (e) { console.error('Error in ArizonaDateShortcut.init:', e); }
+      try { window.ArizonaMultiPlayersManager.init(arizonaSettings); } catch (e) { console.error('Error in ArizonaMultiPlayersManager.init:', e); }
       try { window.ArizonaIdenticalIpHighlight.init(arizonaSettings); } catch (e) { console.error('Error in ArizonaIdenticalIpHighlight.init:', e); }
 
       try { window.ArizonaAnalyticsManager.init(arizonaSettings); } catch (e) { console.error('Error in ArizonaAnalyticsManager.init:', e); }
       try { window.ArizonaTemplatesManager.init(arizonaSettings, arizonaTemplates); } catch (e) { console.error('Error in ArizonaTemplatesManager.init:', e); }
-      try { window.ArizonaThemeManager.init(arizonaSettings); } catch (e) { console.error('Error in ArizonaThemeManager.init:', e); }
+      try {
+        window.ArizonaThemeManager.init({
+          ...arizonaSettings,
+          themeEnabled: currentSettings['extension-toggle'] !== false &&
+            currentSettings['visual-theme-enabled'] !== false
+        });
+      } catch (e) { console.error('Error in ArizonaThemeManager.init:', e); }
       try { window.ArizonaCopyLogsManager.init(arizonaSettings); } catch (e) { console.error('Error in ArizonaCopyLogsManager.init:', e); }
       try { window.ArizonaSidebarManager.init(arizonaSettings); } catch (e) { console.error('Error in ArizonaSidebarManager.init:', e); }
 
       try { window.ArizonaMultiSelectManager.init(arizonaSettings); } catch (e) { console.error('Error in ArizonaMultiSelectManager.init:', e); }
       try { window.ArizonaLoadMoreManager.init(arizonaSettings); } catch (e) { console.error('Error in ArizonaLoadMoreManager.init:', e); }
+      try { window.ArizonaLoadMoreManager.updateSettings(arizonaSettings); } catch (e) { }
 
       document.addEventListener('copy', (e) => {
         try {
@@ -9466,11 +10019,26 @@
                 arizonaSettings.masking = { enabled: true, maskIp: true, maskEmail: true, maskTG: true, maskVK: true };
               }
               if (!arizonaSettings.tools) {
-                arizonaSettings.tools = { identicalIPs: true, identicalIPsColor: '#ff4444', columnEyeButtons: true, filterWindow: true, formsEnabled: true, online: true, dateShortcutEnabled: true, styleResetButtonEnabled: true, copyAllLogsEnabled: true, tgVkDetectorEnabled: true };
+                arizonaSettings.tools = {
+                  identicalIPs: true, identicalIPsColor: '#ff4444', columnEyeButtons: true,
+                  filterWindow: true, formsEnabled: true, online: true, punishment: true,
+                  ipBatch: true, idNick: true, report: true, lookup: true, analytics: true,
+                  dateShortcutEnabled: true, styleResetButtonEnabled: true,
+                  copyAllLogsEnabled: true, tgVkDetectorEnabled: true, markLogsEnabled: true
+                };
               } else {
+                if (arizonaSettings.tools.punishment === undefined) arizonaSettings.tools.punishment = true;
+                if (arizonaSettings.tools.ipBatch === undefined) arizonaSettings.tools.ipBatch = true;
+                if (arizonaSettings.tools.idNick === undefined) arizonaSettings.tools.idNick = true;
+                if (arizonaSettings.tools.report === undefined) arizonaSettings.tools.report = true;
+                if (arizonaSettings.tools.lookup === undefined) arizonaSettings.tools.lookup = true;
+                if (arizonaSettings.tools.analytics === undefined) arizonaSettings.tools.analytics = true;
                 if (arizonaSettings.tools.styleResetButtonEnabled === undefined) arizonaSettings.tools.styleResetButtonEnabled = true;
                 if (arizonaSettings.tools.copyAllLogsEnabled === undefined) arizonaSettings.tools.copyAllLogsEnabled = true;
                 if (arizonaSettings.tools.tgVkDetectorEnabled === undefined) arizonaSettings.tools.tgVkDetectorEnabled = true;
+                if (arizonaSettings.tools.markLogsEnabled === undefined) arizonaSettings.tools.markLogsEnabled = true;
+                if (arizonaSettings.tools.multiPlayersEnabled === undefined) arizonaSettings.tools.multiPlayersEnabled = true;
+                if (arizonaSettings.tools.duplicatePaginationTop === undefined) arizonaSettings.tools.duplicatePaginationTop = true;
               }
               if (!arizonaSettings.tuningParts) {
                 arizonaSettings.tuningParts = { enabled: false, scanDelay: 500, highlightColor: '#f02849', outlineWidth: 2, timePattern: '30:01,30:02,00:03,00:01,00:02,00:03', highlightOnlyMatching: true, autoScrollToMatch: false, playSoundOnMatch: false };
@@ -9521,7 +10089,12 @@
               if (window.ArizonaIpLookupManager) window.ArizonaIpLookupManager.updateSettings(arizonaSettings);
               if (window.ArizonaMaskingManager) window.ArizonaMaskingManager.updateSettings(arizonaSettings);
               if (window.ArizonaTuningAHKManager) window.ArizonaTuningAHKManager.updateSettings(arizonaSettings);
-              if (window.ArizonaThemeManager) window.ArizonaThemeManager.updateSettings(arizonaSettings);
+              if (window.ArizonaThemeManager) {
+                window.ArizonaThemeManager.updateSettings({
+                  ...arizonaSettings,
+                  themeEnabled: currentSettings['visual-theme-enabled'] !== false
+                });
+              }
               if (window.ArizonaCopyLogsManager) window.ArizonaCopyLogsManager.updateSettings(arizonaSettings);
               if (window.ArizonaIdenticalIpHighlight) window.ArizonaIdenticalIpHighlight.updateSettings(arizonaSettings);
               if (window.ArizonaTgVkDetector) window.ArizonaTgVkDetector.updateSettings(arizonaSettings);
@@ -9536,6 +10109,11 @@
               if (window.ArizonaSidebarManager) window.ArizonaSidebarManager.updateSettings(arizonaSettings);
               if (window.ArizonaMultiSelectManager) window.ArizonaMultiSelectManager.updateSettings(arizonaSettings);
               if (window.ArizonaLoadMoreManager) window.ArizonaLoadMoreManager.updateSettings(arizonaSettings);
+              if (window.ArizonaMultiPlayersManager) window.ArizonaMultiPlayersManager.updateSettings(arizonaSettings);
+              document.querySelectorAll('table.table tbody tr').forEach((tr) => {
+                if (arizonaSettings.tools?.markLogsEnabled === false) removeMarkHandle(tr);
+                else injectMarkHandle(tr);
+              });
               styleResetButton();
             }
           }
@@ -9620,7 +10198,7 @@
               renderEcosystemBadges();
             });
           } else {
-            console.warn('[Content] FETCH_ECOSYSTEM_API background request failed or returned invalid data:', response);
+            // console.warn('[Content] FETCH_ECOSYSTEM_API background request failed or returned invalid data:', response);
             ecosystemApiData = [];
             buildLookupMap();
           }

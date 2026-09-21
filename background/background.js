@@ -874,10 +874,51 @@ chrome.runtime.onInstalled.addListener(() => {
           filterWindow: true,
           formsEnabled: true,
           online: true,
+          punishment: true,
+          ipBatch: true,
+          idNick: true,
+          report: true,
+          lookup: true,
+          analytics: true,
           dateShortcutEnabled: true
         },
         theme: 'dark',
         fontSize: 14,
+        colorScheme: 'red',
+        borderRadius: '8px',
+        backgroundColor: null,
+        backgroundImage: null,
+        backgroundImageUrl: null,
+        backgroundImageBlur: 0,
+        cardOpacity: 100,
+        cardBodyBorder: false,
+        customThemeEnabled: false,
+        customTheme: {
+          dark: {
+            accent: '#d40d0d',
+            accentHover: '#ff4d4d',
+            bg: '#0c0e12',
+            bgSidebar: '#13171e',
+            bgNav: '#13171e',
+            cardBg: '#1c212a',
+            tableBg: '#181c24',
+            text: '#e2e8f0',
+            textSecondary: '#94a3b8',
+            border: '#334155'
+          },
+          light: {
+            accent: '#d40d0d',
+            accentHover: '#b91c1c',
+            bg: '#f8fafc',
+            bgSidebar: '#ffffff',
+            bgNav: '#ffffff',
+            cardBg: '#ffffff',
+            tableBg: '#ffffff',
+            text: '#0f172a',
+            textSecondary: '#64748b',
+            border: '#e2e8f0'
+          }
+        },
         customTriggerIcon: null,
         customTriggerEnabled: false
       };

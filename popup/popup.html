@@ -80,6 +80,131 @@
               </select>
             </div>
             <div class="control-row">
+              <label><i class="fa-solid fa-wand-magic-sparkles menu-icon"></i>Кастомная тема расширения</label>
+              <label class="switch">
+                <input type="checkbox" id="visual-theme-enabled" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
+            <div class="control-row">
+              <label><i class="fa-solid fa-sliders menu-icon"></i>Использовать свою тему</label>
+              <label class="switch">
+                <input type="checkbox" id="visual-custom-theme-enabled">
+                <span class="slider round"></span>
+              </label>
+            </div>
+            <div id="custom-theme-editor" class="custom-theme-editor" hidden>
+              <div class="custom-theme-editor-header">
+                <div>
+                  <strong>Палитра своей темы</strong>
+                  <span>Настройте цвета отдельно для каждого режима</span>
+                </div>
+                <div class="custom-theme-mode-tabs" role="tablist" aria-label="Режим своей темы">
+                  <button type="button" class="custom-theme-mode-btn active" data-custom-theme-mode="dark">Тёмная</button>
+                  <button type="button" class="custom-theme-mode-btn" data-custom-theme-mode="light">Светлая</button>
+                </div>
+              </div>
+              <div class="custom-theme-grid">
+                <label class="custom-color-field">
+                  <span>Основной цвет</span>
+                  <input type="color" data-custom-theme-color="accent" value="#d40d0d">
+                </label>
+                <label class="custom-color-field">
+                  <span>Цвет hover</span>
+                  <input type="color" data-custom-theme-color="accentHover" value="#ff4d4d">
+                </label>
+                <label class="custom-color-field">
+                  <span>Фон страницы</span>
+                  <input type="color" data-custom-theme-color="bg" value="#0c0e12">
+                </label>
+                <label class="custom-color-field">
+                  <span>Фон панелей</span>
+                  <input type="color" data-custom-theme-color="bgSidebar" value="#13171e">
+                </label>
+                <label class="custom-color-field">
+                  <span>Фон карточек</span>
+                  <input type="color" data-custom-theme-color="cardBg" value="#1c212a">
+                </label>
+                <label class="custom-color-field">
+                  <span>Фон таблиц</span>
+                  <input type="color" data-custom-theme-color="tableBg" value="#181c24">
+                </label>
+                <label class="custom-color-field">
+                  <span>Основной текст</span>
+                  <input type="color" data-custom-theme-color="text" value="#e2e8f0">
+                </label>
+                <label class="custom-color-field">
+                  <span>Вторичный текст</span>
+                  <input type="color" data-custom-theme-color="textSecondary" value="#94a3b8">
+                </label>
+                <label class="custom-color-field">
+                  <span>Границы</span>
+                  <input type="color" data-custom-theme-color="border" value="#334155">
+                </label>
+              </div>
+              <div class="custom-theme-preview" aria-live="polite">
+                <div class="custom-theme-preview-title">Предпросмотр</div>
+                <div class="custom-theme-preview-card">
+                  <div class="custom-theme-preview-card-header">
+                    <span class="custom-theme-preview-dot"></span>
+                    <span>Пример записи лога</span>
+                    <span class="custom-theme-preview-time">12:45:08</span>
+                  </div>
+                  <div class="custom-theme-preview-row">
+                    <strong>Игрок</strong>
+                    <span>Выполнил действие на сервере</span>
+                  </div>
+                </div>
+              </div>
+              <div class="custom-theme-actions">
+                <button type="button" id="custom-theme-copy-preset" class="arz-btn-secondary appearance-btn">Взять цвета готовой темы</button>
+                <button type="button" id="custom-theme-reset" class="arz-btn-secondary appearance-btn">Сбросить свою тему</button>
+              </div>
+            </div>
+            <div class="control-row">
+              <label for="visual-background-color"><i class="fa-solid fa-fill-drip menu-icon"></i>Фон страницы логов</label>
+              <div class="appearance-actions">
+                <input type="color" id="visual-background-color" value="#0c0e12" class="arz-color-input" title="Выберите цвет фона">
+                <button type="button" id="visual-background-reset" class="arz-btn-secondary appearance-btn">Сбросить</button>
+              </div>
+            </div>
+            <div class="control-row">
+              <label for="visual-background-image"><i class="fa-regular fa-image menu-icon"></i>Картинка заднего фона</label>
+              <div class="appearance-actions">
+                <input type="file" id="visual-background-image" accept="image/*" hidden>
+                <button type="button" id="visual-background-image-btn" class="arz-btn-secondary appearance-btn">Выбрать</button>
+                <button type="button" id="visual-background-image-reset" class="arz-btn-secondary appearance-btn">Удалить</button>
+              </div>
+            </div>
+            <div class="control-row control-row-range">
+              <label for="visual-background-blur"><i class="fa-solid fa-droplet menu-icon"></i>Блюр картинки фона</label>
+              <div class="range-control">
+                <input type="range" id="visual-background-blur" min="0" max="30" step="1" value="0">
+                <span id="visual-background-blur-val">0 px</span>
+              </div>
+            </div>
+            <div class="control-row control-row-range">
+              <label for="visual-card-opacity"><i class="fa-solid fa-layer-group menu-icon"></i>Прозрачность карточки логов</label>
+              <div class="range-control">
+                <input type="range" id="visual-card-opacity" min="10" max="100" step="1" value="100">
+                <span id="visual-card-opacity-val">100%</span>
+              </div>
+            </div>
+            <div class="control-row background-url-row">
+              <label for="visual-background-image-url"><i class="fa-solid fa-link menu-icon"></i>Фон по ссылке</label>
+              <div class="appearance-actions background-url-actions">
+                <input type="url" id="visual-background-image-url" class="arz-input" placeholder="https://example.com/image.jpg">
+                <button type="button" id="visual-background-image-url-btn" class="arz-btn-secondary appearance-btn">Применить</button>
+              </div>
+            </div>
+            <div class="control-row">
+              <label><i class="fa-solid fa-border-top-left menu-icon"></i>Border у card-body</label>
+              <label class="switch">
+                <input type="checkbox" id="visual-card-body-border">
+                <span class="slider round"></span>
+              </label>
+            </div>
+            <div class="control-row">
               <label><i class="fa-solid fa-grip-lines-vertical menu-icon"></i>Вертикальные линии таблицы</label>
               <label class="switch">
                 <input type="checkbox" id="visual-vertical-borders">
@@ -166,8 +291,16 @@
               </label>
             </div>
             <div class="control-row">
+              <label><i class="fa-solid fa-bookmark menu-icon"></i>Отметка логов</label>
+              <label class="switch">
+                <input type="checkbox" id="tools-markLogsEnabled" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
+            <div class="control-row">
               <label><i class="fa-regular fa-eye menu-icon"></i>Кнопка копирования лога</label>
               <select id="tweak-copy-btn-visibility" class="arz-select">
+                <option value="off">Выключить</option>
                 <option value="hover" selected>При наведении на строку</option>
                 <option value="always">Всегда показывать</option>
               </select>
@@ -265,6 +398,55 @@
               </label>
             </div>
             <div class="control-row">
+              <label><i class="fa-solid fa-users menu-icon"></i>Ввод нескольких ID/никнеймов</label>
+              <label class="switch">
+                <input type="checkbox" id="tools-multiPlayersEnabled" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
+            <div class="control-row">
+              <label style="padding-left: 20px;"><i class="fa-solid fa-gavel menu-icon"></i>Пробив наказаний</label>
+              <label class="switch">
+                <input type="checkbox" id="tools-punishment" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
+            <div class="control-row">
+              <label style="padding-left: 20px;"><i class="fa-solid fa-network-wired menu-icon"></i>Пакетный пробив IP</label>
+              <label class="switch">
+                <input type="checkbox" id="tools-ipBatch" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
+            <div class="control-row">
+              <label style="padding-left: 20px;"><i class="fa-solid fa-id-card menu-icon"></i>Пробив ID и никнеймов</label>
+              <label class="switch">
+                <input type="checkbox" id="tools-idNick" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
+            <div class="control-row">
+              <label style="padding-left: 20px;"><i class="fa-solid fa-flag menu-icon"></i>Пробив репортов</label>
+              <label class="switch">
+                <input type="checkbox" id="tools-report" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
+            <div class="control-row">
+              <label style="padding-left: 20px;"><i class="fa-solid fa-user-secret menu-icon"></i>Пробив игрока</label>
+              <label class="switch">
+                <input type="checkbox" id="tools-lookup" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
+            <div class="control-row">
+              <label><i class="fa-solid fa-arrow-up-wide-short menu-icon"></i>Дублировать пагинацию наверху страницы</label>
+              <label class="switch">
+                <input type="checkbox" id="tools-duplicatePaginationTop" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
+            <div class="control-row">
               <label><i class="fa-solid fa-table-list menu-icon"></i>Менеджер форм команд</label>
               <label class="switch">
                 <input type="checkbox" id="tools-formsEnabled" checked>
@@ -313,6 +495,13 @@
                 <span class="slider round"></span>
               </label>
             </div>
+            <div class="control-row">
+              <label><i class="fa-solid fa-ban menu-icon"></i>Блокировка стандартного копирования</label>
+              <label class="switch">
+                <input type="checkbox" id="tweak-block-copy" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
           </div>
 
           <div class="control-group-title"><i class="fa-solid fa-shield-halved menu-icon"></i>Проверки и аналитика</div>
@@ -340,6 +529,13 @@
               <label><i class="fa-solid fa-rotate menu-icon"></i>Детекция повторов действий</label>
               <label class="switch">
                 <input type="checkbox" id="tools-actionRepeatsFinder" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
+            <div class="control-row">
+              <label><i class="fa-solid fa-chart-line menu-icon"></i>Окно аналитики логов</label>
+              <label class="switch">
+                <input type="checkbox" id="tools-analytics" checked>
                 <span class="slider round"></span>
               </label>
             </div>

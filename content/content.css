@@ -1516,6 +1516,24 @@ body {
   color: var(--az-text) !important;
 }
 
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: var(--az-custom-bg-image, none);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: blur(var(--az-custom-bg-blur, 0px));
+  transform: scale(1.04);
+}
+
+body:not(.az-custom-bg-image-active)::before {
+  display: none !important;
+}
+
 .app-nav, .app-nav .navbar, .app-nav .bg-white {
   background-color: var(--az-bg-nav) !important;
   border-bottom: 1px solid var(--az-border) !important;
@@ -1591,6 +1609,10 @@ body.az-theme-sunset .app-nav-logo img, body.az-theme-sunset .logo img {
 
 .app-content {
   background-color: var(--az-bg) !important;
+}
+
+body.az-custom-bg-image-active .app-content {
+  background-color: transparent !important;
 }
 
 .card {
@@ -1704,8 +1726,10 @@ html body .btn-info:not(.btn-tiny) {
   border-radius: var(--az-border-radius-small) !important;
   border: 1px solid transparent !important;
   background: linear-gradient(135deg, var(--az-accent) 0%, var(--az-accent-hover) 100%) !important;
+  background-size: 200% 200% !important;
+  background-position: 0% 50% !important;
   color: #ffffff !important;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition: background-position 0.45s ease, transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease !important;
   cursor: pointer !important;
   vertical-align: middle !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(var(--az-accent-rgb), 0.1) !important;
@@ -1716,7 +1740,7 @@ html body #arz-log-filter-root .btn:hover,
 html body .btn-primary:hover:not(.btn-tiny),
 html body .btn-success:hover:not(.btn-tiny),
 html body .btn-info:hover:not(.btn-tiny) {
-  background: linear-gradient(135deg, var(--az-accent-hover) 0%, var(--az-accent) 100%) !important;
+  background-position: 100% 50% !important;
   transform: translateY(-1.5px) !important;
   box-shadow: 0 4px 12px rgba(var(--az-accent-rgb), 0.35) !important;
   text-decoration: none !important;
@@ -1789,6 +1813,20 @@ html body #arz-filter-logs-reset:hover {
   color: rgb(255, 255, 255) !important;
   transform: translateY(-1.5px) !important;
   box-shadow: 0 4px 12px rgba(var(--az-accent-rgb), 0.2) !important;
+}
+
+html body #arz-log-filter-root #arz-filter-logs-reset:hover {
+  background: rgba(255, 255, 255, 0.09) !important;
+  background-position: 0 50% !important;
+  border-color: var(--az-accent-hover) !important;
+  color: #ffffff !important;
+  transform: translateY(-1.5px) !important;
+  box-shadow: 0 4px 12px rgba(var(--az-accent-rgb), 0.2) !important;
+}
+
+html body #arz-log-filter-root #arz-filter-logs-reset:hover i {
+  background: transparent !important;
+  color: #ffffff !important;
 }
 
 html body #arz-filter-logs-reset:active {
@@ -2784,4 +2822,207 @@ body.az-light-theme table.table tbody td:nth-child(3) { color: rgba(0, 0, 0, 0.2
 .table-ip > code {
   color: var(--az-accent-hover) !important;
   font-weight: 700 !important;
+}
+
+.arz-filter-clear-group {
+  position: relative !important;
+}
+
+.arz-filter-clear-shortcut {
+  box-sizing: border-box !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 20px !important;
+  min-width: 20px !important;
+  height: 20px !important;
+  padding: 0 !important;
+  color: var(--az-text-secondary) !important;
+  font-size: 11px !important;
+  font-weight: 400 !important;
+  line-height: 1 !important;
+  text-decoration: none !important;
+  border: 1px solid var(--az-border) !important;
+  border-bottom: 1px solid var(--az-border) !important;
+  border-radius: 50% !important;
+  background: var(--az-input-bg) !important;
+  opacity: .7 !important;
+  transition: color .15s ease, background-color .15s ease, border-color .15s ease, opacity .15s ease !important;
+}
+
+.arz-filter-clear-shortcut:hover {
+  color: var(--az-accent-hover) !important;
+  background: rgba(var(--az-accent-rgb), .12) !important;
+  border-color: var(--az-accent) !important;
+  border-bottom-color: var(--az-accent) !important;
+  opacity: 1 !important;
+}
+
+.arz-filter-clear-shortcut i {
+  margin: 0 !important;
+  pointer-events: none !important;
+}
+
+#arz-filter-logs-regex {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  width: 16px !important;
+  height: 16px !important;
+  margin: 0 !important;
+  border: 1px solid rgba(255, 255, 255, .3) !important;
+  border-radius: 4px !important;
+  background-color: rgba(0, 0, 0, .4) !important;
+  vertical-align: middle !important;
+  cursor: pointer !important;
+  position: relative !important;
+}
+
+#arz-filter-logs-regex:checked {
+  background: linear-gradient(135deg, var(--az-accent) 0%, var(--az-accent-hover) 100%) !important;
+  border-color: var(--az-accent-hover) !important;
+  box-shadow: 0 0 6px rgba(var(--az-accent-rgb), .4) !important;
+}
+
+#arz-filter-logs-regex:checked::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 4px;
+  height: 8px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+#arz-multi-player-wrap {
+  order: 10;
+}
+
+#arz-multi-player-input {
+  min-height: 42px !important;
+}
+
+.arz-multi-player-shortcuts,
+.arz-ip-filter-shortcuts {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 4px !important;
+  margin-top: 5px !important;
+}
+
+.arz-multi-player-shortcuts .arz-shortcut-link,
+.arz-ip-filter-shortcuts .arz-shortcut-link {
+  color: var(--az-text-secondary) !important;
+  font-size: 11px !important;
+  text-decoration: none !important;
+  border-bottom: 1px dashed currentColor !important;
+  cursor: pointer !important;
+  opacity: .85 !important;
+}
+
+.arz-multi-player-shortcuts .arz-shortcut-link:hover,
+.arz-ip-filter-shortcuts .arz-shortcut-link:hover {
+  color: var(--az-accent-hover) !important;
+  opacity: 1 !important;
+}
+
+.arz-multi-player-shortcuts .arz-filter-clear-shortcut,
+.arz-ip-filter-shortcuts .arz-filter-clear-shortcut {
+  border-bottom: 0 !important;
+}
+
+body.arz-extension-disabled #arz-multi-player-wrap,
+body.az-multi-players-disabled #arz-multi-player-wrap {
+  display: none !important;
+}
+
+#arz-top-pagination {
+  margin-bottom: 12px !important;
+}
+
+.arz-filter-clear-group > .arz-filter-clear-btn {
+  position: absolute !important;
+  right: 6px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  z-index: 3 !important;
+  width: 20px !important;
+  height: 20px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  color: var(--az-text-secondary) !important;
+  opacity: .45 !important;
+  cursor: pointer !important;
+}
+
+.arz-filter-clear-group > .arz-filter-clear-btn:hover {
+  color: var(--az-accent-hover) !important;
+  opacity: 1 !important;
+}
+
+.arz-filter-clear-group > input,
+.arz-filter-clear-group > select {
+  padding-right: 30px !important;
+}
+
+.arz-log-filter-regex-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+  color: var(--az-text-secondary);
+  font-size: 10px;
+  opacity: .75;
+}
+
+.arz-log-filter-regex-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.arz-regex-presets {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 3px;
+}
+
+.arz-regex-presets button {
+  padding: 1px 5px !important;
+  border: 1px solid var(--az-border) !important;
+  border-radius: 3px !important;
+  background: transparent !important;
+  color: var(--az-text-secondary) !important;
+  font-size: 9px !important;
+  cursor: pointer !important;
+}
+
+.arz-regex-presets button:hover {
+  color: var(--az-accent-hover) !important;
+  border-color: var(--az-accent) !important;
+}
+
+.app-content-body > .row .card {
+  background-color: var(--az-log-card-bg, var(--az-card-bg)) !important;
+  border: var(--az-log-card-border, 1px solid var(--az-border)) !important;
+}
+
+.app-content-body > .row .card > .card-body {
+  border: var(--az-log-card-body-border, none) !important;
+}
+
+.app-content-body > .row .card table.table {
+  background-color: var(--az-log-table-bg, var(--az-table-bg)) !important;
+}
+
+.app-content-body > .row .card table.table tbody tr {
+  background-color: var(--az-log-table-bg, var(--az-table-bg)) !important;
 }
