@@ -1,3 +1,4 @@
+importScripts('log-requests.js');
 
 console.log('[BG] Unified background script loaded v1.0');
 
@@ -26,9 +27,9 @@ class RateLimitedQueue {
     this.lastRequestTime = 0;
   }
 
-  enqueue(fn) {
+  enqueue(fn, skip) {
     return new Promise((resolve, reject) => {
-      this.queue.push({ fn, resolve, reject });
+      this.queue.push({ fn, skip, resolve, reject });
       this.process();
     });
   }
@@ -41,6 +42,11 @@ class RateLimitedQueue {
 
     while (this.queue.length > 0) {
       const task = this.queue[0];
+      if (task.skip?.()) {
+        this.queue.shift();
+        task.reject(new Error('Сервис временно недоступен'));
+        continue;
+      }
       const now = Date.now();
       const timeSinceLast = now - this.lastRequestTime;
       const timeToWait = Math.max(0, this.delayMs - timeSinceLast);
@@ -64,72 +70,226 @@ class RateLimitedQueue {
   }
 }
 
-const ipLookupQueue = new RateLimitedQueue(2000);
+const geoProviders = [
+  { name: 'ip-api.com', queue: new RateLimitedQueue(2000), retryAt: 0 },
+  { name: 'ipwho.is', queue: new RateLimitedQueue(1100), retryAt: 0 },
+  { name: 'ipapi.co', queue: new RateLimitedQueue(1100), retryAt: 0 },
+  { name: 'FreeIPAPI', queue: new RateLimitedQueue(1100), retryAt: 0 }
+];
 
-function fetchWithRetry(url, options = {}, maxAttempts = 3) {
-  return fetch(url, options)
-    .then(async res => {
-      if (res.status === 429) {
-        if (maxAttempts > 1) {
-          console.warn(`[BG] IP lookup rate limited (429). Waiting 5s before retry...`);
-          await new Promise(resolve => setTimeout(resolve, 5000));
-          return fetchWithRetry(url, options, maxAttempts - 1);
+function normalizeGeoResponse(provider, ip, data) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('Некорректный ответ сервиса геолокации');
+  const message = data.message || data.reason || 'Сервис не вернул данные IP';
+  if (data.status === 'fail' || data.success === false || data.error) {
+    return { query: ip, status: 'fail', message,
+      retryable: !/^(invalid (query|ip address)|(?:reserved|private) (range|ip address))$/i.test(message) };
+  }
+  let entry;
+  if (provider.name === 'ip-api.com') {
+    if (data.status !== 'success' || data.query !== ip) throw new Error('Некорректный ответ ip-api.com');
+    entry = { ...data };
+  } else if (provider.name === 'ipwho.is') {
+    if (data.success !== true || data.ip !== ip) throw new Error('Некорректный ответ ipwho.is');
+    entry = {
+      country: data.country, countryCode: data.country_code, city: data.city,
+      region: data.region_code, regionName: data.region,
+      lat: data.latitude, lon: data.longitude, timezone: data.timezone?.id,
+      isp: data.connection?.isp, org: data.connection?.org,
+      as: data.connection?.asn != null ? `AS${data.connection.asn}` : undefined
+    };
+  } else if (provider.name === 'ipapi.co') {
+    if (data.ip !== ip) throw new Error('Некорректный ответ ipapi.co');
+    entry = {
+      country: data.country_name, countryCode: data.country_code || data.country, city: data.city,
+      region: data.region_code, regionName: data.region,
+      lat: data.latitude, lon: data.longitude, timezone: data.timezone,
+      org: data.org, as: data.asn
+    };
+  } else {
+    if (data.ipAddress !== ip) throw new Error('Некорректный ответ FreeIPAPI');
+    entry = {
+      country: data.countryName, countryCode: data.countryCode, city: data.cityName,
+      region: data.regionCode, regionName: data.regionName,
+      lat: data.latitude, lon: data.longitude,
+      org: data.asnOrganization, as: data.asn != null ? `AS${data.asn}` : undefined
+    };
+    if (typeof data.isProxy === 'boolean') entry.proxy = data.isProxy;
+  }
+  if (!entry.country && !entry.countryCode && !entry.city) throw new Error('Пустой ответ сервиса геолокации');
+  for (const [field, limit] of [['lat', 90], ['lon', 180]]) {
+    const value = entry[field];
+    if (value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value)) && Math.abs(Number(value)) <= limit) entry[field] = Number(value);
+    else delete entry[field];
+  }
+  return { ...entry, query: ip, status: 'success', _provider: provider.name };
+}
+
+function requestGeoProvider(provider, ips) {
+  if (Date.now() < provider.retryAt) return Promise.reject(new Error(`${provider.name}: временно недоступен`));
+  return provider.queue.enqueue(async () => {
+    if (Date.now() < provider.retryAt) throw new Error(`${provider.name}: временно недоступен`);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2500);
+    let retryDelay = 60000;
+    try {
+      const direct = provider === geoProviders[0];
+      const url = direct
+        ? 'http://ip-api.com/batch?fields=query,status,message,country,countryCode,city,region,regionName,lat,lon,timezone,isp,org,as,mobile,proxy,hosting&lang=ru'
+        : 'https://arizona-ai.ru/ecosystem_api/geoip';
+      const response = await fetch(url, {
+        signal: controller.signal,
+        credentials: 'omit',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(direct ? ips.map(query => ({ query })) : { provider: provider.name, ips })
+      });
+      if (!response.ok) {
+        if (response.status === 429) {
+          const header = response.headers.get('Retry-After');
+          const wait = Number(header) > 0 ? Number(header) * 1000 : Date.parse(header) - Date.now();
+          retryDelay = Math.max(60000, Number.isFinite(wait) ? wait : 60000);
         }
-        throw new Error(`HTTP error! Status: 429 Too Many Requests`);
+        throw new Error(`${provider.name}: HTTP ${response.status}`);
       }
-      if (!res.ok) {
-        if (maxAttempts > 1) {
-          console.warn(`[BG] IP lookup failed with status ${res.status}. Retrying in 2s...`);
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          return fetchWithRetry(url, options, maxAttempts - 1);
+      const data = await response.json();
+      let results;
+      if (provider === geoProviders[0]) {
+        if (!Array.isArray(data)) throw new Error('Некорректный ответ ip-api.com');
+        results = ips.map(query => {
+          const item = data.find(item => item?.query === query);
+          try { return normalizeGeoResponse(provider, query, item); }
+          catch (error) { return { query, status: 'fail', retryable: true, message: error.message }; }
+        });
+      } else results = [normalizeGeoResponse(provider, ips[0], data)];
+      if (results.every(item => item.status !== 'success' && item.retryable)) provider.retryAt = Date.now() + retryDelay;
+      return results;
+    } catch (error) {
+      provider.retryAt = Date.now() + retryDelay;
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+  }, () => Date.now() < provider.retryAt);
+}
+
+async function lookupGeoBatch(ips, onResult = () => {}) {
+  let primary = [];
+  try { primary = await requestGeoProvider(geoProviders[0], ips); } catch (error) { }
+  return Promise.all(ips.map(async ip => {
+    const result = primary.find(item => item.query === ip);
+    if (result?.status === 'success' || result?.retryable === false) {
+      onResult(result);
+      return result;
+    }
+    let message = result?.message || 'Сервисы геолокации недоступны';
+    const remaining = geoProviders.slice(1);
+    while (remaining.length) {
+      remaining.sort((a, b) => Number(Date.now() < a.retryAt) - Number(Date.now() < b.retryAt) || a.queue.queue.length - b.queue.queue.length);
+      const provider = remaining.shift();
+      try {
+        const [item] = await requestGeoProvider(provider, [ip]);
+        if (item.status === 'success' || item.retryable === false) {
+          onResult(item);
+          return item;
         }
-        throw new Error(`HTTP error! Status: ${res.status}`);
+        message = item.message;
+      } catch (error) {
+        message = error.message;
       }
-      return res.json();
-    })
-    .catch(async err => {
-      if (err.message && err.message.includes('429')) {
-        throw err;
-      }
-      if (maxAttempts > 1) {
-        console.warn(`[BG] Fetch error: ${err.message}. Retrying in 2s...`);
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        return fetchWithRetry(url, options, maxAttempts - 1);
-      }
-      throw err;
-    });
+    }
+    const failed = { query: ip, status: 'fail', retryable: true, message };
+    onResult(failed);
+    return failed;
+  }));
 }
 
 let ipDetailsCache = {};
-let isCacheLoaded = false;
+let cacheLoadPromise;
+let cacheSaveTimer;
+let geoCacheGeneration = 0;
+const pendingGeoIps = new Map();
+const IP_CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
 
 function loadCache() {
-  if (isCacheLoaded) return Promise.resolve();
-  return new Promise((resolve) => {
-    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-      chrome.storage.local.get(['arz_ip_details_cache'], (result) => {
-        if (result && result['arz_ip_details_cache']) {
-          ipDetailsCache = result['arz_ip_details_cache'];
+  if (!cacheLoadPromise) {
+    cacheLoadPromise = new Promise(resolve => {
+      chrome.storage.local.get(['arz_ip_details_cache'], result => {
+        ipDetailsCache = result.arz_ip_details_cache || {};
+        const now = Date.now();
+        for (const [ip, data] of Object.entries(ipDetailsCache)) {
+          if (!data || data.status !== 'success' || (data._ts && now - data._ts >= IP_CACHE_TTL)) delete ipDetailsCache[ip];
+          else if (!data._ts) data._ts = now;
         }
-        isCacheLoaded = true;
         resolve();
       });
-    } else {
-      isCacheLoaded = true;
-      resolve();
-    }
-  });
+    });
+  }
+  return cacheLoadPromise;
 }
 
 function saveCache() {
-  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+  if (cacheSaveTimer) return;
+  cacheSaveTimer = setTimeout(() => {
+    cacheSaveTimer = null;
     const keys = Object.keys(ipDetailsCache);
     if (keys.length > 3000) {
-      const keysToRemove = keys.slice(0, keys.length - 2000);
-      keysToRemove.forEach(k => delete ipDetailsCache[k]);
+      keys.sort((a, b) => (ipDetailsCache[a]._ts || 0) - (ipDetailsCache[b]._ts || 0));
+      for (const key of keys.slice(0, keys.length - 2000)) delete ipDetailsCache[key];
     }
-    chrome.storage.local.set({ 'arz_ip_details_cache': ipDetailsCache });
+    chrome.storage.local.set({ arz_ip_details_cache: ipDetailsCache });
+  }, 250);
+}
+
+async function getCachedIps(ips) {
+  await loadCache();
+  const result = {};
+  for (const ip of new Set(ips)) {
+    const local = ipDetailsCache[ip];
+    const remote = memoryCache.get(ip);
+    const data = local || remote;
+    if (data?.status === 'success' && Date.now() - (data._ts || 0) < IP_CACHE_TTL) result[ip] = data;
+    else if (local) delete ipDetailsCache[ip];
   }
+  return result;
+}
+
+async function fetchGeoIps(ips, onResult = () => {}) {
+  const unique = [...new Set(ips)].filter(ip => typeof ip === 'string' && /^\d{1,3}(\.\d{1,3}){3}$/.test(ip) && ip.split('.').every(part => Number(part) <= 255));
+  await loadCache();
+  let cached = await getCachedIps(unique);
+  if (unique.some(ip => !cached[ip])) loadIpCache();
+  const missing = unique.filter(ip => !cached[ip] && !pendingGeoIps.has(ip));
+  for (let i = 0; i < missing.length; i += 15) {
+    const chunk = missing.slice(i, i + 15);
+    const generation = geoCacheGeneration;
+    const resolvers = new Map();
+    for (const ip of chunk) {
+      const pending = new Promise(resolve => resolvers.set(ip, resolve))
+        .finally(() => { if (pendingGeoIps.get(ip) === pending) pendingGeoIps.delete(ip); });
+      pendingGeoIps.set(ip, pending);
+    }
+    const publish = item => {
+      if (resolvers.has(item.query)) {
+        if (item.status === 'success' && generation === geoCacheGeneration) {
+          const entry = { ...item, _ts: Date.now() };
+          ipDetailsCache[item.query] = entry;
+          memoryCache.set(item.query, entry);
+          saveCache();
+          scheduleSave();
+        }
+        resolvers.get(item.query)(item);
+        resolvers.delete(item.query);
+      }
+    };
+    lookupGeoBatch(chunk, publish).catch(error => {
+      for (const ip of resolvers.keys()) publish({ query: ip, status: 'fail', retryable: true, message: error.message });
+    });
+  }
+  return Promise.all(unique.map(async ip => {
+    const item = cached[ip] || await pendingGeoIps.get(ip);
+    onResult(item);
+    return item;
+  }));
 }
 
 const API_CONFIG = {
@@ -143,20 +303,21 @@ let cacheLoaded = false;
 let saveTimeout = null;
 let isSaving = false;
 
-function logToStorage(context, data) {
-  chrome.storage.local.get(['bg_debug_logs'], (result) => {
-    const logs = result.bg_debug_logs || [];
-    logs.unshift({
-      time: new Date().toISOString(),
-      context: context,
-      data: data
-    });
-    if (logs.length > 100) logs.pop();
-    chrome.storage.local.set({ bg_debug_logs: logs });
+let remoteCachePromise;
+let remoteCacheRetryAt = 0;
+
+function loadIpCache() {
+  if (cacheLoaded) return Promise.resolve({ success: true, data: Object.fromEntries(memoryCache) });
+  if (remoteCachePromise) return remoteCachePromise;
+  if (Date.now() < remoteCacheRetryAt) return Promise.resolve({ success: true, data: Object.fromEntries(memoryCache) });
+  remoteCachePromise = readRemoteIpCache().finally(() => {
+    remoteCachePromise = null;
+    if (!cacheLoaded) remoteCacheRetryAt = Date.now() + 60000;
   });
+  return remoteCachePromise;
 }
 
-async function loadIpCache() {
+async function readRemoteIpCache() {
   if (cacheLoaded) {
     return { success: true, data: Object.fromEntries(memoryCache) };
   }
@@ -168,13 +329,13 @@ async function loadIpCache() {
     const result = await response.json();
 
     if (result.success && result.data) {
-      memoryCache.clear();
       const now = Date.now();
       for (const [ip, data] of Object.entries(result.data)) {
         if (data._ts && (now - data._ts) < 30 * 24 * 60 * 60 * 1000) {
-          memoryCache.set(ip, data);
+          if (!memoryCache.has(ip)) memoryCache.set(ip, data);
         }
       }
+      while (memoryCache.size > 3000) memoryCache.delete(memoryCache.keys().next().value);
       cacheLoaded = true;
       console.log(`[BG] Загружено ${memoryCache.size} IP из кэша API`);
       return { success: true, data: Object.fromEntries(memoryCache) };
@@ -224,7 +385,8 @@ async function forceSaveIpsToCache() {
 }
 
 function scheduleSave() {
-  if (saveTimeout) clearTimeout(saveTimeout);
+  if (saveTimeout) return;
+  while (memoryCache.size > 3000) memoryCache.delete(memoryCache.keys().next().value);
   saveTimeout = setTimeout(() => {
     forceSaveIpsToCache();
     saveTimeout = null;
@@ -232,7 +394,7 @@ function scheduleSave() {
 }
 
 async function addIpsToCache(ipsData) {
-  await loadIpCache();
+  await loadCache();
 
   let updated = false;
   const now = Date.now();
@@ -240,18 +402,28 @@ async function addIpsToCache(ipsData) {
   for (const [ip, ipData] of Object.entries(ipsData)) {
     const existing = memoryCache.get(ip);
     if (!existing || existing._ts !== ipData._ts) {
-      memoryCache.set(ip, { ...ipData, _ts: now });
+      const data = { ...ipData, _ts: now };
+      memoryCache.set(ip, data);
+      if (data.status === 'success') ipDetailsCache[ip] = data;
       updated = true;
     }
   }
 
   if (updated) {
+    saveCache();
     console.log(`[BG] Добавлено ${Object.keys(ipsData).length} IP в кэш (всего: ${memoryCache.size})`);
     scheduleSave();
   }
 }
 
-async function fetchItemsFromAPI() {
+let itemsRequest;
+
+function fetchItemsFromAPI() {
+  if (!itemsRequest) itemsRequest = requestItemsFromAPI().finally(() => { itemsRequest = null; });
+  return itemsRequest;
+}
+
+async function requestItemsFromAPI() {
   try {
     console.log('[BG] Загрузка предметов из API...');
     const url = `${API_CONFIG.url}?type=items&action=get_all&api_key=${encodeURIComponent(API_CONFIG.apiKey)}&t=${Date.now()}`;
@@ -426,7 +598,7 @@ async function getWorkingEcosystemDomain() {
   ];
   for (const domain of domains) {
     try {
-      const response = await fetch(`${domain}/ecosystem_api/info`);
+      const response = await fetchWithTimeout(`${domain}/ecosystem_api/info`, { timeout: 5000 });
       if (response.ok) {
         cachedWorkingDomain = domain;
         return domain;
@@ -438,7 +610,21 @@ async function getWorkingEcosystemDomain() {
   return 'https://arizona-ai.ru';
 }
 
-async function fetchEcosystemApi() {
+let ecosystemRequest;
+let ecosystemExpires = 0;
+
+function fetchEcosystemApi() {
+  if (!ecosystemRequest || Date.now() >= ecosystemExpires) {
+    ecosystemExpires = Date.now() + 3600000;
+    ecosystemRequest = requestEcosystemApi().catch(error => {
+      ecosystemRequest = null;
+      throw error;
+    });
+  }
+  return ecosystemRequest;
+}
+
+async function requestEcosystemApi() {
   const domains = [
     'https://arizona-ai.ru',
     'https://arizona-ai.tech'
@@ -446,7 +632,7 @@ async function fetchEcosystemApi() {
   for (const domain of domains) {
     try {
       const url = `${domain}/ecosystem_api/info`;
-      const response = await fetch(url);
+      const response = await fetchWithTimeout(url, { timeout: 5000 });
       if (!response.ok) throw new Error(`HTTP status: ${response.status}`);
       const json = await response.json();
       if (json && json.status === 'success' && Array.isArray(json.users)) {
@@ -460,7 +646,55 @@ async function fetchEcosystemApi() {
   throw new Error('All ArizonaAI Ecosystem API fallback routes failed.');
 }
 
+let settingsWriteQueue = Promise.resolve();
+
+let pendingSettingsBatch;
+
+function patchSettings(patches) {
+  if (!pendingSettingsBatch) {
+    const batch = { patches: [], promise: null };
+    batch.promise = new Promise((resolve, reject) => {
+      setTimeout(() => {
+        pendingSettingsBatch = null;
+        writeSettingsPatches(batch.patches).then(resolve, reject);
+      }, 40);
+    });
+    pendingSettingsBatch = batch;
+  }
+  pendingSettingsBatch.patches.push(...patches);
+  return pendingSettingsBatch.promise;
+}
+
+function writeSettingsPatches(patches) {
+  const allowed = patches.filter(patch => ['arz_logsparser_helper_settings', 'arizonaSettings'].includes(patch.key) &&
+    Array.isArray(patch.path) && patch.path.every(key => typeof key === 'string' && !['__proto__', 'constructor', 'prototype'].includes(key)));
+  settingsWriteQueue = settingsWriteQueue.catch(() => {}).then(() => new Promise((resolve, reject) => {
+    const keys = [...new Set(allowed.map(patch => patch.key))];
+    chrome.storage.local.get(keys, values => {
+      if (chrome.runtime.lastError) return reject(new Error(chrome.runtime.lastError.message));
+      for (const { key, path, value } of allowed) {
+        if (!path.length) { values[key] = value; continue; }
+        let target = values[key] ||= {};
+        for (const segment of path.slice(0, -1)) target = target[segment] ||= {};
+        target[path.at(-1)] = value;
+      }
+      chrome.storage.local.set(values, () => {
+        if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+        else resolve();
+      });
+    });
+  }));
+  return settingsWriteQueue;
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === 'patch_settings') {
+    patchSettings(message.patches || [])
+      .then(() => sendResponse({ success: true }))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+
   if (message.type === 'FETCH_ECOSYSTEM_API') {
     fetchEcosystemApi()
       .then(data => sendResponse({ success: true, data }))
@@ -481,72 +715,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (message.action) {
-    console.log('[BG] Unified received action:', message.action);
-    logToStorage('message_received', { action: message.action, type: message.type });
-  }
 
-  if (message.type === 'arz_fetch_ips') {
-    const { ips } = message;
-    loadCache().then(() => {
-      const results = [];
-      const ipsToFetch = [];
-
-      ips.forEach(ip => {
-        if (ipDetailsCache[ip]) {
-          results.push(ipDetailsCache[ip]);
-        } else {
-          ipsToFetch.push(ip);
-        }
-      });
-
-      if (ipsToFetch.length === 0) {
-        sendResponse({ success: true, data: results });
-        return;
-      }
-
-      const maxBatchSize = 15;
-      const chunks = [];
-      for (let i = 0; i < ipsToFetch.length; i += maxBatchSize) {
-        chunks.push(ipsToFetch.slice(i, i + maxBatchSize));
-      }
-
-      const chunkPromises = chunks.map(chunk => {
-        return ipLookupQueue.enqueue(() => {
-          return fetchWithRetry("http://ip-api.com/batch?fields=status,message,country,countryCode,region,regionName,city,lat,lon,timezone,org,as,mobile,proxy,hosting,query&lang=ru", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify(chunk)
-          });
-        });
-      });
-
-      Promise.allSettled(chunkPromises).then(settledResults => {
-        let hasSuccess = false;
-        settledResults.forEach(result => {
-          if (result.status === 'fulfilled' && Array.isArray(result.value)) {
-            hasSuccess = true;
-            result.value.forEach(item => {
-              if (item && item.query) {
-                ipDetailsCache[item.query] = item;
-                results.push(item);
-              }
-            });
-          }
-        });
-
-        if (hasSuccess) {
-          saveCache();
-        }
-
-        sendResponse({ success: results.length > 0, data: results });
-      });
-    });
+  if (message.type === 'arz_fetch_ips' || message.action === 'fetch_ip_geo_batch' || message.action === 'fetch_ip_geo_single') {
+    const single = message.action === 'fetch_ip_geo_single';
+    const progress = item => {
+      if (!message.requestId || !sender.tab?.id) return;
+      const target = sender.documentId ? { documentId: sender.documentId } : { frameId: sender.frameId || 0 };
+      chrome.tabs.sendMessage(sender.tab.id, { action: 'ip_geo_result', requestId: message.requestId, data: item }, target, () => { void chrome.runtime.lastError; });
+    };
+    fetchGeoIps(single ? [message.ip] : message.ips || [], progress)
+      .then(data => sendResponse({ success: true, data: single ? data[0] : data }))
+      .catch(error => sendResponse({ success: false, error: error.message, data: single ? null : [] }));
     return true;
   }
 
+  if (message.action === 'get_cached_ips') {
+    loadIpCache();
+    getCachedIps(message.ips || [])
+      .then(data => sendResponse({ success: true, data }))
+      .catch(error => sendResponse({ success: false, error: error.message, data: {} }));
+    return true;
+  }
 
   if (message.action === 'ping') {
     sendResponse({ success: true, message: 'pong', timestamp: Date.now() });
@@ -581,184 +770,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (message.action === 'fetch_ip_geo_batch') {
-    const ipsToFetch = message.ips || [];
-    if (ipsToFetch.length === 0) {
-      sendResponse({ success: true, data: [] });
-      return true;
-    }
-
-    const maxBatchSize = 15;
-    const chunks = [];
-    for (let i = 0; i < ipsToFetch.length; i += maxBatchSize) {
-      chunks.push(ipsToFetch.slice(i, i + maxBatchSize));
-    }
-
-    const chunkPromises = chunks.map(chunk => {
-      return ipLookupQueue.enqueue(() => {
-        const url = 'http://ip-api.com/batch?fields=query,status,country,city,regionName,lat,lon,isp,org,as,mobile,proxy,hosting&lang=ru';
-        return fetchWithRetry(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(chunk.map(ip => ({ query: ip })))
-        });
-      });
-    });
-
-    Promise.allSettled(chunkPromises).then(async settledResults => {
-      const mergedData = [];
-      const ipsToSave = {};
-      const now = Date.now();
-
-      settledResults.forEach((result, chunkIdx) => {
-        const chunk = chunks[chunkIdx];
-        if (result.status === 'fulfilled' && Array.isArray(result.value)) {
-          for (let i = 0; i < result.value.length; i++) {
-            const ipData = result.value[i];
-            const ip = chunk[i];
-            mergedData.push(ipData);
-            if (ipData && ipData.status === 'success' && ip) {
-              ipsToSave[ip] = { ...ipData, _ts: now };
-            }
-          }
-        } else {
-          console.error(`[BG] fetch_ip_geo_batch chunk failed:`, result.reason);
-          chunk.forEach(() => {
-            mergedData.push({ status: 'fail' });
-          });
-        }
-      });
-
-      if (Object.keys(ipsToSave).length > 0) {
-        await addIpsToCache(ipsToSave);
-      }
-
-      sendResponse({ success: mergedData.length > 0, data: mergedData });
-    });
-
-    return true;
-  }
-
-  if (message.action === 'fetch_ip_geo_single') {
-    ipLookupQueue.enqueue(() => {
-      const url = `http://ip-api.com/json/${message.ip}?fields=query,status,country,city,regionName,lat,lon,isp,org,as,mobile,proxy,hosting&lang=ru`;
-      return fetchWithRetry(url);
-    })
-    .then(async (data) => {
-      if (data && data.status === 'success') {
-        await addIpsToCache({ [message.ip]: { ...data, _ts: Date.now() } });
-      }
-      sendResponse({ success: true, data });
-    })
-    .catch(error => {
-      sendResponse({ success: false, error: error.message });
-    });
-    return true;
-  }
-
   if (message.action === 'check_ban') {
-    const nickname = message.nickname;
-    const url = `https://arizonarp.logsparser.info/?server_number=5&type%5B%5D=ban&type%5B%5D=login&sort=desc&min_period=2026-01-16+00%3A00%3A00&player=${encodeURIComponent(nickname)}&arz-filter-logs-mode=show`;
-
-    chrome.tabs.create({ url: url, active: false }, (tab) => {
-      let isResolved = false;
-      const finish = (result) => {
-        if (isResolved) return;
-        isResolved = true;
-        if (tab && tab.id) {
-          chrome.tabs.remove(tab.id, () => {});
-        }
-        sendResponse(result);
-      };
-
-      const timeout = setTimeout(() => {
-        finish({ success: false, error: 'Timeout' });
-      }, 20000);
-
-      const onUpdated = (tabId, changeInfo) => {
-        if (tabId === tab.id && changeInfo.status === 'complete') {
-          chrome.tabs.onUpdated.removeListener(onUpdated);
-
-          chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            func: (nickname) => {
-              const result = {
-                bans: [],
-                logins: [],
-                lastBan: null,
-                isBanned: false,
-                unbanDate: null
-              };
-
-              const rows = document.querySelectorAll('table.table tbody tr');
-              for (let row of rows) {
-                const cells = row.querySelectorAll('td');
-                if (cells.length >= 2) {
-                  const date = cells[0]?.textContent?.trim() || '';
-                  const action = cells[1]?.textContent || '';
-
-                  if (action.includes('забанил') && action.includes(nickname)) {
-                    const durationMatch = action.match(/на\s+(\d+)\s+дней/);
-                    const reasonMatch = action.match(/причина:\s+(.+?)(?:\s*\||$)/);
-                    const adminMatch = action.match(/Администратор\s+(\S+)/);
-
-                    result.bans.push({
-                      date: date,
-                      duration: durationMatch ? durationMatch[1] : '2000',
-                      reason: reasonMatch ? reasonMatch[1].trim() : action,
-                      admin: adminMatch ? adminMatch[1] : 'Unknown'
-                    });
-                  }
-
-                  if (action.includes('авторизовался') && action.includes(nickname)) {
-                    result.logins.push({ date: date });
-                  }
-                }
-              }
-
-              if (result.bans.length > 0) {
-                result.lastBan = result.bans.reduce((latest, current) => {
-                  return current.date > latest.date ? current : latest;
-                }, result.bans[0]);
-
-                const loginsAfterBan = result.logins.filter(login => login.date > result.lastBan.date);
-                result.isBanned = loginsAfterBan.length === 0;
-
-                if (result.isBanned) {
-                  const banDate = new Date(result.lastBan.date);
-                  const days = parseInt(result.lastBan.duration);
-                  const unbanDate = new Date(banDate);
-                  unbanDate.setDate(unbanDate.getDate() + days);
-                  result.unbanDate = unbanDate.toLocaleString('ru-RU');
-                }
-              }
-              return result;
-            },
-            args: [nickname]
-          }, (results) => {
-            clearTimeout(timeout);
-            if (results && results[0] && results[0].result) {
-              const data = results[0].result;
-              let banInfo = null;
-              if (data.isBanned && data.lastBan) {
-                banInfo = {
-                  nickname: nickname,
-                  date: data.lastBan.date,
-                  reason: data.lastBan.reason,
-                  banDuration: parseInt(data.lastBan.duration),
-                  date_unbanned: data.unbanDate,
-                  admin: data.lastBan.admin
-                };
-              }
-              finish({ success: true, data: banInfo });
-            } else {
-              finish({ success: false, error: 'Script execution failed' });
-            }
-          });
-        }
-      };
-      chrome.tabs.onUpdated.addListener(onUpdated);
-    });
+    runQueuedBanCheck(message.nickname, sender.tab?.id ?? -1)
+      .then(sendResponse).catch(error => sendResponse({ success: false, error: error.message }));
     return true;
   }
 
@@ -838,21 +852,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === 'clear_ip_cache') {
-    memoryCache.clear();
-    cacheLoaded = false;
-    forceSaveIpsToCache()
-      .then(() => sendResponse({ success: true }))
-      .catch(err => sendResponse({ success: false, error: err.message }));
+    loadCache().then(() => {
+      geoCacheGeneration++;
+      memoryCache.clear();
+      ipDetailsCache = {};
+      cacheLoaded = true;
+      saveCache();
+      sendResponse({ success: true });
+    }).catch(error => sendResponse({ success: false, error: error.message }));
     return true;
   }
 
   return false;
 });
-
-setInterval(() => {
-  console.log('[BG] Периодическое обновление предметов');
-  updateItemsFromAPI().catch(() => {});
-}, 24 * 60 * 60 * 1000);
 
 chrome.runtime.onInstalled.addListener(() => {
   console.log('Arizona LogsParser Helper установлен!');
@@ -950,4 +962,141 @@ if (chrome.commands && chrome.commands.onCommand) {
       });
     }
   });
+}
+
+
+async function runQueuedBanCheck(nickname, owner) {
+  let epoch;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const id = crypto.randomUUID();
+    let finished = false;
+    try {
+      while (true) {
+        const permit = await logRequests.acquire(owner, id, epoch);
+        if (permit.stopped) throw new Error('Автоматические операции остановлены после 429');
+        epoch = permit.epoch;
+        if (permit.granted) break;
+        if (owner >= 0) await chrome.tabs.get(owner);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      const result = await new Promise(resolve => {
+        chrome.tabs.create({ url: 'about:blank', active: false }, tab => {
+          if (chrome.runtime.lastError || !tab) { resolve({ success: false, status: 0, error: 'Не удалось открыть вкладку' }); return; }
+          let resolved = false;
+          let status = 0;
+          let retryAfter;
+          const finish = result => {
+            if (resolved) return;
+            resolved = true;
+            clearTimeout(timeout);
+            chrome.tabs.onUpdated.removeListener(onUpdated);
+            chrome.tabs.onRemoved.removeListener(onRemoved);
+            chrome.webRequest.onHeadersReceived.removeListener(onHeaders);
+            chrome.tabs.remove(tab.id, () => { void chrome.runtime.lastError; });
+            resolve({ ...result, status, retryAfter });
+          };
+          const timeout = setTimeout(() => finish({ success: false, error: 'Timeout' }), 20000);
+          const onRemoved = tabId => {
+            if (tabId === tab.id || tabId === owner) finish({ success: false, error: 'Вкладка закрыта' });
+          };
+          const onHeaders = details => {
+            if (details.tabId !== tab.id || details.type !== 'main_frame') return;
+            status = details.statusCode;
+            retryAfter = details.responseHeaders?.find(header => header.name.toLowerCase() === 'retry-after')?.value;
+            if (status >= 400) finish({ success: false, error: status === 429 ? 'Логпарсер ограничил запросы' : `HTTP ${status}` });
+          };
+          const onUpdated = (tabId, changeInfo, updatedTab) => {
+            if (tabId !== tab.id || changeInfo.status !== 'complete' || resolved || !updatedTab?.url?.startsWith('https://arizonarp.logsparser.info/')) return;
+            chrome.scripting.executeScript({
+              target: { tabId: tab.id },
+              func: (nickname) => {
+              const result = {
+                bans: [],
+                logins: [],
+                lastBan: null,
+                isBanned: false,
+                unbanDate: null
+              };
+
+              const rows = document.querySelectorAll('table.table tbody tr');
+              for (let row of rows) {
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 2) {
+                  const date = cells[0]?.textContent?.trim() || '';
+                  const action = cells[1]?.textContent || '';
+
+                  if (action.includes('забанил') && action.includes(nickname)) {
+                    const durationMatch = action.match(/на\s+(\d+)\s+дней/);
+                    const reasonMatch = action.match(/причина:\s+(.+?)(?:\s*\||$)/);
+                    const adminMatch = action.match(/Администратор\s+(\S+)/);
+
+                    result.bans.push({
+                      date: date,
+                      duration: durationMatch ? durationMatch[1] : '2000',
+                      reason: reasonMatch ? reasonMatch[1].trim() : action,
+                      admin: adminMatch ? adminMatch[1] : 'Unknown'
+                    });
+                  }
+
+                  if (action.includes('авторизовался') && action.includes(nickname)) {
+                    result.logins.push({ date: date });
+                  }
+                }
+              }
+
+              if (result.bans.length > 0) {
+                result.lastBan = result.bans.reduce((latest, current) => {
+                  return current.date > latest.date ? current : latest;
+                }, result.bans[0]);
+
+                const loginsAfterBan = result.logins.filter(login => login.date > result.lastBan.date);
+                result.isBanned = loginsAfterBan.length === 0;
+
+                if (result.isBanned) {
+                  const banDate = new Date(result.lastBan.date);
+                  const days = parseInt(result.lastBan.duration);
+                  const unbanDate = new Date(banDate);
+                  unbanDate.setDate(unbanDate.getDate() + days);
+                  result.unbanDate = unbanDate.toLocaleString('ru-RU');
+                }
+              }
+              return result;
+            },
+              args: [nickname]
+            }, results => {
+              if (chrome.runtime.lastError || !results?.[0]?.result) { finish({ success: false, error: 'Script execution failed' }); return; }
+              const data = results[0].result;
+              const banInfo = data.isBanned && data.lastBan ? {
+                nickname, date: data.lastBan.date, reason: data.lastBan.reason,
+                banDuration: parseInt(data.lastBan.duration), date_unbanned: data.unbanDate
+              } : null;
+              finish({ success: true, data: banInfo });
+            });
+          };
+          chrome.tabs.onUpdated.addListener(onUpdated);
+          chrome.tabs.onRemoved.addListener(onRemoved);
+          chrome.webRequest.onHeadersReceived.addListener(onHeaders, {
+            urls: ['https://arizonarp.logsparser.info/*'], types: ['main_frame']
+          }, ['responseHeaders']);
+          const url = `https://arizonarp.logsparser.info/?server_number=5&type%5B%5D=ban&type%5B%5D=login&sort=desc&min_period=2026-01-16+00%3A00%3A00&player=${encodeURIComponent(nickname)}&arz-filter-logs-mode=show`;
+          chrome.tabs.update(tab.id, { url }, () => {
+            if (chrome.runtime.lastError) finish({ success: false, error: 'Не удалось загрузить вкладку' });
+          });
+        });
+      });
+      const outcome = await logRequests.finish(owner, id, result.status, result.retryAfter);
+      finished = true;
+      if (outcome.expired) throw new Error('Истекло разрешение на запрос');
+      if (outcome.stopped) {
+        const tabs = await chrome.tabs.query({ url: 'https://arizonarp.logsparser.info/*' });
+        for (const tab of tabs) chrome.tabs.sendMessage(tab.id, { action: 'log_stop' }).catch(() => {});
+        throw new Error('Автоматические операции остановлены после 429');
+      }
+      if (result.status === 0 && result.error !== 'Вкладка закрыта' && attempt < 2) continue;
+      if (result.status !== 429) return result;
+    } finally {
+      if (!finished) await logRequests.cancel(owner, id);
+    }
+  }
+  return { success: false, error: 'Логпарсер ограничил запросы. Повторите позже.' };
 }

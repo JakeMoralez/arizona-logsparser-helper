@@ -1,14 +1,15 @@
 {
   "manifest_version": 3,
   "name": "Arizona LogsParser Helper",
-  "version": "1.9",
+  "version": "2.0",
   "description": "Помощник для работы с логами Arizona RP",
   "permissions": [
     "storage",
     "notifications",
     "activeTab",
     "tabs",
-    "scripting"
+    "scripting",
+    "webRequest"
   ],
   "host_permissions": [
     "https://arizonarp.logsparser.info/*",
@@ -17,6 +18,9 @@
     "http://localhost/*",
     "https://arizona-ai.ru/*",
     "https://arizona-ai.tech/*"
+  ],
+  "optional_permissions": [
+    "clipboardWrite"
   ],
   "background": {
     "service_worker": "background/background.js"
@@ -40,7 +44,10 @@
         "https://arizonarp.logsparser.info/*"
       ],
       "js": [
-        "content/content.js"
+        "content/compatibility.js",
+        "content/theme.js",
+        "content/runtime.js",
+        "content/bootstrap.js"
       ],
       "css": [
         "content/content.css"
@@ -56,6 +63,16 @@
       ],
       "world": "MAIN",
       "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "https://arizonarp.logsparser.info/*"
+      ],
+      "js": [
+        "content/log-requests.js",
+        "content/content.js"
+      ],
+      "run_at": "document_start"
     }
   ],
   "web_accessible_resources": [
@@ -63,7 +80,8 @@
       "resources": [
         "icons/icon16.png",
         "icons/icon48.png",
-        "icons/icon128.png"
+        "icons/icon128.png",
+        "content/modules/*.js"
       ],
       "matches": [
         "https://arizonarp.logsparser.info/*"

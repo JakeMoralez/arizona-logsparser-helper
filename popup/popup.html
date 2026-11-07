@@ -4,10 +4,8 @@
 <head>
   <meta charset="UTF-8">
   <title>Arizona LogsParser Helper</title>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap"
-    rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="vendor/css/google-fonts.css">
+  <link rel="stylesheet" href="vendor/css/fontawesome.min.css">
   <link rel="stylesheet" href="popup.css">
 </head>
 
@@ -15,7 +13,7 @@
   <div class="app-container">
     <header class="app-header">
       <div class="logo-area">
-        <img class="logo-img" src="../icons/icon128.png" alt="ARIZONA Logo">
+        <span class="logo-img" role="img" aria-label="ARIZONA Logo"></span>
         <div class="logo-text">
           <h1>ARIZONA</h1>
           <span class="logo-sub">LOGSPARSER HELPER</span>
@@ -31,7 +29,10 @@
     </header>
 
     <nav class="tab-nav">
-      <button class="tab-btn active" data-tab="appearance-tab">
+      <button class="tab-btn active" data-tab="themes-tab">
+        <i class="fa-solid fa-star tab-btn-icon"></i>Темы
+      </button>
+      <button class="tab-btn" data-tab="appearance-tab">
         <i class="fa-solid fa-palette tab-btn-icon"></i>Внешний вид
       </button>
       <button class="tab-btn" data-tab="tweaks-tab">
@@ -42,33 +43,34 @@
 
     <main class="tab-content">
 
-      <section id="appearance-tab" class="tab-panel active">
+      <section id="themes-tab" class="tab-panel active">
+        <div class="themes-container">
+          <div class="theme-search-wrapper">
+            <input type="search" id="theme-search" class="arz-input" placeholder="Поиск темы по названию..." aria-label="Поиск темы по названию">
+            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+          </div>
+          <p id="themes-custom-notice" class="themes-notice" hidden>Включена своя тема. Выбор карточки меняет режим и готовую схему, сохраняя свою палитру.</p>
+          <section id="themes-favorites-section" hidden>
+            <div class="control-group-title"><i class="fa-solid fa-star menu-icon"></i>Избранные темы</div>
+            <div id="themes-grid-favorites" class="themes-grid"></div>
+          </section>
+          <section id="themes-dark-section">
+            <div class="control-group-title">Тёмные темы</div>
+            <div id="themes-grid-dark" class="themes-grid"></div>
+          </section>
+          <section id="themes-light-section">
+            <div class="control-group-title">Светлые темы</div>
+            <div id="themes-grid-light" class="themes-grid"></div>
+          </section>
+          <p id="themes-empty" class="themes-notice" role="status" hidden>Темы не найдены</p>
+        </div>
+      </section>
+
+      <section id="appearance-tab" class="tab-panel">
         <div class="customizer-scroll">
           <div class="control-group-title"><i class="fa-solid fa-paintbrush menu-icon"></i>Тема и кастомизация логов
           </div>
           <div class="control-card">
-            <div class="control-row">
-              <label><i class="fa-solid fa-circle-half-stroke menu-icon"></i>Режим темы</label>
-              <select id="visual-theme-mode" class="arz-select">
-                <option value="dark" selected>Тёмная тема</option>
-                <option value="light">Светлая тема</option>
-              </select>
-            </div>
-            <div class="control-row">
-              <label><i class="fa-solid fa-palette menu-icon"></i>Цветовая схема</label>
-              <select id="visual-theme-color" class="arz-select">
-                <option value="red" selected>Arizona Red (Красная)</option>
-                <option value="ocean">Ocean Breeze (Синяя)</option>
-                <option value="emerald">Emerald Safe (Зелёная)</option>
-                <option value="gold">Amber Gold (Золотая)</option>
-                <option value="frost">Nordic Frost (Серая)</option>
-                <option value="dracula">Dracula (Фиолетовая)</option>
-                <option value="sunset">Sunset Orange (Оранжевая)</option>
-                <option value="cyberpunk">Cyberpunk Neon (Розовая)</option>
-                <option value="nord">Nord Frost (Голубая)</option>
-                <option value="matrix">Matrix Hacker (Зелёный неон)</option>
-              </select>
-            </div>
             <div class="control-row">
               <label><i class="fa-solid fa-border-all menu-icon"></i>Закругление элементов</label>
               <select id="visual-theme-radius" class="arz-select">
@@ -319,12 +321,58 @@
                 <span class="slider round"></span>
               </label>
             </div>
+            <div class="control-row">
+              <label><i class="fa-solid fa-arrow-up menu-icon"></i>Кнопка прокрутки вверх</label>
+              <label class="switch">
+                <input type="checkbox" id="tweak-scroll-top" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
+            <div class="control-row">
+              <label><i class="fa-solid fa-arrow-down menu-icon"></i>Кнопка прокрутки вниз</label>
+              <label class="switch">
+                <input type="checkbox" id="tweak-scroll-bottom" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
           </div>
         </div>
       </section>
 
       <section id="tweaks-tab" class="tab-panel">
         <div class="customizer-scroll">
+          <div class="control-group-title"><i class="fa-solid fa-puzzle-piece menu-icon"></i>Совместимость расширений</div>
+          <section class="control-card compatibility-card" aria-labelledby="compatibility-title">
+            <div class="control-row">
+              <label id="compatibility-title" for="sakai-compatibility-mode">Arizona Helper by Sakai</label>
+              <select id="sakai-compatibility-mode" class="arz-select">
+                <option value="auto">Автоматически</option>
+                <option value="on">Всегда включено</option>
+                <option value="off">Выключено</option>
+              </select>
+            </div>
+            <p id="sakai-compatibility-status" role="status">Проверка текущей вкладки…</p>
+            <button id="sakai-compatibility-reload" class="arz-btn-primary" type="button" hidden><i class="fa-solid fa-rotate-right" aria-hidden="true"></i>Перезагрузить страницу</button>
+            <details>
+              <summary>Какие функции передаются Sakai</summary>
+              <p>Оформление страницы, фильтр логов и выбор конкретной даты, количество и догрузка логов, GeoIP в таблице, скрытие столбцов, маскировка, TG/VK, копирование страницы, формы, шаблоны и автоматический запуск онлайна.</p>
+              <p>Все разделы окон «Пробив» и «Аналитика», включая онлайн, остаются доступны. Favicon, логотип и боковое меню управляются настройками нашего расширения. Также доступны ввод нескольких ID/никнеймов, быстрый выбор границ периода, эмодзи типов логов, сортировка, кнопки никнеймов и буфера обмена, проверки Email и тюнинга, ручная проверка IP, ArizonaAI, выделение, метки и копирование строк и ячеек.</p>
+              <p>Настройки сохраняются. Изменения режима действуют после перезагрузки страницы логов.</p>
+            </details>
+          </section>
+          <div id="totp-title" class="control-group-title"><i class="fa-solid fa-shield-halved menu-icon"></i>2FA</div>
+          <section class="totp-card" aria-labelledby="totp-title">
+            <div class="totp-heading"><span id="totp-timer"></span></div>
+            <div id="totp-current" hidden><strong id="totp-code" class="totp-code"></strong><button type="button" id="totp-copy" class="arz-btn-secondary">Копировать</button></div>
+            <form id="totp-form"><input id="totp-secret" class="arz-input" type="password" autocomplete="off" placeholder="Секрет или ссылка Google Authenticator" aria-label="Секрет 2FA"><button class="arz-btn-secondary" type="submit">Сохранить</button></form>
+            <div class="totp-actions"><button type="button" id="totp-replace" class="arz-btn-secondary" hidden>Заменить</button><button type="button" id="totp-delete" class="arz-btn-secondary" hidden>Удалить</button></div>
+            <div id="totp-status" role="status" aria-live="polite"></div>
+          </section>
+          <div class="control-card">
+            <p>Разрешите копирование для кнопок расширения, в том числе кода 2FA.</p>
+            <button type="button" id="allow-clipboard" class="arz-btn-secondary">Разрешить копирование</button>
+            <div id="clipboard-permission-status" role="status" aria-live="polite"></div>
+          </div>
           <div class="control-group-title"><i class="fa-solid fa-user-shield menu-icon"></i>Инструменты пробива</div>
           <div class="control-card">
             <div class="control-row">
@@ -363,6 +411,11 @@
               <label><input type="checkbox" id="ipField-proxy" style="margin-right: 6px;"> Proxy</label>
               <label><input type="checkbox" id="ipField-hosting" style="margin-right: 6px;"> Хостинг</label>
             </div>
+            <label>Шаблон GeoIP (пустое поле — стандартный вид)</label>
+            <textarea id="geo-template" class="arz-input" rows="3" placeholder="{ip} — {country}, {city}, {isp} {distance}"></textarea>
+            <div style="font-size:11px">Теги: {ip}, {country}, {city}, {regionName}, {isp}, {org}, {as}, {mobile}, {proxy}, {hosting}, {distance}. Цвет: {city|#ff0000}</div>
+            <div id="geo-template-preview" style="font-size:11px; overflow-wrap:anywhere"></div>
+            <button type="button" id="geo-template-reset" class="arz-btn-secondary">Сбросить шаблон</button>
             <div class="control-row">
               <label><i class="fa-regular fa-calendar-days menu-icon"></i>Выбор конкретного дня</label>
               <label class="switch">
@@ -532,6 +585,8 @@
                 <span class="slider round"></span>
               </label>
             </div>
+            <div class="control-row"><label>Боты гаранта</label><input type="checkbox" id="guarantee-enabled"><input type="color" id="guarantee-color" value="#b8b8ef"></div>
+            <div class="control-row"><label>Подозрительная смена данных</label><input type="checkbox" id="binding-enabled"><input type="color" id="binding-color" value="#ff9800"></div>
             <div class="control-row">
               <label><i class="fa-solid fa-chart-line menu-icon"></i>Окно аналитики логов</label>
               <label class="switch">
@@ -707,7 +762,7 @@
         <span class="active-theme-label">совместно с Filipp Malyj</span>
       </div>
       <div class="footer-links">
-        <span class="app-version">v1.9</span>
+        <span class="app-version">v2.0</span>
 
         <a href="https://chromewebstore.google.com/detail/imobodagdnhdmjjlpfajidiofikmmpgi?utm_source=item-share-cb"
           target="_blank" class="footer-link-btn" title="Страница расширения в Chrome Web Store">
@@ -729,6 +784,7 @@
       </div>
     </footer>
   </div>
+  <script src="totp.js"></script>
   <script src="popup.js"></script>
 </body>
 

@@ -1,5 +1,66 @@
 
 document.addEventListener('DOMContentLoaded', () => {
+  function setupPermissionButton(buttonId, statusId, permissions, enabledText) {
+    const button = document.getElementById(buttonId);
+    const status = document.getElementById(statusId);
+    if (!button || !status || !globalThis.chrome?.permissions) return;
+    async function refresh() {
+      try {
+        const granted = await chrome.permissions.contains(permissions);
+        button.disabled = granted;
+        status.textContent = granted ? enabledText : '';
+      } catch {
+        status.textContent = 'Не удалось проверить доступ';
+      }
+    }
+    button.addEventListener('click', async () => {
+      try {
+        const granted = await chrome.permissions.request(permissions);
+        button.disabled = granted;
+        status.textContent = granted ? enabledText : 'Доступ не предоставлен. Можно разрешить позже.';
+      } catch {
+        status.textContent = 'Не удалось запросить доступ. Попробуйте ещё раз.';
+      }
+    });
+    chrome.permissions.onAdded.addListener(refresh);
+    chrome.permissions.onRemoved.addListener(refresh);
+    refresh();
+  }
+
+  setupPermissionButton('allow-clipboard', 'clipboard-permission-status', { permissions: ['clipboardWrite'] }, 'Копирование разрешено');
+
+  const settingsSnapshot = {};
+  const snapshotReady = new Promise(resolve => {
+    if (!globalThis.chrome?.storage?.local) return resolve();
+    chrome.storage.local.get(['arz_logsparser_helper_settings', 'arizonaSettings'], result => {
+      Object.assign(settingsSnapshot, result);
+      resolve();
+    });
+  });
+
+  function readSettings(keys, callback) {
+    snapshotReady.then(() => callback(structuredClone(settingsSnapshot)));
+  }
+
+  function persistSettings(values, callback) {
+    const patches = [];
+    const compare = (key, path, previous, next) => {
+      if (JSON.stringify(previous) === JSON.stringify(next)) return;
+      if (next && typeof next === 'object' && !Array.isArray(next)) {
+        for (const [name, value] of Object.entries(next)) compare(key, [...path, name], previous?.[name], value);
+      } else patches.push({ key, path, value: next });
+    };
+    for (const [key, value] of Object.entries(values)) {
+      compare(key, [], settingsSnapshot[key], value);
+      settingsSnapshot[key] = structuredClone(value);
+    }
+    if (!patches.length) return callback?.();
+    chrome.runtime.sendMessage({ action: 'patch_settings', patches }, response => {
+      if (chrome.runtime.lastError || !response?.success) {
+        chrome.storage.local.set(values, callback);
+      } else callback?.();
+    });
+  }
 
   const tabButtons = document.querySelectorAll('.tab-btn');
   const tabPanels = document.querySelectorAll('.tab-panel');
@@ -42,6 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const defaultSettings = {
     'extension-toggle': true,
+    'sakai-compatibility-mode': 'auto',
     'visual-sticky-navbar': true,
     'visual-sticky-headers': true,
     'visual-theme-enabled': true,
@@ -51,6 +113,8 @@ document.addEventListener('DOMContentLoaded', () => {
     'visual-replace-favicon': false,
     'visual-remove-top-padding': false,
     'tweak-floating-filter': true,
+    'tweak-scroll-top': true,
+    'tweak-scroll-bottom': true,
     'tweak-load-more': true,
     'tweak-show-filled-filters': true,
     'tweak-ip-info': false,
@@ -73,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const el = document.getElementById(id);
         if (el) {
           if (el.tagName === 'SELECT') {
-            el.value = merged[id];
+            el.value = id === 'sakai-compatibility-mode' && !['auto', 'on', 'off'].includes(merged[id]) ? 'auto' : merged[id];
           } else {
             el.checked = merged[id];
           }
@@ -99,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-      chrome.storage.local.get([STORAGE_KEY], (result) => {
+      readSettings([STORAGE_KEY], (result) => {
         if (chrome.runtime.lastError) {
           fallbackLoad();
         } else if (result[STORAGE_KEY]) {
@@ -135,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-      chrome.storage.local.set({ [STORAGE_KEY]: settings }, () => {
+      persistSettings({ [STORAGE_KEY]: settings }, () => {
         if (chrome.runtime.lastError) {
           fallbackSave();
         }
@@ -151,6 +215,38 @@ document.addEventListener('DOMContentLoaded', () => {
       el.addEventListener('change', saveSettings);
     }
   });
+
+  const compatibilityStatus = document.getElementById('sakai-compatibility-status');
+  const compatibilityReload = document.getElementById('sakai-compatibility-reload');
+  let compatibilityTabId;
+  function refreshCompatibilityStatus() {
+    if (!chrome?.tabs?.query || !compatibilityStatus) return;
+    chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+      const tab = tabs[0];
+      compatibilityTabId = tab?.id;
+      if (!tab?.url?.startsWith('https://arizonarp.logsparser.info/')) {
+        compatibilityStatus.textContent = 'Для проверки откройте вкладку Arizona LogsParser.';
+        compatibilityReload.hidden = true;
+        return;
+      }
+      chrome.tabs.sendMessage(tab.id, { action: 'alh_compatibility_status' }, status => {
+        if (chrome.runtime.lastError || !status) {
+          compatibilityStatus.textContent = 'Обновите страницу логов для проверки совместимости.';
+          compatibilityReload.hidden = false;
+          return;
+        }
+        compatibilityStatus.textContent = `${status.detected ? 'Sakai обнаружен' : 'Sakai не обнаружен'}. Совместимость ${status.active ? 'включена' : 'выключена'}.${status.reloadRequired ? ' Требуется перезагрузка страницы.' : ''}`;
+        compatibilityReload.hidden = !status.reloadRequired;
+      });
+    });
+  }
+  compatibilityReload?.addEventListener('click', () => {
+    if (compatibilityTabId !== undefined) chrome.tabs.reload(compatibilityTabId);
+  });
+  if (globalThis.chrome?.tabs?.query) {
+    refreshCompatibilityStatus();
+    setInterval(refreshCompatibilityStatus, 1000);
+  }
 
 
   const ARIZONA_STORAGE_KEY = 'arizonaSettings';
@@ -186,6 +282,9 @@ document.addEventListener('DOMContentLoaded', () => {
     templatesEnabled: true,
     ipLookupEnabled: true,
     geoIPEnabled: true,
+    geoTemplate: '',
+    guaranteeDetector: { enabled: false, color: '#b8b8ef' },
+    bindingDetector: { enabled: false, color: '#ff9800' },
     ipFields: { country: true, city: true, regionName: true, isp: true, org: true, as: true, mobile: true, proxy: true, hosting: true },
     tuningParts: { enabled: true, scanDelay: 500, highlightColor: '#f02849', outlineWidth: 2, timePattern: '30:01,30:02,00:03,00:01,00:02,00:03', highlightOnlyMatching: true, autoScrollToMatch: false, playSoundOnMatch: false },
     emailCheck: { enabled: true, duplicateDetection: true, threshold: 3, lowColor: '#10b981', mediumColor: '#f59e0b', highColor: '#ef4444' },
@@ -216,6 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
     theme: 'dark',
     fontSize: 14,
     colorScheme: 'red',
+    favoritePresets: [],
     borderRadius: '8px',
     backgroundColor: null,
     backgroundImage: null,
@@ -288,6 +388,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     'ipLookupEnabled': 'ipLookupEnabled',
     'geoIPEnabled': 'geoIPEnabled',
+    'geo-template': 'geoTemplate',
+    'guarantee-enabled': 'guaranteeDetector.enabled',
+    'guarantee-color': 'guaranteeDetector.color',
+    'binding-enabled': 'bindingDetector.enabled',
+    'binding-color': 'bindingDetector.color',
     'ipField-country': 'ipFields.country',
     'ipField-city': 'ipFields.city',
     'ipField-regionName': 'ipFields.regionName',
@@ -337,10 +442,8 @@ document.addEventListener('DOMContentLoaded', () => {
     'tools-multiPlayersEnabled': 'tools.multiPlayersEnabled',
     'tools-duplicatePaginationTop': 'tools.duplicatePaginationTop',
 
-    'visual-theme-mode': 'theme',
     'visual-theme-enabled': 'themeEnabled',
     'visual-custom-theme-enabled': 'customThemeEnabled',
-    'visual-theme-color': 'colorScheme',
     'visual-theme-radius': 'borderRadius',
     'visual-background-color': 'backgroundColor',
     'visual-background-image-url': 'backgroundImageUrl',
@@ -361,15 +464,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const customThemeReset = document.getElementById('custom-theme-reset');
   const customThemeCopyPreset = document.getElementById('custom-theme-copy-preset');
   let customThemeMode = 'dark';
-  let customThemeSaveTimer = null;
 
   function saveAppearanceValues(values) {
-    chrome.storage.local.get([ARIZONA_STORAGE_KEY], (result) => {
+    readSettings([ARIZONA_STORAGE_KEY], (result) => {
       const current = getMergedArizonaSettings(result[ARIZONA_STORAGE_KEY]);
       Object.entries(values).forEach(([path, value]) => setArizonaElementValue(path, value, current));
-      chrome.storage.local.set({ [ARIZONA_STORAGE_KEY]: current }, () => {
-        applyThemeToPopup(current);
-      });
+      const editorMode = customThemeMode;
+      applyThemeToPopup(current);
+      setCustomThemeMode(editorMode);
+      persistSettings({ [ARIZONA_STORAGE_KEY]: current });
     });
   }
 
@@ -378,8 +481,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function scheduleCustomThemeSave(values) {
-    clearTimeout(customThemeSaveTimer);
-    customThemeSaveTimer = setTimeout(() => saveAppearanceValues(values), 80);
+    saveAppearanceValues(values);
   }
 
   function setCustomThemeEditorVisible(enabled) {
@@ -625,6 +727,141 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  Object.assign(colorSchemes, {
+    arizonaBlue: { ...colorSchemes.red, accent: '#2563eb', accentRgb: '37, 99, 235', accentHover: '#60a5fa' },
+    arizonaGreen: { ...colorSchemes.red, accent: '#16a34a', accentRgb: '22, 163, 74', accentHover: '#4ade80' },
+    arizonaPurple: { ...colorSchemes.red, accent: '#9333ea', accentRgb: '147, 51, 234', accentHover: '#c084fc' },
+    arizonaOrange: { ...colorSchemes.red, accent: '#ea580c', accentRgb: '234, 88, 12', accentHover: '#fb923c' },
+    arizonaPink: { ...colorSchemes.red, accent: '#db2777', accentRgb: '219, 39, 119', accentHover: '#f472b6' },
+    arizonaGold: { ...colorSchemes.red, accent: '#d97706', accentRgb: '217, 119, 6', accentHover: '#fbbf24' },
+    arizonaCyan: { ...colorSchemes.red, accent: '#0891b2', accentRgb: '8, 145, 178', accentHover: '#22d3ee' }
+  });
+
+  Object.assign(colorSchemes, {
+    midnightSapphire: { accent: '#4577b4', accentRgb: '69, 119, 180', accentHover: '#739ac5', dark: { bg: '#090f20', cardBg: '#1c2b49' } },
+    royalAmethyst: { accent: '#8a5fb5', accentRgb: '138, 95, 181', accentHover: '#ac8ec6', dark: { bg: '#130d20', cardBg: '#30203f' } },
+    enchantedForest: { accent: '#35a05c', accentRgb: '53, 160, 92', accentHover: '#69ba86', dark: { bg: '#091810', cardBg: '#1b3527' } },
+    emberForge: { accent: '#b5692b', accentRgb: '181, 105, 43', accentHover: '#c5915a', dark: { bg: '#1b100c', cardBg: '#3b261c' } },
+    roseVelvet: { accent: '#b55160', accentRgb: '181, 81, 96', accentHover: '#c58088', dark: { bg: '#1e0d15', cardBg: '#45212e' } },
+    arcticNight: { accent: '#4aa7b3', accentRgb: '74, 167, 179', accentHover: '#81bec5', dark: { bg: '#0b1820', cardBg: '#1d3742' } },
+    goldenNoir: { accent: '#b58a1a', accentRgb: '181, 138, 26', accentHover: '#c5b36c', dark: { bg: '#19150c', cardBg: '#3a311c' } },
+    moonstone: { accent: '#7782b5', accentRgb: '119, 130, 181', accentHover: '#9ba4c6', dark: { bg: '#111321', cardBg: '#2a2e45' } },
+    deepTeal: { accent: '#20998a', accentRgb: '32, 153, 138', accentHover: '#49b7a5', dark: { bg: '#071817', cardBg: '#193a35' } },
+    cherryBlossom: { accent: '#b05283', accentRgb: '176, 82, 131', accentHover: '#c283a5', dark: { bg: '#1b0e1a', cardBg: '#3e253a' } },
+    solarFlare: { accent: '#b4930f', accentRgb: '180, 147, 15', accentHover: '#c5af37', dark: { bg: '#1a1708', cardBg: '#3c3518' } },
+    lavenderHaze: { accent: '#7864b4', accentRgb: '120, 100, 180', accentHover: '#998dc5', dark: { bg: '#171321', cardBg: '#352d49' } },
+    copperDust: { accent: '#a86c58', accentRgb: '168, 108, 88', accentHover: '#c79783', dark: { bg: '#1b1210', cardBg: '#3e2a23' } },
+    abyssalBlue: { accent: '#2888b3', accentRgb: '40, 136, 179', accentHover: '#62a5c5', dark: { bg: '#06141e', cardBg: '#143344' } },
+    mossAndStone: { accent: '#758f4e', accentRgb: '117, 143, 78', accentHover: '#99af76', dark: { bg: '#14190f', cardBg: '#303b28' } },
+    crimsonNight: { accent: '#b35151', accentRgb: '179, 81, 81', accentHover: '#c58181', dark: { bg: '#1d0c0e', cardBg: '#452125' } },
+    violetGalaxy: { accent: '#a757b3', accentRgb: '167, 87, 179', accentHover: '#bb85c5', dark: { bg: '#190d20', cardBg: '#40214a' } },
+    stormCloud: { accent: '#6b7584', accentRgb: '107, 117, 132', accentHover: '#9ea6b0', dark: { bg: '#11151a', cardBg: '#29333e' } },
+    mintChocolate: { accent: '#4fa684', accentRgb: '79, 166, 132', accentHover: '#82bea2', dark: { bg: '#181510', cardBg: '#3a3227' } },
+    oceanCoral: { accent: '#b56456', accentRgb: '181, 100, 86', accentHover: '#c78c80', dark: { bg: '#0b1a20', cardBg: '#1d3c45' } },
+    electricIndigo: { accent: '#5d65b3', accentRgb: '93, 101, 179', accentHover: '#818cc5', dark: { bg: '#0d0e21', cardBg: '#252750' } }
+  });
+
+  const themeNames = {
+    red: 'Arizona Red (Красная)',
+    midnightSapphire: 'Midnight Sapphire',
+    royalAmethyst: 'Royal Amethyst',
+    enchantedForest: 'Enchanted Forest',
+    emberForge: 'Ember Forge',
+    roseVelvet: 'Rose Velvet',
+    arcticNight: 'Arctic Night',
+    goldenNoir: 'Golden Noir',
+    moonstone: 'Moonstone',
+    deepTeal: 'Deep Teal',
+    cherryBlossom: 'Cherry Blossom',
+    solarFlare: 'Solar Flare',
+    lavenderHaze: 'Lavender Haze',
+    copperDust: 'Copper Dust',
+    abyssalBlue: 'Abyssal Blue',
+    mossAndStone: 'Moss and Stone',
+    crimsonNight: 'Crimson Night',
+    violetGalaxy: 'Violet Galaxy',
+    stormCloud: 'Storm Cloud',
+    mintChocolate: 'Mint Chocolate',
+    oceanCoral: 'Ocean Coral',
+    electricIndigo: 'Electric Indigo',
+    arizonaBlue: 'Arizona Blue (Синяя)',
+    arizonaGreen: 'Arizona Green (Зелёная)',
+    arizonaPurple: 'Arizona Purple (Фиолетовая)',
+    arizonaOrange: 'Arizona Orange (Оранжевая)',
+    arizonaPink: 'Arizona Pink (Розовая)',
+    arizonaGold: 'Arizona Gold (Золотая)',
+    arizonaCyan: 'Arizona Cyan (Голубая)',
+    ocean: 'Ocean Breeze (Синяя)',
+    emerald: 'Emerald Safe (Зелёная)',
+    gold: 'Amber Gold (Золотая)',
+    frost: 'Nordic Frost (Серая)',
+    dracula: 'Dracula (Фиолетовая)',
+    sunset: 'Sunset Orange (Оранжевая)',
+    cyberpunk: 'Cyberpunk Neon (Розовая)',
+    nord: 'Nord Frost (Голубая)',
+    matrix: 'Matrix Hacker (Зелёный неон)'
+  };
+  const themeSearch = document.getElementById('theme-search');
+
+  function renderThemeCatalog(settings) {
+    const query = (themeSearch.value || '').trim().toLocaleLowerCase('ru');
+    const favorites = Array.isArray(settings.favoritePresets) ? settings.favoritePresets : [];
+    const groups = { favorites: [], dark: [], light: [] };
+    for (const mode of ['dark', 'light']) {
+      for (const [scheme, name] of Object.entries(themeNames)) {
+        if (!colorSchemes[scheme][mode]) continue;
+        if (!name.toLocaleLowerCase('ru').includes(query)) continue;
+        const preset = { id: `${mode}:${scheme}`, mode, scheme, name };
+        groups[mode].push(preset);
+        if (favorites.includes(preset.id)) groups.favorites.push(preset);
+      }
+    }
+    document.getElementById('themes-custom-notice').hidden = settings.customThemeEnabled !== true;
+    document.getElementById('themes-empty').hidden = groups.dark.length + groups.light.length > 0;
+    for (const [group, presets] of Object.entries(groups)) {
+      document.getElementById(`themes-${group}-section`).hidden = presets.length === 0;
+      const grid = document.getElementById(`themes-grid-${group}`);
+      const cards = presets.map(preset => {
+        const palette = colorSchemes[preset.scheme];
+        const selected = settings.theme === preset.mode && settings.colorScheme === preset.scheme;
+        const favorite = favorites.includes(preset.id);
+        const card = document.createElement('div');
+        card.className = `theme-card${selected ? ' active' : ''}`;
+        card.dataset.preset = preset.id;
+        card.style.setProperty('--preset-bg', palette[preset.mode].bg);
+        card.style.setProperty('--preset-block', palette[preset.mode].cardBg);
+        card.style.setProperty('--preset-accent', palette.accent);
+        card.style.setProperty('--preset-accent-hover', palette.accentHover);
+        card.innerHTML = `
+          <button type="button" class="theme-card-select" aria-pressed="${selected}" aria-label="${preset.name}, ${preset.mode === 'dark' ? 'тёмная' : 'светлая'}">
+            <span class="theme-preview" aria-hidden="true">
+              <span class="theme-preview-nav"><span></span><span></span></span>
+              <span class="theme-preview-body"><span class="theme-preview-block"></span><span class="theme-preview-badges"><span></span><span></span></span></span>
+            </span>
+            <span class="theme-card-name">${preset.name}</span>
+          </button>
+          <button type="button" class="theme-favorite${favorite ? ' is-favorite' : ''}" aria-pressed="${favorite}" aria-label="${favorite ? 'Убрать из избранного' : 'Добавить в избранное'}: ${preset.name}" title="${favorite ? 'Убрать из избранного' : 'Добавить в избранное'}"><i class="${favorite ? 'fa-solid' : 'fa-regular'} fa-star" aria-hidden="true"></i></button>`;
+        card.querySelector('.theme-card-select').addEventListener('click', () => {
+          saveAppearanceValues({ theme: preset.mode, colorScheme: preset.scheme });
+        });
+        card.querySelector('.theme-favorite').addEventListener('click', () => {
+          const current = window.__arizonaPopupSettings;
+          const saved = Array.isArray(current.favoritePresets) ? current.favoritePresets : [];
+          const next = saved.includes(preset.id)
+            ? saved.filter(id => id !== preset.id)
+            : [...saved, preset.id];
+          saveAppearanceValue('favoritePresets', next);
+        });
+        return card;
+      });
+      grid.replaceChildren(...cards);
+    }
+  }
+
+  themeSearch.addEventListener('input', () => {
+    renderThemeCatalog(getMergedArizonaSettings(window.__arizonaPopupSettings));
+  });
+
   function applyThemeToPopup(settings) {
     const mergedSettings = getMergedArizonaSettings(settings);
     window.__arizonaPopupSettings = mergedSettings;
@@ -732,11 +969,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     updateStatusText(document.getElementById('extension-toggle').checked);
     setCustomThemeMode(theme);
+    renderThemeCatalog(mergedSettings);
   }
 
   function loadArizonaSettings() {
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-      chrome.storage.local.get([ARIZONA_STORAGE_KEY], (result) => {
+      readSettings([ARIZONA_STORAGE_KEY], (result) => {
         const settings = getMergedArizonaSettings(result[ARIZONA_STORAGE_KEY]);
         Object.keys(arizonaMappings).forEach(elId => {
           const el = document.getElementById(elId);
@@ -746,6 +984,7 @@ document.addEventListener('DOMContentLoaded', () => {
               if (el.type === 'checkbox') {
                 el.checked = !!val;
               } else {
+                if (el.type === 'color' && (typeof val !== 'string' || !/^#[0-9a-f]{6}$/i.test(val))) return;
                 el.value = val;
                 if (el.type === 'range' || el.type === 'color' || el.type === 'text') {
                   const valEl = document.getElementById(elId + '-val');
@@ -758,13 +997,14 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         });
         applyThemeToPopup(settings);
+        if (typeof updateGeoPreview === 'function') updateGeoPreview();
       });
     }
   }
 
   function saveArizonaSettings() {
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-      chrome.storage.local.get([ARIZONA_STORAGE_KEY], (result) => {
+      readSettings([ARIZONA_STORAGE_KEY], (result) => {
         const current = getMergedArizonaSettings(result[ARIZONA_STORAGE_KEY]);
         Object.keys(arizonaMappings).forEach(elId => {
           const el = document.getElementById(elId);
@@ -784,9 +1024,8 @@ document.addEventListener('DOMContentLoaded', () => {
             setArizonaElementValue(arizonaMappings[elId], val, current);
           }
         });
-        chrome.storage.local.set({ [ARIZONA_STORAGE_KEY]: current }, () => {
-          applyThemeToPopup(current);
-        });
+        applyThemeToPopup(current);
+        persistSettings({ [ARIZONA_STORAGE_KEY]: current });
       });
     }
   }
@@ -805,6 +1044,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       }
     }
+  });
+
+  const geoTemplateInput = document.getElementById('geo-template');
+  const geoPreview = document.getElementById('geo-template-preview');
+  const updateGeoPreview = () => {
+    const samples = { ip: '8.8.8.8', country: 'США', city: 'Маунтин-Вью', regionName: 'Калифорния', isp: 'Google', org: 'Google', as: 'AS15169', mobile: 'Mobile', proxy: 'Proxy', hosting: 'Hosting', distance: '~120.0km' };
+    geoPreview.textContent = geoTemplateInput.value ? geoTemplateInput.value.replace(/\{([a-zA-Z]+)(?:\|#[0-9a-fA-F]{6})?\}/g, (_, key) => samples[key] || '') : 'Стандартный вид';
+  };
+  geoTemplateInput?.addEventListener('input', updateGeoPreview);
+  document.getElementById('geo-template-reset')?.addEventListener('click', () => {
+    geoTemplateInput.value = '';
+    updateGeoPreview();
+    saveArizonaSettings();
   });
 
   const manualIpInput = document.getElementById('manual-ip-input');

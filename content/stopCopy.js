@@ -1,5 +1,5 @@
 (function () {
-  let isEnabled = true;
+  let isEnabled = false;
 
   const stopCopy = (e) => {
     if (!isEnabled) return;
@@ -18,5 +18,5 @@
   };
 
   window.addEventListener('arizona-helper-copy-setting', applySetting);
-  applySetting({ detail: { enabled: true } });
+  applySetting({ detail: { enabled: false } });
 })();
