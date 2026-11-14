@@ -75,13 +75,18 @@
       document.documentElement.classList.add('alh-sakai-compatible');
       document.documentElement.classList.remove('arz-mask-pending');
     }
-    const observer = new MutationObserver(() => {
-      if (inspectScheduled) return;
+    const candidateSelector = '#arz-helper-fab, #arz-helper-log-styles, #arz-helper-log-panel-style, img[src*="/icons/fab-icon-logs.png"]';
+    const relevant = node => node.nodeType === 1 && (node.matches(candidateSelector) ||
+      (node.childElementCount > 0 && node.querySelector(candidateSelector)));
+    const observer = new MutationObserver(records => {
+      if (inspectScheduled || !records.some(record => record.type === 'attributes'
+        ? relevant(record.target) || ['arz-helper-fab', 'arz-helper-log-styles', 'arz-helper-log-panel-style'].includes(record.oldValue) || record.oldValue?.includes('/icons/fab-icon-logs.png')
+        : [...record.addedNodes, ...record.removedNodes].some(relevant))) return;
       inspectScheduled = true;
       queueMicrotask(() => { inspectScheduled = false; inspect(); });
     });
     let inspectScheduled = false;
-    observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['src', 'id'] });
+    observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['src', 'id'], attributeOldValue: true });
     startup = new Promise(resolve => {
       const finish = () => {
         if (initialized) return;

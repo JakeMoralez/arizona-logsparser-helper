@@ -160,7 +160,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     const el = id => document.getElementById('totp-' + id);
     const status = message => { el('status').textContent = message; };
-    let editing = false, generation = 0;
+    let editing = false, codeVisible = false, generation = 0;
     async function refresh() {
       const serial = ++generation;
       try {
@@ -171,7 +171,7 @@
         el('delete').hidden = !result;
         el('form').hidden = !!result && !editing;
         el('timer').textContent = result ? `Обновление через ${result.remaining} с` : '';
-        if (result) el('code').textContent = result.code;
+        el('code').textContent = result && codeVisible ? result.code : '••••••';
       } catch {
         if (serial !== generation) return;
         el('current').hidden = true;
@@ -192,6 +192,13 @@
       if (!confirm('Удалить сохранённый секрет 2FA?')) return;
       try { await transaction('readwrite', store => store.delete('account')); el('secret').value = ''; editing = false; status('Секрет удалён'); await refresh(); }
       catch { status('Не удалось удалить данные 2FA'); }
+    });
+    el('toggle').addEventListener('click', () => {
+      codeVisible = !codeVisible;
+      el('toggle').textContent = codeVisible ? 'Скрыть' : 'Показать';
+      el('toggle').setAttribute('aria-pressed', String(codeVisible));
+      if (!codeVisible) el('code').textContent = '••••••';
+      refresh();
     });
     el('copy').addEventListener('click', async () => {
       try {

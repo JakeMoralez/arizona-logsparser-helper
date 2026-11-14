@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Arizona LogsParser Helper",
-  "version": "2.0",
+  "version": "2.1",
   "description": "Помощник для работы с логами Arizona RP",
   "permissions": [
     "storage",
@@ -69,10 +69,15 @@
         "https://arizonarp.logsparser.info/*"
       ],
       "js": [
+        "shared/inventory.js",
+        "content/inventory.js",
         "content/log-requests.js",
         "content/content.js"
       ],
-      "run_at": "document_start"
+      "run_at": "document_start",
+      "css": [
+        "shared/inventory.css"
+      ]
     }
   ],
   "web_accessible_resources": [

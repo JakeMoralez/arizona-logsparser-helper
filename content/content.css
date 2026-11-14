@@ -48,7 +48,7 @@ body.arz-sticky-navbar-active .app-sidebar {
 }
 
 body.arz-sticky-headers-active,
-html:has(body.arz-sticky-headers-active) {
+html.arz-sticky-headers-root {
   overflow: visible !important;
 }
 
@@ -449,7 +449,7 @@ body.arz-remove-top-padding-active .app-content {
   border: 1px solid var(--az-border) !important;
   border-radius: var(--az-border-radius, 12px) !important;
   width: 90% !important;
-  max-width: 900px !important;
+  max-width: 1100px !important;
   max-height: 90vh !important;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5) !important;
   display: flex !important;
@@ -1737,6 +1737,7 @@ html:where(:not(.alh-sakai-compatible)) body .select2-results__option--selected{
 }
 html:where(:not(.alh-sakai-compatible)) body .filter-buttons .btn,
 html body #alh-log-filter-root .btn,
+html:where(:not(.alh-sakai-compatible)) body button.btn-secondary[href$="/logout"],
 html:where(:not(.alh-sakai-compatible)) body .btn-primary:not(.btn-tiny),
 html:where(:not(.alh-sakai-compatible)) body .btn-success:not(.btn-tiny),
 html:where(:not(.alh-sakai-compatible)) body .btn-info:not(.btn-tiny){
@@ -1762,6 +1763,7 @@ html:where(:not(.alh-sakai-compatible)) body .btn-info:not(.btn-tiny){
 }
 html:where(:not(.alh-sakai-compatible)) body .filter-buttons .btn:hover,
 html body #alh-log-filter-root .btn:hover,
+html:where(:not(.alh-sakai-compatible)) body button.btn-secondary[href$="/logout"]:hover,
 html:where(:not(.alh-sakai-compatible)) body .btn-primary:hover:not(.btn-tiny),
 html:where(:not(.alh-sakai-compatible)) body .btn-success:hover:not(.btn-tiny),
 html:where(:not(.alh-sakai-compatible)) body .btn-info:hover:not(.btn-tiny){
@@ -1772,6 +1774,7 @@ html:where(:not(.alh-sakai-compatible)) body .btn-info:hover:not(.btn-tiny){
 }
 html:where(:not(.alh-sakai-compatible)) body .filter-buttons .btn:active,
 html body #alh-log-filter-root .btn:active,
+html:where(:not(.alh-sakai-compatible)) body button.btn-secondary[href$="/logout"]:active,
 html:where(:not(.alh-sakai-compatible)) body .btn-primary:active:not(.btn-tiny),
 html:where(:not(.alh-sakai-compatible)) body .btn-success:active:not(.btn-tiny),
 html:where(:not(.alh-sakai-compatible)) body .btn-info:active:not(.btn-tiny){
@@ -1793,6 +1796,7 @@ html:where(:not(.alh-sakai-compatible)) body .btn-info.btn-tiny:hover{
 }
 html:where(:not(.alh-sakai-compatible)) body .filter-buttons .btn i,
 html:where(:not(.alh-sakai-compatible)) body .filter-buttons .btn svg,
+html:where(:not(.alh-sakai-compatible)) body button.btn-secondary[href$="/logout"] i,
 html body #alh-log-filter-root .btn i {
   margin-right: 6px !important;
   font-size: 14px !important;
@@ -3080,7 +3084,7 @@ html.alh-sakai-compatible body:not(.arz-extension-disabled).arz-sidebar-collapse
   padding: 24px 16px;
   background: var(--az-input-bg);
   border: 1px dashed var(--az-border);
-  border-radius: 14px;
+  border-radius: var(--az-border-radius);
   text-align: center;
 }
 .arz-business-message.is-error { color: #ef4444; }
@@ -3101,7 +3105,7 @@ html.alh-sakai-compatible body:not(.arz-extension-disabled).arz-sidebar-collapse
   gap: 10px;
   padding: 16px;
   border: 1px solid var(--az-border);
-  border-radius: 14px;
+  border-radius: var(--az-border-radius);
   background: var(--az-input-bg);
   min-width: 0;
 }
@@ -3112,7 +3116,7 @@ html.alh-sakai-compatible body:not(.arz-extension-disabled).arz-sidebar-collapse
 #arz-business-result .expense { color: #ef4444; }
 .arz-business-breakdown { margin-top: 20px; }
 .arz-business-breakdown h4 { margin: 0 0 10px; font-size: 12px; color: var(--az-text); font-weight: 600; }
-.arz-business-table-scroll { max-height: 280px; overflow: auto; border: 1px solid var(--az-border); border-radius: 12px; }
+.arz-business-table-scroll { max-height: 280px; overflow: auto; border: 1px solid var(--az-border); border-radius: var(--az-border-radius); }
 #arz-lookup-overlay > .arz-modal-container,
 #arz-analytics-overlay > .arz-modal-container {
   display: flex !important;
@@ -3219,4 +3223,56 @@ html.alh-sakai-compatible body:not(.arz-extension-disabled).arz-sidebar-collapse
 html.arz-layout-pending body .app-sidebar,
 html.arz-layout-pending body .app-content--sidebar {
   transition: none !important;
+}
+
+table.table tbody td:nth-child(3) .arz-log-data-extra {
+  overflow-wrap: anywhere;
+  line-height: inherit;
+}
+table.table tbody td:nth-child(3) .arz-log-data-extra code.arz-log-data-value {
+  color: var(--az-text-secondary, #94a3b8) !important;
+  font-weight: 400 !important;
+  white-space: nowrap;
+}
+table.table tbody td:nth-child(3) .arz-log-data-extra code[data-field="vc"] {
+  color: #f59e0b !important;
+}
+table.table tbody td:nth-child(3) .arz-log-data-extra code[data-field="deposit"],
+table.table tbody td:nth-child(3) .arz-log-data-extra code[data-field^="account"] {
+  color: #28c76f !important;
+}
+table.table tbody td:nth-child(3) .arz-log-data-extra code[data-field="admin"] {
+  color: var(--az-accent-hover, #a78bfa) !important;
+}
+body.az-light-theme table.table tbody td:nth-child(3) .arz-log-data-extra code[data-field="vc"] {
+  color: #d97706 !important;
+}
+body.az-light-theme table.table tbody td:nth-child(3) .arz-log-data-extra code[data-field="deposit"],
+body.az-light-theme table.table tbody td:nth-child(3) .arz-log-data-extra code[data-field^="account"] {
+  color: #16a34a !important;
+}
+
+table.table thead .table-description.arz-log-data-description {
+  display: block;
+  contain: inline-size;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 1200px) {
+  :where(html:not(.alh-sakai-compatible)) table.table.arz-log-data-expanded > thead > tr > th:nth-child(2) {
+    width: 43% !important;
+  }
+
+  :where(html:not(.alh-sakai-compatible)) table.table.arz-log-data-expanded > thead > tr > th:nth-child(3) {
+    width: 27% !important;
+  }
+}
+
+table.table tbody td:nth-child(3) hr.arz-log-data-separator {
+  border: 0;
+  border-top: 1px solid var(--az-border, currentColor);
+  height: 0;
+  margin: 5px 0;
+  opacity: 0.6;
 }

@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="vendor/css/google-fonts.css">
   <link rel="stylesheet" href="vendor/css/fontawesome.min.css">
   <link rel="stylesheet" href="popup.css">
+  <link rel="stylesheet" href="../shared/inventory.css">
 </head>
 
 <body>
@@ -39,9 +40,32 @@
         <i class="fa-solid fa-wrench tab-btn-icon"></i>Твики
       </button>
 
+      <button class="tab-btn inventory-tab-button" data-tab="inventory-tab" title="Предметы" aria-label="Предметы">
+        <i class="fa-solid fa-box" aria-hidden="true"></i>
+      </button>
     </nav>
 
     <main class="tab-content">
+      <section id="inventory-tab" class="tab-panel">
+        <div class="inventory-toolbar">
+          <div class="inventory-search-wrapper"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input id="inventory-search" class="arz-input" type="search" placeholder="Название или ID предмета" aria-label="Поиск предмета по названию или ID"></div>
+          <button id="inventory-refresh" class="arz-btn-secondary" type="button" title="Обновить каталог" aria-label="Обновить каталог"><i class="fa-solid fa-rotate" aria-hidden="true"></i></button>
+        </div>
+        <p id="inventory-status" role="status"></p>
+        <div id="inventory-results">
+          <p id="inventory-count"></p>
+          <div id="inventory-list"></div>
+          <div class="inventory-pagination">
+            <button id="inventory-previous" class="arz-btn-secondary" type="button" disabled aria-label="Предыдущая страница"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i>Назад</button>
+            <span id="inventory-page">1 / 1</span>
+            <button id="inventory-next" class="arz-btn-secondary" type="button" disabled aria-label="Следующая страница">Далее<i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
+          </div>
+        </div>
+        <div id="inventory-detail" hidden>
+          <button id="inventory-back" class="arz-btn-secondary" type="button"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i>К списку</button>
+          <div id="inventory-detail-body"></div>
+        </div>
+      </section>
 
       <section id="themes-tab" class="tab-panel active">
         <div class="themes-container">
@@ -341,6 +365,34 @@
 
       <section id="tweaks-tab" class="tab-panel">
         <div class="customizer-scroll">
+          <div id="totp-title" class="control-group-title"><i class="fa-solid fa-shield-halved menu-icon"></i>2FA</div>
+          <section class="totp-card" aria-labelledby="totp-title">
+            <div class="totp-heading"><span id="totp-timer"></span></div>
+            <div id="totp-current" hidden><strong id="totp-code" class="totp-code">••••••</strong><button type="button" id="totp-toggle" class="arz-btn-secondary" aria-pressed="false">Показать</button><button type="button" id="totp-copy" class="arz-btn-secondary">Копировать</button></div>
+            <form id="totp-form"><input id="totp-secret" class="arz-input" type="password" autocomplete="off" placeholder="Секрет или ссылка Google Authenticator" aria-label="Секрет 2FA"><button class="arz-btn-secondary" type="submit">Сохранить</button></form>
+            <div class="totp-actions"><button type="button" id="totp-replace" class="arz-btn-secondary" hidden>Заменить</button><button type="button" id="totp-delete" class="arz-btn-secondary" hidden>Удалить</button></div>
+            <div id="totp-status" role="status" aria-live="polite"></div>
+          </section>
+          <div class="control-group-title">Данные логов</div>
+          <div class="control-card">
+            <div class="control-row"><label for="tweak-log-data">Расширенные данные</label><label class="switch"><input type="checkbox" id="tweak-log-data" checked><span class="slider round"></span></label></div>
+            <div class="control-row"><label for="tweak-log-labels">Показывать обозначения валют</label><label class="switch"><input type="checkbox" id="tweak-log-labels" checked><span class="slider round"></span></label></div>
+            <div class="control-row"><label for="tweak-log-id">ID аккаунта</label><label class="switch"><input type="checkbox" id="tweak-log-id" checked><span class="slider round"></span></label></div>
+            <div class="control-row"><label for="tweak-log-vc">VC$</label><label class="switch"><input type="checkbox" id="tweak-log-vc" checked><span class="slider round"></span></label></div>
+            <div class="control-row"><label for="tweak-log-account1">Доп. счёт №1</label><label class="switch"><input type="checkbox" id="tweak-log-account1" checked><span class="slider round"></span></label></div>
+            <div class="control-row"><label for="tweak-log-account2">Доп. счёт №2</label><label class="switch"><input type="checkbox" id="tweak-log-account2" checked><span class="slider round"></span></label></div>
+            <div class="control-row"><label for="tweak-log-account3">Доп. счёт №3</label><label class="switch"><input type="checkbox" id="tweak-log-account3" checked><span class="slider round"></span></label></div>
+            <div class="control-row"><label for="tweak-log-account4">Доп. счёт №4</label><label class="switch"><input type="checkbox" id="tweak-log-account4" checked><span class="slider round"></span></label></div>
+            <div class="control-row"><label for="tweak-log-account5">Доп. счёт №5</label><label class="switch"><input type="checkbox" id="tweak-log-account5" checked><span class="slider round"></span></label></div>
+            <div class="control-row"><label for="tweak-log-account6">Доп. счёт №6</label><label class="switch"><input type="checkbox" id="tweak-log-account6" checked><span class="slider round"></span></label></div>
+            <div class="control-row"><label for="tweak-log-accounts-total">Баланс всех доп. счетов</label><label class="switch"><input type="checkbox" id="tweak-log-accounts-total"><span class="slider round"></span></label></div>
+            <div class="control-row"><label for="tweak-log-deposit">Депозит</label><label class="switch"><input type="checkbox" id="tweak-log-deposit" checked><span class="slider round"></span></label></div>
+            <div class="control-row"><label for="tweak-log-admin">Уровень администрирования</label><label class="switch"><input type="checkbox" id="tweak-log-admin" checked><span class="slider round"></span></label></div>
+            <div class="control-row"><label for="tweak-log-hide-zero">Скрывать нулевые значения</label><label class="switch"><input type="checkbox" id="tweak-log-hide-zero" ><span class="slider round"></span></label></div>
+            <div class="control-row"><label for="tweak-log-hide-minus">Скрывать −1</label><label class="switch"><input type="checkbox" id="tweak-log-hide-minus" checked><span class="slider round"></span></label></div>
+            <div class="control-row"><label for="tweak-log-separator">Разделитель между I и II</label><label class="switch"><input type="checkbox" id="tweak-log-separator"><span class="slider round"></span></label></div>
+            <div class="control-row"><label for="tweak-log-layout">Режим отображения</label><select id="tweak-log-layout" class="arz-select"><option value="below">Под основной строкой</option><option value="inline" selected>В одну строку</option></select></div>
+          </div>
           <div class="control-group-title"><i class="fa-solid fa-puzzle-piece menu-icon"></i>Совместимость расширений</div>
           <section class="control-card compatibility-card" aria-labelledby="compatibility-title">
             <div class="control-row">
@@ -359,14 +411,6 @@
               <p>Все разделы окон «Пробив» и «Аналитика», включая онлайн, остаются доступны. Favicon, логотип и боковое меню управляются настройками нашего расширения. Также доступны ввод нескольких ID/никнеймов, быстрый выбор границ периода, эмодзи типов логов, сортировка, кнопки никнеймов и буфера обмена, проверки Email и тюнинга, ручная проверка IP, ArizonaAI, выделение, метки и копирование строк и ячеек.</p>
               <p>Настройки сохраняются. Изменения режима действуют после перезагрузки страницы логов.</p>
             </details>
-          </section>
-          <div id="totp-title" class="control-group-title"><i class="fa-solid fa-shield-halved menu-icon"></i>2FA</div>
-          <section class="totp-card" aria-labelledby="totp-title">
-            <div class="totp-heading"><span id="totp-timer"></span></div>
-            <div id="totp-current" hidden><strong id="totp-code" class="totp-code"></strong><button type="button" id="totp-copy" class="arz-btn-secondary">Копировать</button></div>
-            <form id="totp-form"><input id="totp-secret" class="arz-input" type="password" autocomplete="off" placeholder="Секрет или ссылка Google Authenticator" aria-label="Секрет 2FA"><button class="arz-btn-secondary" type="submit">Сохранить</button></form>
-            <div class="totp-actions"><button type="button" id="totp-replace" class="arz-btn-secondary" hidden>Заменить</button><button type="button" id="totp-delete" class="arz-btn-secondary" hidden>Удалить</button></div>
-            <div id="totp-status" role="status" aria-live="polite"></div>
           </section>
           <div class="control-card">
             <p>Разрешите копирование для кнопок расширения, в том числе кода 2FA.</p>
@@ -545,6 +589,13 @@
               <label><i class="fa-solid fa-border-none menu-icon"></i>Копирование ячеек и сниппетов</label>
               <label class="switch">
                 <input type="checkbox" id="tweak-copy-cells" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
+            <div class="control-row">
+              <label for="tweak-inventory-items"><i class="fa-solid fa-box menu-icon"></i>Предметы в логах</label>
+              <label class="switch">
+                <input type="checkbox" id="tweak-inventory-items" checked>
                 <span class="slider round"></span>
               </label>
             </div>
@@ -758,11 +809,11 @@
 
     <footer class="app-footer">
       <div class="active-theme-wrapper">
-        <span class="active-theme-name" id="active-theme-name">Arizona AI | Ecosystem</span>
+        <span class="active-theme-name" id="active-theme-name">Arizona AI Ecosystem</span>
         <span class="active-theme-label">совместно с Filipp Malyj</span>
       </div>
       <div class="footer-links">
-        <span class="app-version">v2.0</span>
+        <span class="app-version">v2.1</span>
 
         <a href="https://chromewebstore.google.com/detail/imobodagdnhdmjjlpfajidiofikmmpgi?utm_source=item-share-cb"
           target="_blank" class="footer-link-btn" title="Страница расширения в Chrome Web Store">
@@ -786,6 +837,8 @@
   </div>
   <script src="totp.js"></script>
   <script src="popup.js"></script>
+  <script src="../shared/inventory.js"></script>
+  <script src="inventory.js"></script>
 </body>
 
 </html>

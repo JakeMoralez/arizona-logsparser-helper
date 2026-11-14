@@ -41,6 +41,7 @@
     const maskingAppearance = !window.ArizonaCompatibility?.ready && status?.appliedMode === 'auto' && !status.detected
       ? values.arizonaSettings || {} : appearance;
     root.classList.toggle('arz-mask-pending', enabled && maskingAppearance.masking?.enabled !== false);
+    root.classList.toggle('arz-sticky-headers-root', enabled && (general['visual-sticky-headers'] ?? true));
     if (!document.body) return;
     document.body.classList.toggle('arz-extension-disabled', !enabled);
     window.ArizonaThemeManager.init({ ...appearance, themeEnabled: enabled && general['visual-theme-enabled'] !== false });

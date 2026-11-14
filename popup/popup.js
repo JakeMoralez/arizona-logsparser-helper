@@ -103,6 +103,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const defaultSettings = {
     'extension-toggle': true,
+    'tweak-log-data': true,
+    'tweak-log-labels': true,
+    'tweak-log-layout': 'inline',
+    'tweak-log-separator': false,
+    'tweak-log-accounts-total': false,
+    'tweak-log-hide-zero': false,
+    'tweak-log-hide-minus': true,
+    'tweak-log-id': true,
+    'tweak-log-vc': true,
+    'tweak-log-account1': true,
+    'tweak-log-account2': true,
+    'tweak-log-account3': true,
+    'tweak-log-account4': true,
+    'tweak-log-account5': true,
+    'tweak-log-account6': true,
+    'tweak-log-deposit': true,
+    'tweak-log-admin': true,
+
     'sakai-compatibility-mode': 'auto',
     'visual-sticky-navbar': true,
     'visual-sticky-headers': true,
@@ -124,6 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'tweak-copy-row': true,
     'tweak-hide-row': true,
     'tweak-copy-cells': true,
+    'tweak-inventory-items': true,
     'tweak-block-copy': true,
     'tweak-multi-select': true
   };

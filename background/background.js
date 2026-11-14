@@ -1,4 +1,4 @@
-importScripts('log-requests.js');
+importScripts('log-requests.js', 'inventory-catalog.js');
 
 console.log('[BG] Unified background script loaded v1.0');
 
@@ -71,10 +71,10 @@ class RateLimitedQueue {
 }
 
 const geoProviders = [
-  { name: 'ip-api.com', queue: new RateLimitedQueue(2000), retryAt: 0 },
-  { name: 'ipwho.is', queue: new RateLimitedQueue(1100), retryAt: 0 },
-  { name: 'ipapi.co', queue: new RateLimitedQueue(1100), retryAt: 0 },
-  { name: 'FreeIPAPI', queue: new RateLimitedQueue(1100), retryAt: 0 }
+  { name: 'ip-api.com', queue: new RateLimitedQueue(2000), retryAt: 0, rateLimitUntil: 0 },
+  { name: 'ipwho.is', queue: new RateLimitedQueue(1100), retryAt: 0, rateLimitUntil: 0 },
+  { name: 'ipapi.co', queue: new RateLimitedQueue(1100), retryAt: 0, rateLimitUntil: 0 },
+  { name: 'FreeIPAPI', queue: new RateLimitedQueue(1100), retryAt: 0, rateLimitUntil: 0 }
 ];
 
 function normalizeGeoResponse(provider, ip, data) {
@@ -124,10 +124,11 @@ function normalizeGeoResponse(provider, ip, data) {
   return { ...entry, query: ip, status: 'success', _provider: provider.name };
 }
 
-function requestGeoProvider(provider, ips) {
-  if (Date.now() < provider.retryAt) return Promise.reject(new Error(`${provider.name}: временно недоступен`));
+function requestGeoProvider(provider, ips, force = false) {
+  const unavailable = () => Date.now() < provider.retryAt && (!force || Date.now() < provider.rateLimitUntil);
+  if (unavailable()) return Promise.reject(new Error(`${provider.name}: временно недоступен`));
   return provider.queue.enqueue(async () => {
-    if (Date.now() < provider.retryAt) throw new Error(`${provider.name}: временно недоступен`);
+    if (unavailable()) throw new Error(`${provider.name}: временно недоступен`);
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 2500);
     let retryDelay = 60000;
@@ -148,6 +149,7 @@ function requestGeoProvider(provider, ips) {
           const header = response.headers.get('Retry-After');
           const wait = Number(header) > 0 ? Number(header) * 1000 : Date.parse(header) - Date.now();
           retryDelay = Math.max(60000, Number.isFinite(wait) ? wait : 60000);
+          provider.rateLimitUntil = Date.now() + retryDelay;
         }
         throw new Error(`${provider.name}: HTTP ${response.status}`);
       }
@@ -162,6 +164,7 @@ function requestGeoProvider(provider, ips) {
         });
       } else results = [normalizeGeoResponse(provider, ips[0], data)];
       if (results.every(item => item.status !== 'success' && item.retryable)) provider.retryAt = Date.now() + retryDelay;
+      else provider.retryAt = 0;
       return results;
     } catch (error) {
       provider.retryAt = Date.now() + retryDelay;
@@ -169,12 +172,12 @@ function requestGeoProvider(provider, ips) {
     } finally {
       clearTimeout(timer);
     }
-  }, () => Date.now() < provider.retryAt);
+  }, unavailable);
 }
 
-async function lookupGeoBatch(ips, onResult = () => {}) {
+async function lookupGeoBatch(ips, onResult = () => {}, force = false) {
   let primary = [];
-  try { primary = await requestGeoProvider(geoProviders[0], ips); } catch (error) { }
+  try { primary = await requestGeoProvider(geoProviders[0], ips, force); } catch (error) { }
   return Promise.all(ips.map(async ip => {
     const result = primary.find(item => item.query === ip);
     if (result?.status === 'success' || result?.retryable === false) {
@@ -187,7 +190,7 @@ async function lookupGeoBatch(ips, onResult = () => {}) {
       remaining.sort((a, b) => Number(Date.now() < a.retryAt) - Number(Date.now() < b.retryAt) || a.queue.queue.length - b.queue.queue.length);
       const provider = remaining.shift();
       try {
-        const [item] = await requestGeoProvider(provider, [ip]);
+        const [item] = await requestGeoProvider(provider, [ip], force);
         if (item.status === 'success' || item.retryable === false) {
           onResult(item);
           return item;
@@ -253,7 +256,7 @@ async function getCachedIps(ips) {
   return result;
 }
 
-async function fetchGeoIps(ips, onResult = () => {}) {
+async function fetchGeoIps(ips, onResult = () => {}, force = false) {
   const unique = [...new Set(ips)].filter(ip => typeof ip === 'string' && /^\d{1,3}(\.\d{1,3}){3}$/.test(ip) && ip.split('.').every(part => Number(part) <= 255));
   await loadCache();
   let cached = await getCachedIps(unique);
@@ -281,7 +284,7 @@ async function fetchGeoIps(ips, onResult = () => {}) {
         resolvers.delete(item.query);
       }
     };
-    lookupGeoBatch(chunk, publish).catch(error => {
+    lookupGeoBatch(chunk, publish, force).catch(error => {
       for (const ip of resolvers.keys()) publish({ query: ip, status: 'fail', retryable: true, message: error.message });
     });
   }
@@ -723,7 +726,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const target = sender.documentId ? { documentId: sender.documentId } : { frameId: sender.frameId || 0 };
       chrome.tabs.sendMessage(sender.tab.id, { action: 'ip_geo_result', requestId: message.requestId, data: item }, target, () => { void chrome.runtime.lastError; });
     };
-    fetchGeoIps(single ? [message.ip] : message.ips || [], progress)
+    fetchGeoIps(single ? [message.ip] : message.ips || [], progress, message.force === true)
       .then(data => sendResponse({ success: true, data: single ? data[0] : data }))
       .catch(error => sendResponse({ success: false, error: error.message, data: single ? null : [] }));
     return true;

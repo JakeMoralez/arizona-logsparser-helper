@@ -1,4 +1,32 @@
 (function () {
+  const tasks = new Map();
+  const channel = new MessageChannel();
+  let taskId = 0;
+  let taskPending = false;
+  channel.port1.onmessage = () => {
+    taskPending = false;
+    const next = tasks.entries().next().value;
+    if (!next) return;
+    tasks.delete(next[0]);
+    try { next[1](); }
+    finally {
+      if (tasks.size && !taskPending) {
+        taskPending = true;
+        channel.port2.postMessage(null);
+      }
+    }
+  };
+  function schedule(callback) {
+    const id = ++taskId;
+    tasks.set(id, callback);
+    if (!taskPending) {
+      taskPending = true;
+      channel.port2.postMessage(null);
+    }
+    return id;
+  }
+  function cancelTask(id) { tasks.delete(id); }
+
   const waiters = new Map();
   let waiterObserver;
   let waiterTimer;
@@ -103,5 +131,5 @@
     };
   }
 
-  window.ArizonaRuntime = { waitFor, stopWaiting, createRowIndex };
+  window.ArizonaRuntime = { waitFor, stopWaiting, createRowIndex, schedule, cancelTask };
 })();

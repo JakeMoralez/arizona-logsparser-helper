@@ -12,6 +12,24 @@
 
   const DEFAULT_SETTINGS = {
     'extension-toggle': true,
+    'tweak-log-data': true,
+    'tweak-log-labels': true,
+    'tweak-log-layout': 'inline',
+    'tweak-log-separator': false,
+    'tweak-log-accounts-total': false,
+    'tweak-log-hide-zero': false,
+    'tweak-log-hide-minus': true,
+    'tweak-log-id': true,
+    'tweak-log-vc': true,
+    'tweak-log-account1': true,
+    'tweak-log-account2': true,
+    'tweak-log-account3': true,
+    'tweak-log-account4': true,
+    'tweak-log-account5': true,
+    'tweak-log-account6': true,
+    'tweak-log-deposit': true,
+    'tweak-log-admin': true,
+
     'sakai-compatibility-mode': 'auto',
     'visual-sticky-navbar': true,
     'visual-sticky-headers': true,
@@ -32,6 +50,7 @@
     'tweak-copy-row': true,
     'tweak-hide-row': true,
     'tweak-copy-cells': true,
+    'tweak-inventory-items': true,
     'tweak-block-copy': true,
     'tweak-multi-select': true
   };
@@ -798,7 +817,7 @@
             }
           });
         }, {
-          rootMargin: '200px 0px',
+          rootMargin: '1000px 0px',
           threshold: 0.01
         });
       }
@@ -970,7 +989,7 @@
             window.ArizonaMultiSelectManager.injectCheckbox(row);
           }
         });
-      }, { rootMargin: '300px 0px' });
+      }, { rootMargin: '1000px 0px' });
     }
     rowControlsObserver.observe(row);
   }
@@ -979,18 +998,173 @@
     for (const row of document.querySelectorAll('table.table tbody tr')) observeRowControls(row);
   }
 
-  function processRow(tr) {
+  const logDataFields = {
+    'ID аккаунта': 'id', 'VC$': 'vc',
+    ...Object.fromEntries(Array.from({ length: 6 }, (_, i) => [`Доп. счёт №${i + 1}`, `account${i + 1}`])),
+    'Депозит': 'deposit', 'Уровень администрирования': 'admin'
+  };
+  const logDataHeaders = new WeakMap();
+  const logDataCells = new WeakMap();
+  const logDataSources = new WeakMap();
+  const logDataTableSettings = new WeakMap();
+  const logDataSettingKeys = ['extension-toggle', 'tweak-log-data', 'tweak-log-labels', 'tweak-log-layout', 'tweak-log-separator', 'tweak-log-accounts-total', 'tweak-log-hide-zero', 'tweak-log-hide-minus', ...Object.values(logDataFields).map(key => `tweak-log-${key}`)];
+  let logDataSettingsRef;
+  let logDataSettingsSignature;
+  function logDataSignature() {
+    if (logDataSettingsRef !== currentSettings) {
+      logDataSettingsRef = currentSettings;
+      logDataSettingsSignature = logDataSettingKeys.map(key => currentSettings[key]).join('|');
+    }
+    return logDataSettingsSignature;
+  }
+
+  function updateLogDataHeader(table) {
+    if (!table) return;
+    const signature = logDataSignature();
+    if (logDataTableSettings.get(table) === signature) return;
+    const description = table.tHead?.rows[0]?.cells[2]?.querySelector('.table-description');
+    logDataTableSettings.set(table, signature);
+    if (!description) return;
+    const enabled = currentSettings['extension-toggle'] !== false && currentSettings['tweak-log-data'];
+    description.classList.toggle('arz-log-data-description', !!enabled);
+    table.classList.toggle('arz-log-data-expanded', !!enabled);
+    if (!enabled) {
+      const original = logDataHeaders.get(description);
+      if (original) {
+        description.replaceChildren(...original);
+        logDataHeaders.delete(description);
+      }
+      return;
+    }
+    if (!logDataHeaders.has(description)) logDataHeaders.set(description, Array.from(description.childNodes));
+    const extra = Object.entries(logDataFields)
+      .filter(([, key]) => currentSettings[`tweak-log-${key}`] === true)
+      .map(([label]) => label);
+    if (currentSettings['tweak-log-accounts-total']) extra.push('Баланс всех доп. счетов');
+    const text = ['Деньги / Банк / Донат', ...extra].join(' / ');
+    if (description.textContent !== text) description.textContent = text;
+  }
+
+  function renderLogData(row) {
+    const cell = row.cells?.[2];
+    if (!cell) return;
+    updateLogDataHeader(row.closest('table'));
+    const signature = logDataSignature();
+    const previous = logDataCells.get(cell);
+    if (previous?.signature === signature && previous.text === cell.textContent && previous.first === cell.firstChild) return;
+    cell.querySelectorAll('.arz-log-data-extra, .arz-log-data-label, .arz-log-data-unit, .arz-log-data-separator').forEach(node => node.remove());
+    if (currentSettings['extension-toggle'] === false || !currentSettings['tweak-log-data']) {
+      logDataCells.set(cell, { signature, text: cell.textContent, first: cell.firstChild });
+      return;
+    }
+    const fields = logDataFields;
+    let hasFirstPlayer = false;
+    for (const hidden of cell.querySelectorAll('.app__hidden[data-title="Дополнительная информация"]')) {
+      let button = hidden.previousElementSibling;
+      if (!button?.classList.contains('js_entry_format_button')) continue;
+      const codes = [];
+      let node = button.previousSibling;
+      while (node && node.nodeName !== 'BR') {
+        if (node.nodeType === 1 && node.tagName === 'CODE') codes.unshift(node);
+        node = node.previousSibling;
+      }
+      if (codes.length < 4 || !/^(I|II):$/.test(codes[0].textContent.trim())) continue;
+      const player = codes[0].textContent.trim();
+      if (player === 'II:' && hasFirstPlayer && currentSettings['tweak-log-separator']) {
+        const separator = document.createElement('hr');
+        separator.className = 'arz-log-data-separator';
+        codes[0].before(separator);
+      }
+      if (player === 'I:') hasFirstPlayer = true;
+      if (currentSettings['tweak-log-labels']) {
+        codes.slice(1, 4).forEach((code, i) => {
+          const unit = document.createElement('span');
+          unit.className = 'arz-log-data-unit';
+          unit.textContent = i === 2 ? ' AZ' : ' SA$';
+          code.append(unit);
+        });
+      }
+      const values = [];
+      let accountsTotal = 0n;
+      let accountsCount = 0;
+      const sourceText = hidden.textContent;
+      let source = logDataSources.get(hidden);
+      if (source?.text !== sourceText) {
+        source = { text: sourceText, values: Array.from(hidden.querySelectorAll('li'), item => ({
+          value: item.querySelector('code')?.textContent.trim(),
+          label: Array.from(item.childNodes).filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim().replace(/:\s*$/, '')
+        })) };
+        logDataSources.set(hidden, source);
+      }
+      for (const { value, label } of source.values) {
+        if (fields[label]?.startsWith('account') && value) {
+          const normalized = value.replace(/[,\s\u00a0]/g, '');
+          if (/^\d+$/.test(normalized)) {
+            accountsTotal += BigInt(normalized);
+            accountsCount++;
+          }
+        }
+        if (!fields[label] || currentSettings[`tweak-log-${fields[label]}`] !== true || !value) continue;
+        if (currentSettings['tweak-log-hide-zero'] && /^0+$/.test(value)) continue;
+        if (currentSettings['tweak-log-hide-minus'] && value === '-1') continue;
+        const code = document.createElement('code');
+        code.className = 'arz-log-data-value';
+        code.dataset.field = fields[label];
+        code.title = label;
+        const field = fields[label];
+        code.textContent = field === 'id' ? `ID: ${value}` : field === 'vc' ? value + (currentSettings['tweak-log-labels'] ? ' VC$' : '') : field === 'deposit' || field.startsWith('account') ? value + (currentSettings['tweak-log-labels'] ? ' SA$' : '') : field === 'admin' ? `${value} lvl` : value;
+        values.push(code);
+      }
+      if (currentSettings['tweak-log-accounts-total'] && accountsCount && !(currentSettings['tweak-log-hide-zero'] && accountsTotal === 0n)) {
+        const total = document.createElement('code');
+        total.className = 'arz-log-data-value';
+        total.dataset.field = 'accounts-total';
+        total.title = 'Баланс всех доп. счетов';
+        total.textContent = accountsTotal.toLocaleString('en-US') + (currentSettings['tweak-log-labels'] ? ' SA$' : '');
+        values.push(total);
+      }
+      if (values.length) {
+        const extra = document.createElement('span');
+        extra.className = 'arz-log-data-extra';
+        if (currentSettings['tweak-log-layout'] === 'inline') extra.append(' / ');
+        values.forEach((value, index) => {
+          if (index) extra.append(' / ');
+          extra.append(value);
+        });
+        if (currentSettings['tweak-log-layout'] !== 'inline') extra.style.display = 'block';
+        if (currentSettings['tweak-log-layout'] === 'inline') {
+          extra.append(' ');
+          button.before(extra);
+        } else {
+          hidden.after(extra);
+        }
+      }
+    }
+    logDataCells.set(cell, { signature, text: cell.textContent, first: cell.firstChild });
+  }
+
+  function processRow(tr, reason = 1) {
+    if (reason === 2) {
+      window.ArizonaInventoryLogs?.processRow(tr);
+      return;
+    }
+    if (reason === 4) {
+      renderLogData(tr);
+      return;
+    }
     if (!tr || !tr.cells || !tr.cells[1]) return;
 
-    observeRowControls(tr);
-
     if (window.ArizonaMaskingManager && typeof window.ArizonaMaskingManager.maskRow === 'function') {
-      try { window.ArizonaMaskingManager.maskRow(tr); } catch (e) { }
+      window.ArizonaMaskingManager.maskRow(tr);
     }
+
+    renderLogData(tr);
+    observeRowControls(tr);
 
     try { highlightIdenticalIps(tr); } catch (e) { }
     try { highlightTuningAHK(tr); } catch (e) { }
     try { injectRowActions(tr); } catch (e) { }
+    window.ArizonaInventoryLogs?.processRow(tr);
 
     if (currentSettings['tweak-copy-cells'] !== false) {
       try { processSnippetsInElement(tr.cells[1]); } catch (e) { }
@@ -1249,7 +1423,7 @@
         }
       };
       ipGeoRequests.set(requestId, accept);
-      Promise.resolve().then(() => window.ArizonaUtils.sendMessageToBackground({ action: 'fetch_ip_geo_batch', ips: chunk, requestId }))
+      Promise.resolve().then(() => window.ArizonaUtils.sendMessageToBackground({ action: 'fetch_ip_geo_batch', ips: chunk, requestId, force }))
         .then(result => {
           for (const item of Array.isArray(result?.data) ? result.data : []) accept(item);
           for (const ip of resolvers.keys()) accept({ query: ip, status: 'fail', retryable: true, message: result?.error });
@@ -1443,46 +1617,99 @@
     }
   }
 
+  let accountScanGeneration = 0;
+  let accountScanTask = null;
+  let accountMarkedRows = new Set();
+
   function scanAccountSignals() {
-    const rows = Array.from(document.querySelectorAll('table.table tbody tr'));
-    rows.forEach(row => {
-      row.querySelectorAll('.arz-account-signal').forEach(el => el.remove());
-      row.style.removeProperty('--arz-account-color');
-      row.classList.remove('arz-account-highlight');
-    });
-    if (currentSettings['extension-toggle'] === false || window.ArizonaCompatibility?.active) return;
+    const generation = ++accountScanGeneration;
+    window.ArizonaRuntime.cancelTask(accountScanTask);
+    accountScanTask = null;
+    const enabled = currentSettings['extension-toggle'] !== false && !sakaiCompatible();
+    const binding = enabled && arizonaSettings.bindingDetector?.enabled;
+    const guarantee = enabled && arizonaSettings.guaranteeDetector?.enabled;
+    if (!binding && !guarantee && !accountMarkedRows.size) return;
+    const tbody = document.querySelector('table.table tbody');
+    const rows = binding || guarantee ? Array.from(tbody?.rows || []) : [];
+    const marks = new Map();
+    const exits = new Map();
+    let position = 0;
+    let updates;
     const mark = (row, label, color) => {
       if (!row?.cells[1]) return;
-      const badge = document.createElement('span');
-      badge.className = 'arz-account-signal';
-      badge.textContent = ` ⚠ ${label}`;
-      badge.title = label;
-      badge.style.cssText = `color:${/^#[0-9a-f]{6}$/i.test(color) ? color : '#ff9800'};font-weight:bold`;
-      row.style.setProperty('--arz-account-color', /^#[0-9a-f]{6}$/i.test(color) ? color : '#ff9800');
-      row.classList.add('arz-account-highlight');
-      row.cells[1].appendChild(badge);
+      if (!marks.has(row)) marks.set(row, []);
+      marks.get(row).push({ label, color: /^#[0-9a-f]{6}$/i.test(color) ? color : '#ff9800' });
     };
-    const exits = new Map();
-    for (const row of rows) {
-      const action = row.cells[1]?.textContent || '';
-      if (arizonaSettings.bindingDetector?.enabled && /изменил почту|привязал почту|изменил пароль|привязал ВК|привязал Telegram|изменил вход по почте|изменил привязку ВК|установил почту/i.test(action)) {
-        const amount = (row.cells[2]?.textContent || '').match(/I:\s*([\d,.]+)/i);
-        if (amount && Number(amount[1].replace(/[,.]/g, '')) >= 100000000) mark(row, 'Смена данных при балансе от 100 млн', arizonaSettings.bindingDetector.color);
-      }
-      if (!arizonaSettings.guaranteeDetector?.enabled) continue;
-      const exit = action.match(/Игрок\s+(\S+).*время сессии:\s*(\d{2}):(\d{2}):(\d{2})/i);
-      if (exit) exits.set(exit[1], { row, seconds: +exit[2] * 3600 + +exit[3] * 60 + +exit[4] });
-      const auth = action.match(/Игрок\s+(\S+).*авторизовался.*Тип клиента:\s*none/i);
-      if (auth) {
-        const match = exits.get(auth[1]);
-        if (match && match.seconds >= 23 && match.seconds <= 60) {
-          const reason = `Возможный бот гаранта: клиент none, сессия ${match.seconds} сек.`;
-          mark(row, reason, arizonaSettings.guaranteeDetector.color);
-          mark(match.row, reason, arizonaSettings.guaranteeDetector.color);
+    const step = () => {
+      accountScanTask = null;
+      if (generation !== accountScanGeneration || (tbody && !tbody.isConnected)) return;
+      const deadline = performance.now() + 7;
+      if (!updates) {
+        while (position < rows.length) {
+          const row = rows[position++];
+          const action = row.cells[1]?.textContent || '';
+          if (binding && /изменил почту|привязал почту|изменил пароль|привязал ВК|привязал Telegram|изменил вход по почте|изменил привязку ВК|установил почту/i.test(action)) {
+            const amount = (row.cells[2]?.textContent || '').match(/I:\s*([\d,.]+)/i);
+            if (amount && Number(amount[1].replace(/[,.]/g, '')) >= 100000000) mark(row, 'Смена данных при балансе от 100 млн', arizonaSettings.bindingDetector.color);
+          }
+          if (guarantee) {
+            const exit = action.match(/Игрок\s+(\S+).*время сессии:\s*(\d{2}):(\d{2}):(\d{2})/i);
+            if (exit) exits.set(exit[1], { row, seconds: +exit[2] * 3600 + +exit[3] * 60 + +exit[4] });
+            const auth = action.match(/Игрок\s+(\S+).*авторизовался.*Тип клиента:\s*none/i);
+            if (auth) {
+              const match = exits.get(auth[1]);
+              if (match && match.seconds >= 23 && match.seconds <= 60) {
+                const reason = `Возможный бот гаранта: клиент none, сессия ${match.seconds} сек.`;
+                mark(row, reason, arizonaSettings.guaranteeDetector.color);
+                mark(match.row, reason, arizonaSettings.guaranteeDetector.color);
+              }
+              exits.delete(auth[1]);
+            }
+          }
+          if (performance.now() >= deadline) {
+            accountScanTask = window.ArizonaRuntime.schedule(step);
+            return;
+          }
         }
-        exits.delete(auth[1]);
+        updates = [...new Set([...accountMarkedRows, ...marks.keys()])];
+        position = 0;
       }
-    }
+      window.ArizonaObservers.write(() => {
+        while (position < updates.length) {
+          const row = updates[position++];
+          const data = marks.get(row);
+          if (row.isConnected) {
+            const existing = Array.from(row.querySelectorAll('.arz-account-signal'));
+            if (data) {
+              data.forEach((item, index) => {
+                const badge = existing[index] || document.createElement('span');
+                badge.className = 'arz-account-signal';
+                if (badge.title !== item.label || badge.dataset.color !== item.color) {
+                  badge.textContent = ` ⚠ ${item.label}`;
+                  badge.title = item.label;
+                  badge.dataset.color = item.color;
+                  badge.style.cssText = `color:${item.color};font-weight:bold`;
+                }
+                if (!existing[index]) row.cells[1].appendChild(badge);
+              });
+              existing.slice(data.length).forEach(badge => badge.remove());
+              row.style.setProperty('--arz-account-color', data[data.length - 1].color);
+              row.classList.add('arz-account-highlight');
+              accountMarkedRows.add(row);
+            } else {
+              existing.forEach(badge => badge.remove());
+              row.style.removeProperty('--arz-account-color');
+              row.classList.remove('arz-account-highlight');
+              accountMarkedRows.delete(row);
+            }
+            rowIndex.finish(row);
+          } else accountMarkedRows.delete(row);
+          if (performance.now() >= deadline) break;
+        }
+      });
+      if (position < updates.length) accountScanTask = window.ArizonaRuntime.schedule(step);
+    };
+    accountScanTask = window.ArizonaRuntime.schedule(step);
   }
 
   function formatGeoText(ipData, distance) {
@@ -1673,7 +1900,7 @@
           }
         });
       }, {
-        rootMargin: '300px 0px',
+        rootMargin: '1000px 0px',
         threshold: 0.01
       });
     }
@@ -1767,56 +1994,151 @@
   }
 
   const queuedRows = new Set();
+  const priorityRows = new Set();
+  const rowReasons = new WeakMap();
   let rowTimer = null;
+  let finishTask = null;
+  let tableLayoutLock = null;
+  let tableHasProcessedRows = false;
 
-  function queueRows(rows) {
+  function releaseTableLayout() {
+    if (!tableLayoutLock) return;
+    const { table, columns, layout, priority, width, widthPriority } = tableLayoutLock;
+    columns.remove();
+    if (layout) table.style.setProperty('table-layout', layout, priority);
+    else table.style.removeProperty('table-layout');
+    if (width) table.style.setProperty('width', width, widthPriority);
+    else table.style.removeProperty('width');
+    tableLayoutLock = null;
+  }
+
+  window.addEventListener('resize', releaseTableLayout, { passive: true });
+
+  function lockTableLayout() {
+    if (tableLayoutLock || sakaiCompatible() || !tableHasProcessedRows || queuedRows.size < 100 || document.readyState === 'loading') return;
+    const table = queuedRows.values().next().value?.closest('table.table');
+    const headers = table?.tHead?.rows[0]?.cells;
+    if (!headers?.length || table.querySelector('colgroup') || getComputedStyle(table).tableLayout === 'fixed') return;
+    updateLogDataHeader(table);
+    const tableWidth = table.getBoundingClientRect().width;
+    const widths = Array.from(headers, cell => cell.getBoundingClientRect().width);
+    if (widths.some(width => !width)) return;
+    const columns = document.createElement('colgroup');
+    columns.dataset.arzLayoutLock = 'true';
+    for (const width of widths) {
+      const column = document.createElement('col');
+      column.style.width = `${width}px`;
+      columns.appendChild(column);
+    }
+    tableLayoutLock = { table, columns, layout: table.style.getPropertyValue('table-layout'), priority: table.style.getPropertyPriority('table-layout'), width: table.style.getPropertyValue('width'), widthPriority: table.style.getPropertyPriority('width') };
+    table.insertBefore(columns, table.tHead);
+    table.style.setProperty('width', `${tableWidth}px`, 'important');
+    table.style.setProperty('table-layout', 'fixed', 'important');
+  }
+
+  function queueRows(rows, reason = 1) {
     if (currentSettings['extension-toggle'] === false) return;
+    let first = true;
     for (const row of rows) {
       if (!row.isConnected) continue;
+      const previous = rowReasons.get(row);
+      const next = (!queuedRows.has(row) && !row.hasAttribute('data-arz-processed')) || previous === 1 || reason === 1 ? 1 : (previous || 0) | reason;
+      rowReasons.set(row, next);
       row.removeAttribute('data-arz-processed');
+      if (first && accountScanTask !== null && reason !== 2) {
+        accountScanGeneration++;
+        window.ArizonaRuntime.cancelTask(accountScanTask);
+        accountScanTask = null;
+      }
+      if (queuedRows.size < 50) priorityRows.add(row);
+      first = false;
       queuedRows.add(row);
     }
-    if (rowTimer === null && queuedRows.size) rowTimer = setTimeout(processRowBatch, 0);
+    if (rowTimer === null && queuedRows.size) rowTimer = window.ArizonaRuntime.schedule(processRowBatch);
   }
+
+  let priorityFrame = null;
+  document.addEventListener('scroll', () => {
+    if (priorityFrame !== null || !queuedRows.size) return;
+    priorityFrame = requestAnimationFrame(() => {
+      priorityFrame = null;
+      if (!queuedRows.size) return;
+      let anchor = document.elementFromPoint(Math.round(innerWidth / 2), Math.round(innerHeight / 2))?.closest('table.table tbody tr');
+      if (!anchor) {
+        const rows = document.querySelector('table.table tbody')?.rows;
+        let low = 0;
+        let high = (rows?.length || 0) - 1;
+        const middleY = innerHeight / 2;
+        while (low <= high) {
+          const middle = (low + high) >> 1;
+          const row = rows[middle];
+          const rect = row.getBoundingClientRect();
+          if (rect.bottom < middleY) low = middle + 1;
+          else if (rect.top > middleY) high = middle - 1;
+          else { anchor = row; break; }
+        }
+      }
+      if (!anchor) return;
+      let row = anchor;
+      for (let i = 0; row.previousElementSibling && i < 15; i++) row = row.previousElementSibling;
+      for (let i = 0; row && i < 80; i++, row = row.nextElementSibling) {
+        if (queuedRows.has(row)) priorityRows.add(row);
+      }
+    });
+  }, { passive: true, capture: true });
 
   function processRowBatch() {
     rowTimer = null;
     if (currentSettings['extension-toggle'] === false) return;
     isProcessingTable = true;
-    window.ArizonaObservers.write(() => {
-      const deadline = performance.now() + 8;
-      for (const row of queuedRows) {
-        queuedRows.delete(row);
-        if (!row.isConnected || !row.closest('table.table')) continue;
-        try {
-          rowIndex.update(row);
-          processRow(row);
-          rowIndex.finish(row);
-        } catch (error) {
-          console.error('Error processing row:', error);
-        } finally {
-          row.setAttribute('data-arz-processed', 'true');
+    try {
+      window.ArizonaObservers.write(() => {
+        lockTableLayout();
+        const deadline = performance.now() + 8;
+        while (queuedRows.size) {
+          const row = priorityRows.values().next().value || queuedRows.values().next().value;
+          priorityRows.delete(row);
+          if (!queuedRows.has(row)) continue;
+          queuedRows.delete(row);
+          const reason = rowReasons.get(row) || 1;
+          rowReasons.delete(row);
+          if (!row.isConnected || !row.closest('table.table')) continue;
+          try {
+            if (reason === 1) rowIndex.update(row);
+            if (reason === 6) {
+              renderLogData(row);
+              window.ArizonaInventoryLogs?.processRow(row);
+            } else processRow(row, reason);
+            rowIndex.finish(row);
+          } catch (error) {
+            console.error('Error processing row:', error);
+          } finally {
+            row.setAttribute('data-arz-processed', 'true');
+            tableHasProcessedRows = true;
+          }
+          if (performance.now() >= deadline) break;
         }
-        if (performance.now() >= deadline) break;
-      }
-    });
-    isProcessingTable = false;
-    if (queuedRows.size) {
-      rowTimer = setTimeout(processRowBatch, 0);
-    } else if (isInitialized) {
-      finishTableProcessing();
-    }
+      });
+    } finally { isProcessingTable = false; }
+    if (queuedRows.size) rowTimer = window.ArizonaRuntime.schedule(processRowBatch);
+    else if (isInitialized) finishTableProcessing();
   }
 
   function finishTableProcessing() {
-    window.ArizonaObservers.write(() => {
-      window.ArizonaColumnEyeButtons.update();
-      window.ArizonaTgVkDetector.scan();
-      window.ArizonaEmailDetector.scan();
-      handleTuningAutoScroll();
-      scanAccountSignals();
-      window.ArizonaOnlineManager.checkAutoCalculation();
-      window.ArizonaDateShortcut.reposition();
+    if (finishTask !== null) return;
+    finishTask = window.ArizonaRuntime.schedule(() => {
+      finishTask = null;
+      if (queuedRows.size || currentSettings['extension-toggle'] === false) return;
+      window.ArizonaObservers.write(() => {
+        releaseTableLayout();
+        window.ArizonaColumnEyeButtons.update();
+        window.ArizonaTgVkDetector.scan();
+        window.ArizonaEmailDetector.scan();
+        handleTuningAutoScroll();
+        scanAccountSignals();
+        window.ArizonaOnlineManager.checkAutoCalculation();
+        window.ArizonaDateShortcut.reposition();
+      });
     });
   }
 
@@ -1829,9 +2151,18 @@
   }
 
   function stopTableWork() {
-    clearTimeout(rowTimer);
+    releaseTableLayout();
+    window.ArizonaRuntime.cancelTask(rowTimer);
+    window.ArizonaRuntime.cancelTask(finishTask);
+    finishTask = null;
     rowTimer = null;
     queuedRows.clear();
+    priorityRows.clear();
+    if (priorityFrame !== null) cancelAnimationFrame(priorityFrame);
+    priorityFrame = null;
+    accountScanGeneration++;
+    window.ArizonaRuntime.cancelTask(accountScanTask);
+    accountScanTask = null;
     clearTimeout(ipBatchTimeout);
     ipBatchTimeout = null;
     pendingIpRows.clear();
@@ -2216,6 +2547,7 @@
     const previous = appliedGeneralSettings;
     const changed = key => !previous || previous[key] !== settings[key];
     const toggled = changed('extension-toggle');
+    const inventoryChanged = window.ArizonaInventoryLogs?.configure(settings, rows => queueRows(rows, 2));
     appliedGeneralSettings = { ...settings };
     if (toggled || changed('tweak-copy-row') || changed('tweak-copy-btn-visibility')) initCopyButtonsLazy(settings);
     if (isInitialized && (toggled || changed('tweak-ip-info'))) initIpRowsObserver();
@@ -2233,6 +2565,14 @@
       if (changed('visual-theme-enabled')) window.ArizonaThemeManager.updateSettings({ ...arizonaSettings, themeEnabled: settings['extension-toggle'] !== false && settings['visual-theme-enabled'] !== false });
     }
     const isEnabled = settings['extension-toggle'] !== false;
+    document.documentElement.classList.toggle('arz-sticky-headers-root', isEnabled && settings['visual-sticky-headers'] === true);
+    if (toggled || Object.keys(settings).some(key => key.startsWith('tweak-log-') && changed(key))) {
+      window.ArizonaObservers.write(() => {
+        document.querySelectorAll('table.table').forEach(updateLogDataHeader);
+        if (settings['extension-toggle'] === false) document.querySelectorAll('table.table tbody tr').forEach(renderLogData);
+        else if (isInitialized) queueRows(document.querySelectorAll('table.table tbody tr'), 4);
+      });
+    }
 
     document.body.classList.remove(
       'arz-sticky-navbar-active',
@@ -2317,13 +2657,15 @@
 
     renderEcosystemBadges();
 
-    if (isInitialized && (toggled || changed('tweak-copy-cells'))) {
+    if (isInitialized && (toggled || inventoryChanged || changed('tweak-copy-cells'))) {
       queueRows(document.querySelectorAll('table.table tbody tr'));
     }
     if (isInitialized && toggled) window.ArizonaObservers.start();
   }
 
   window.ArizonaUtils = {
+    openOverlay,
+    closeOverlay,
     isValidNickname: isValidNickname,
     escapeHtml: function (str) {
       if (!str) return '';
@@ -2794,45 +3136,84 @@
 
   window.ArizonaObservers = (function () {
     let observer = null;
+    let structureObserver = null;
     let tbody = null;
     let writing = false;
     const ownedSelector = '[class*="arz-"], [class*="alh-"], .az-geo-inserted, .arizona-ecosystem-badge';
 
     function forget(row) {
       queuedRows.delete(row);
+      priorityRows.delete(row);
+      rowReasons.delete(row);
+      accountMarkedRows.delete(row);
       pendingIpRows.delete(row);
       ipRetryRows.delete(row);
       ipRetryAttempts.delete(row);
       ipRowObserver?.unobserve(row);
       copyBtnObserver?.unobserve(row);
       rowControlsObserver?.unobserve(row);
+      window.ArizonaInventoryLogs?.forget(row);
       rowIndex.remove(row);
-      if (row.cells) for (const cell of row.cells) ipCellCache.delete(cell);
+      if (row.cells) for (const cell of row.cells) {
+        ipCellCache.delete(cell);
+        logDataCells.delete(cell);
+      }
+    }
+
+    function bind() {
+      const next = document.querySelector('table.table tbody');
+      if (next === tbody) return;
+      releaseTableLayout();
+      if (tbody) for (const row of tbody.rows) forget(row);
+      observer?.disconnect();
+      window.ArizonaRuntime.cancelTask(finishTask);
+      finishTask = null;
+      tbody = next;
+      tableHasProcessedRows = false;
+      rowIndex.clear();
+      ipGeneration++;
+      accountScanGeneration++;
+      window.ArizonaRuntime.cancelTask(accountScanTask);
+      accountScanTask = null;
+      if (tbody) {
+        observer?.observe(tbody, { childList: true, subtree: true, characterData: true });
+        logDataTableSettings.delete(tbody.closest('table'));
+        queueRows(tbody.rows);
+      }
+      if (!tbody?.rows.length) finishTableProcessing();
+      styleResetButton();
+    }
+
+    function structureChanges(records) {
+      if (currentSettings['extension-toggle'] === false) return;
+      for (const record of records) {
+        if (tbody && (record.target === tbody || tbody.contains(record.target))) continue;
+        if (record.target.nodeType === 1 && record.target.closest('thead')) {
+          const table = record.target.closest('table.table');
+          if (table) {
+            logDataTableSettings.delete(table);
+            updateLogDataHeader(table);
+          }
+        }
+        for (const node of [...record.addedNodes, ...record.removedNodes]) {
+          if (node.nodeType !== 1) continue;
+          if ((tbody && (node === tbody || node.contains(tbody))) || node.matches('table.table') ||
+              (node.tagName === 'TBODY' && record.target.nodeType === 1 && record.target.matches('table.table')) ||
+              (node.childElementCount && node.querySelector('table.table'))) {
+            bind();
+            return;
+          }
+        }
+      }
     }
 
     function changes(records) {
-      if (!records.length || currentSettings['extension-toggle'] === false) return;
-      const next = document.querySelector('table.table tbody');
-      if (next !== tbody) {
-        if (tbody) for (const row of tbody.rows) forget(row);
-        tbody = next;
-        rowIndex.clear();
-        ipGeneration++;
-        if (tbody) queueRows(tbody.rows);
-        if (!tbody?.rows.length) {
-          window.ArizonaTgVkDetector.scan();
-          window.ArizonaEmailDetector.scan();
-        }
-        styleResetButton();
-
-        return;
-      }
-      if (!tbody) return;
+      if (!records.length || !tbody || currentSettings['extension-toggle'] === false) return;
       const changed = new Set();
       let removed = false;
       for (const record of records) {
         const target = record.target.nodeType === 1 ? record.target : record.target.parentElement;
-        if (!target || !tbody.contains(target)) continue;
+        if (!target || (target !== tbody && !tbody.contains(target))) continue;
         const owner = target.closest(ownedSelector);
         if (owner && tbody.contains(owner) && owner !== tbody && owner.tagName !== 'TR' && !owner.classList.contains('arz-copyable-snippet')) continue;
         if (record.type === 'childList') {
@@ -2842,7 +3223,7 @@
         const row = target.closest('tr');
         if (row && row.parentElement === tbody) changed.add(row);
         for (const node of record.removedNodes || []) {
-          if (node.nodeType === 1 && node.tagName === 'TR' && !tbody.contains(node)) {
+          if (node.nodeType === 1 && node.tagName === 'TR' && node.parentElement !== tbody) {
             forget(node);
             removed = true;
           }
@@ -2850,16 +3231,17 @@
         for (const node of record.addedNodes || []) {
           if (node.nodeType === 1 && node.tagName === 'TR' && node.parentElement === tbody) changed.add(node);
         }
+        if (row && row.parentElement === tbody) {
+          const cell = target.closest('td');
+          if (cell === row.cells[2]) logDataCells.delete(cell);
+        }
       }
       for (const row of changed) {
         for (const cell of row.cells) ipCellCache.delete(cell);
         row.removeAttribute('data-arz-ip-processed');
       }
       queueRows(changed);
-      if (removed && !queuedRows.size) {
-        window.ArizonaTgVkDetector.scan();
-        window.ArizonaEmailDetector.scan();
-      }
+      if (removed && !queuedRows.size) finishTableProcessing();
     }
 
     return {
@@ -2867,24 +3249,29 @@
       start() {
         if (observer || currentSettings['extension-toggle'] === false) return;
         observer = new MutationObserver(changes);
-        observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-        const next = document.querySelector('table.table tbody');
-        if (next !== tbody) {
-          rowIndex.clear();
-          tbody = next;
-          if (tbody) queueRows(tbody.rows);
-        } else processTable();
+        structureObserver = new MutationObserver(structureChanges);
+        structureObserver.observe(document.body, { childList: true, subtree: true });
+        const previous = tbody;
+        bind();
+        if (previous === tbody && tbody) {
+          observer.observe(tbody, { childList: true, subtree: true, characterData: true });
+          processTable();
+        }
       },
       stop() {
         observer?.disconnect();
+        structureObserver?.disconnect();
         observer = null;
+        structureObserver = null;
       },
       write(callback) {
         if (writing) return callback();
+        if (structureObserver) structureChanges(structureObserver.takeRecords());
         if (observer) changes(observer.takeRecords());
         writing = true;
         try { return callback(); }
         finally {
+          if (structureObserver) structureChanges(structureObserver.takeRecords());
           observer?.takeRecords();
           writing = false;
         }
@@ -3049,7 +3436,9 @@
         const len = tr.cells.length;
         for (let i = 1; i < len; i++) {
           const cell = tr.cells[i];
-          if (cell) walk(cell);
+          if (!cell) continue;
+          if (currentSettings['extension-toggle'] !== false && settings.masking?.enabled !== false && !/[.@]|vk|tg/i.test(cell.textContent)) continue;
+          walk(cell);
         }
       },
       startObserver: function () {
@@ -6064,7 +6453,8 @@
         window.addEventListener('alh-bootstrap-settings', earlyTools);
         window.addEventListener('alh-compatibility-status', earlyTools);
         await window.ArizonaBootstrap.compatibility;
-        await window.ArizonaCompatibility?.documentReady;
+        if (window.ArizonaCompatibility?.status().appliedMode !== 'off') await window.ArizonaCompatibility?.documentReady;
+        else await window.ArizonaBootstrap.bodyReady;
         window.removeEventListener('alh-bootstrap-settings', earlyTools);
         window.removeEventListener('alh-compatibility-status', earlyTools);
         if (isChallenge()) {
@@ -6078,6 +6468,10 @@
       window.ArizonaMaskingManager.init(arizonaSettings);
       window.ArizonaMultiSelectManager.init(arizonaSettings);
       window.ArizonaObservers.init();
+      if (queuedRows.size) {
+        window.ArizonaRuntime.cancelTask(rowTimer);
+        processRowBatch();
+      }
       await new Promise(resolve => setTimeout(resolve, 0));
 
       if (currentSettings['extension-toggle'] !== false) initEcosystemApi();
@@ -6215,8 +6609,8 @@
                   console.error('Redirection failed:', e);
                 }
               }
-              arizonaSettings = (result && result.arizonaSettings) || {};
-              arizonaTemplates = (result && result.arizonaTemplates) || [];
+              arizonaSettings = structuredClone(result?.arizonaSettings || {});
+              arizonaTemplates = structuredClone(result?.arizonaTemplates || []);
 
               if (!arizonaSettings.masking) {
                 arizonaSettings.masking = { enabled: true, maskIp: true, maskEmail: true, maskTG: true, maskVK: true };
