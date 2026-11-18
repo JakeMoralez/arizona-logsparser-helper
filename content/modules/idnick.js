@@ -16,16 +16,16 @@ export function create(context) {
           </div>
           <div class="alh-modal-body">
             <div class="arz-modal-form-group">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                <label class="arz-modal-label" style="margin: 0;"><i class="fa-solid fa-users"></i> Никнеймы или ID аккаунтов</label>
-                <span style="font-size: 11px; color: var(--az-text-secondary); background: var(--az-input-bg); border: 1px solid var(--az-border); padding: 2px 8px; border-radius: 12px;">Введено: <strong id="arz-idnick-count-num" style="color: var(--az-accent-hover);">0</strong></span>
+              <div class="alh-layout-43">
+                <label class="alh-layout-4 arz-modal-label"><i class="fa-solid fa-users"></i> Никнеймы или ID аккаунтов</label>
+                <span class="alh-layout-68">Введено: <strong id="arz-idnick-count-num" class="alh-layout-7">0</strong></span>
               </div>
               <textarea id="arz-idnick-inputs" class="arz-textarea" rows="4" placeholder="Введите никнеймы (Nick_Name) или ID аккаунтов (числа)\nКаждый элемент с новой строки или через запятую"></textarea>
             </div>
           </div>
           <div class="alh-modal-footer">
-            <button data-action="cancel" class="arz-btn-danger" style="flex: 1;">Закрыть</button>
-            <button data-action="start" class="arz-btn-primary" style="flex: 1;">Узнать данные</button>
+            <button data-action="cancel" class="alh-layout-11 arz-btn-danger">Закрыть</button>
+            <button data-action="start" class="alh-layout-11 arz-btn-primary">Узнать данные</button>
           </div>
         </div>
       </div>
@@ -44,7 +44,7 @@ export function create(context) {
       const progressOverlay = document.createElement('div');
       progressOverlay.className = 'alh-modal-overlay';
       progressOverlay.innerHTML = `
-        <div class="arz-modal-container" style="max-width: 400px; width: 90%;">
+        <div class="alh-layout-45 arz-modal-container">
           <div class="alh-modal-header">
             <div class="arz-modal-icon-wrapper"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
             <div class="arz-modal-title-block">
@@ -52,16 +52,16 @@ export function create(context) {
               <div class="arz-modal-subtitle">Сбор информации с логов...</div>
             </div>
           </div>
-          <div class="alh-modal-body" style="padding: 24px; text-align: center;">
-            <div id="arz-progress-input" style="font-size: 16px; font-weight: 600; color: var(--az-text); margin-bottom: 8px;">Запуск...</div>
-            <div id="arz-progress-status" style="font-size: 13px; color: var(--az-text-secondary); margin-bottom: 20px;">Подготовка запросов</div>
+          <div class="alh-layout-47 alh-modal-body">
+            <div id="arz-progress-input" class="alh-layout-69">Запуск...</div>
+            <div id="arz-progress-status" class="alh-layout-70">Подготовка запросов</div>
             
-            <div class="arz-progress-bar-container" style="width: 100%; height: 6px; background: var(--az-border); border-radius: 3px; overflow: hidden; margin-bottom: 24px;">
-              <div id="alh-progress-bar-fill" style="width: 0%; height: 100%; background: var(--az-accent); transition: width 0.3s ease; border-radius: 3px;"></div>
+            <div class="alh-layout-71 arz-progress-bar-container">
+              <div id="alh-progress-bar-fill" class="alh-layout-51"></div>
             </div>
           </div>
           <div class="alh-modal-footer">
-            <button id="arz-progress-cancel-btn" class="arz-btn-danger" style="flex: 1;"><i class="fa-solid fa-ban"></i> Отмена</button>
+            <button id="arz-progress-cancel-btn" class="alh-layout-11 arz-btn-danger"><i class="fa-solid fa-ban"></i> Отмена</button>
           </div>
         </div>
       `;
@@ -241,14 +241,14 @@ export function create(context) {
       let rowsHtml = '';
       results.forEach((res) => {
         const hasError = !!res.error;
-        const nickStr = hasError ? `<span style="color: var(--az-danger); font-size: 12px;">${res.error}</span>` : `<span style="font-weight: 600; color: var(--az-text);">${res.nickname}</span>`;
-        const idStr = hasError ? '—' : `<code style="font-family: monospace; font-size: 13px; color: var(--az-accent-hover);">${res.accountId}</code>`;
+        const nickStr = hasError ? `<span class="alh-layout-72">${res.error}</span>` : `<span class="alh-layout-73">${res.nickname}</span>`;
+        const idStr = hasError ? '—' : `<code class="alh-layout-74">${res.accountId}</code>`;
 
         rowsHtml += `
-          <tr style="border-bottom: 1px solid var(--az-border);">
-            <td style="padding: 12px 16px; font-weight: 500; color: var(--az-text-secondary); font-size: 13px;">${res.query}</td>
-            <td style="padding: 12px 16px;">${nickStr}</td>
-            <td style="padding: 12px 16px;">${idStr}</td>
+          <tr class="alh-layout-75">
+            <td class="alh-layout-76">${res.query}</td>
+            <td class="alh-layout-77">${nickStr}</td>
+            <td class="alh-layout-77">${idStr}</td>
           </tr>
         `;
       });
@@ -266,7 +266,7 @@ export function create(context) {
       const overlay = document.createElement('div');
       overlay.className = 'alh-modal-overlay';
       overlay.innerHTML = `
-        <div class="arz-modal-container" style="max-width: 600px; width: 95%;">
+        <div class="alh-layout-78 arz-modal-container">
           <div class="alh-modal-header">
             <div class="arz-modal-icon-wrapper"><i class="fa-solid fa-id-badge"></i></div>
             <div class="arz-modal-title-block">
@@ -275,13 +275,13 @@ export function create(context) {
             </div>
             <button id="arz-idnick-close-header-btn" class="alh-modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
           </div>
-          <div class="online-result-table-wrapper" style="max-height: 550px; overflow-y: auto; background: rgba(0, 0, 0, 0.1); border-bottom: 1px solid var(--az-border);">
-            <table class="online-result-table" style="width: 100%; border-collapse: collapse;">
+          <div class="alh-layout-79 online-result-table-wrapper">
+            <table class="alh-layout-80 online-result-table">
               <thead>
-                <tr style="border-bottom: 1px solid var(--az-border); background: rgba(255,255,255,0.02); position: sticky; top: 0; z-index: 1;">
-                  <th style="text-align: left; padding: 12px 16px; color: var(--az-text-secondary); font-size: 11px; text-transform: uppercase;">Запрос</th>
-                  <th style="text-align: left; padding: 12px 16px; color: var(--az-text-secondary); font-size: 11px; text-transform: uppercase;">NickName</th>
-                  <th style="text-align: left; padding: 12px 16px; color: var(--az-text-secondary); font-size: 11px; text-transform: uppercase;">ID аккаунта</th>
+                <tr class="alh-layout-81">
+                  <th class="alh-layout-82">Запрос</th>
+                  <th class="alh-layout-82">NickName</th>
+                  <th class="alh-layout-82">ID аккаунта</th>
                 </tr>
               </thead>
               <tbody>
@@ -290,9 +290,9 @@ export function create(context) {
             </table>
           </div>
           <div class="alh-modal-footer">
-            <button id="arz-idnick-copy-btn" class="arz-btn-primary" style="flex: 2;"><i class="fa-regular fa-copy"></i> Скопировать результаты</button>
-            <button id="arz-idnick-reopen-btn" class="arz-btn-secondary" style="flex: 1;"><i class="fa-solid fa-rotate-left"></i> Новый пробив</button>
-            <button id="arz-idnick-close-btn" class="arz-btn-danger" style="flex: 1;"><i class="fa-solid fa-xmark"></i> Закрыть</button>
+            <button id="arz-idnick-copy-btn" class="alh-layout-37 arz-btn-primary"><i class="fa-regular fa-copy"></i> Скопировать результаты</button>
+            <button id="arz-idnick-reopen-btn" class="alh-layout-11 arz-btn-secondary"><i class="fa-solid fa-rotate-left"></i> Новый пробив</button>
+            <button id="arz-idnick-close-btn" class="alh-layout-11 arz-btn-danger"><i class="fa-solid fa-xmark"></i> Закрыть</button>
           </div>
         </div>
       `;
@@ -362,7 +362,7 @@ export function create(context) {
         btn.id = 'arz-idnick-btn';
         btn.className = 'btn btn-primary';
         btn.style.cssText = 'margin-left: 10px; color: white !important;';
-        btn.innerHTML = `<i class="fa-solid fa-id-badge" style="margin-right:6px;"></i> ID/Ник`;
+        btn.innerHTML = `<i style="margin-right: 6px;" class="fa-solid fa-id-badge"></i> ID/Ник`;
         btn.onclick = openModal;
         container.appendChild(btn);
       },

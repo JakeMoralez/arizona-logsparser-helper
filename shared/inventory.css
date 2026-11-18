@@ -156,7 +156,7 @@
 .alh-item-dialog-footer { align-items: center; justify-content: space-between; }
 .alh-item-dialog-status { margin: 0; color: var(--az-text-secondary); font-size: 10px; line-height: 1.5; min-width: 0; flex: 1; }
 .alh-item-dialog-status.is-error { color: #ea5455; }
-.alh-item-dialog-footer .arz-btn-secondary { flex: none; font-size: 11px !important; padding: 9px 12px !important; }
+.alh-item-dialog-footer .arz-btn-secondary { flex: none; font-size: 13px; padding: 8px 12px; }
 .alh-item-dialog.closing { pointer-events: none; }
 .alh-item-dialog-body { scrollbar-width: thin; scrollbar-color: var(--az-border) transparent; scrollbar-gutter: stable; }
 .alh-item-dialog-body::-webkit-scrollbar { width: 5px; }

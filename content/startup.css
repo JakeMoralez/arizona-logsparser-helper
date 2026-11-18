@@ -1,0 +1,31 @@
+/* Keep layout measurable while preparing the first complete frame. */
+html.alh-startup-pending body,
+html.alh-startup-pending body * { visibility: hidden !important; }
+html.alh-startup-pending::before {
+  content: ''; position: fixed; inset: 0; z-index: 2147483646;
+  background: linear-gradient(var(--az-border, #334155),var(--az-border, #334155)) center / 160px 3px no-repeat, var(--az-bg, #0c0e12);
+}
+html.alh-startup-pending::after {
+  content: ''; position: fixed; z-index: 2147483647; top: calc(50% - 1.5px); left: calc(50% - 80px);
+  width: 48px; height: 3px; border-radius: 2px; background: var(--az-accent, #d40d0d);
+  will-change: transform; animation: alh-startup-slide 1.15s ease-in-out infinite alternate;
+}
+@keyframes alh-startup-slide { from { transform: translateX(0); } to { transform: translateX(112px); } }
+@media (prefers-reduced-motion: reduce) { html.alh-startup-pending::after { animation: none; transform: translateX(56px); } }
+html.alh-startup-pending .app-sidebar,
+html.alh-startup-pending .app-content--sidebar { transition: none !important; }
+.alh-ecosystem-slot {
+  display: inline-flex; align-items: center; gap: 3px; flex: 0 0 72px;
+  width: 72px; height: 24px; margin-inline-start: 5px; overflow-x: auto;
+  vertical-align: middle; white-space: nowrap; scrollbar-width: none;
+}
+.alh-ecosystem-slot > .arizona-ecosystem-badge { flex-shrink: 0; }
+.alh-ecosystem-slot::-webkit-scrollbar { display: none; }
+.filter-buttons [id^='arz-'] i[class*='fa-'],
+.alh-modal-overlay i[class*='fa-'] { display: inline-block; min-width: 1em; line-height: 1; text-align: center; }
+.az-geo-inserted.alh-geo-slot {
+  display: block; box-sizing: border-box; height: calc(var(--alh-geo-lines, 1) * 18px + 9px);
+  padding: 4px 0; margin-top: 4px; border-top: 1px solid var(--az-border);
+  font-size: 12px; line-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.arz-ip-distance-inline { box-sizing: border-box; width: calc(14ch + 12px); max-width: 100%; height: 24px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

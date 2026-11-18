@@ -1,0 +1,199 @@
+/* Dialog design. Theme values come from ArizonaThemeManager. */
+:is(.alh-modal-overlay, .alh-controls-scope) {
+  --alh-surface: var(--az-card-bg, #1c212a);
+  --alh-inset: var(--az-input-bg, #161a21);
+  --alh-line: var(--az-border, #334155);
+  --alh-muted: var(--az-text-secondary, #94a3b8);
+  --alh-text: var(--az-text, #e2e8f0);
+  --alh-accent: var(--az-accent, #d40d0d);
+  padding: 16px;
+  box-sizing: border-box;
+  font: 14px/1.45 'Segoe UI', system-ui, sans-serif;
+  color: var(--alh-text);
+}
+:is(.alh-modal-overlay, .alh-controls-scope).open-active { background: rgb(5 8 12 / 78%); backdrop-filter: blur(3px); }
+:is(.alh-modal-overlay, .alh-controls-scope) :is(.arz-modal-container, .arz-modal) {
+  display: flex;
+  flex-direction: column;
+  width: var(--alh-dialog-width, 600px);
+  max-width: 100%;
+  max-height: calc(100dvh - 32px);
+  min-height: 0;
+  background: var(--alh-surface);
+  border-radius: 8px;
+  box-shadow: 0 20px 70px rgb(0 0 0 / 30%);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+#arz-lookup-overlay > .arz-modal-container { width: 850px; }
+#arz-analytics-overlay > .arz-modal-container { width: 950px; }
+:is(.alh-modal-overlay, .alh-controls-scope) :is(.alh-modal-header, .alh-modal-footer, .arz-lookup-tabs) { flex: 0 0 auto; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-modal-header { padding: 20px 24px 16px; gap: 12px; background: var(--alh-surface); }
+:is(.alh-modal-overlay, .alh-controls-scope) .arz-modal-icon-wrapper { display: none; }
+:is(.alh-modal-overlay, .alh-controls-scope) .arz-modal-title { font-size: 18px; line-height: 1.35; font-weight: 650; }
+:is(.alh-modal-overlay, .alh-controls-scope) .arz-modal-subtitle { font-size: 12px; line-height: 1.5; margin-top: 4px; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-modal-close-btn { position: relative; background: transparent; border: 1px solid var(--alh-line); border-radius: 6px; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-modal-close-btn i { display: none; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-modal-close-btn::after { content: none; }
+:is(.alh-modal-overlay, .alh-controls-scope) .arz-lookup-tabs { padding: 0 20px; gap: 16px; background: var(--alh-surface); scrollbar-width: thin; }
+:is(.alh-modal-overlay, .alh-controls-scope) .arz-tab-btn { min-height: 44px; padding: 10px 2px; border-bottom: 2px solid transparent; border-radius: 0; font-size: 13px; }
+:is(.alh-modal-overlay, .alh-controls-scope) .arz-tab-btn i { display: none; }
+:is(.alh-modal-overlay, .alh-controls-scope) .arz-tab-btn.active { background: transparent; color: var(--alh-text); border-bottom-color: var(--alh-accent); box-shadow: none; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-modal-body { padding: 20px 24px; gap: 18px; flex: 1 1 auto; min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+:is(.alh-modal-overlay, .alh-controls-scope) .arz-modal-form-group { min-width: 0; gap: 7px; }
+:is(.alh-modal-overlay, .alh-controls-scope) .arz-modal-label { font-size: 12px; font-weight: 600; text-transform: none; letter-spacing: normal; color: var(--alh-muted); }
+:is(.alh-modal-overlay, .alh-controls-scope) .arz-modal-label > i { display: none; }
+:is(.alh-modal-overlay, .alh-controls-scope) :is(.arz-input, .arz-textarea) { font: 14px/1.45 'Segoe UI', system-ui, sans-serif; padding: 8px 11px; border-radius: 6px; border-color: var(--alh-line); color: var(--alh-text); box-shadow: none; min-width: 0; }
+:is(.alh-modal-overlay, .alh-controls-scope) .arz-input { min-height: 38px; }
+:is(.alh-modal-overlay, .alh-controls-scope) .arz-textarea { min-height: 88px; }
+:is(.alh-modal-overlay, .alh-controls-scope) :is(.arz-input, .arz-textarea)::placeholder { color: var(--alh-muted); opacity: .8; }
+:is(.alh-modal-overlay, .alh-controls-scope) :is(input, textarea, select):focus { outline: none; border-color: var(--alh-accent); box-shadow: none; }
+:is(.alh-modal-overlay, .alh-controls-scope) :is(button, [tabindex]):focus-visible { outline: 2px solid var(--alh-accent); outline-offset: 2px; }
+:is(.alh-modal-overlay, .alh-controls-scope) :is(.arz-modal-container, .arz-modal):focus { outline: none; }
+:is(.alh-modal-overlay, .alh-controls-scope) input[type='checkbox'] { appearance: none; position: relative; flex: 0 0 34px; width: 34px; height: 20px; margin: 0; border: 1px solid var(--alh-line); border-radius: 10px; background: var(--alh-inset); cursor: pointer; }
+:is(.alh-modal-overlay, .alh-controls-scope) input[type='checkbox']::after { content: ''; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 50%; background: var(--alh-muted); }
+:is(.alh-modal-overlay, .alh-controls-scope) input[type='checkbox']:checked { background: var(--alh-accent); border-color: var(--alh-accent); }
+:is(.alh-modal-overlay, .alh-controls-scope) input[type='checkbox']:checked::after { left: 17px; background: white; }
+:is(.alh-modal-overlay, .alh-controls-scope) input[type='checkbox']:focus-visible { outline: 2px solid var(--alh-accent); outline-offset: 3px; }
+:is(.alh-modal-overlay, .alh-controls-scope) input[type='checkbox']:disabled { opacity: .45; cursor: default; }
+:is(.alh-modal-overlay, .alh-controls-scope) input[type='number'] { appearance: textfield; -moz-appearance: textfield; }
+:is(.alh-modal-overlay, .alh-controls-scope) input[type='number']::-webkit-inner-spin-button,
+:is(.alh-modal-overlay, .alh-controls-scope) input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+:is(.alh-modal-overlay, .alh-controls-scope) [hidden] { display: none; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-modal-footer { background: var(--alh-surface); padding: 14px 24px; justify-content: flex-end; gap: 10px; }
+:is(.alh-modal-overlay, .alh-controls-scope) :is(.arz-btn-primary, .arz-btn-secondary, .arz-btn-danger) { font-family: inherit; font-size: 13px; min-height: 38px; padding: 8px 16px; border-radius: 6px; box-shadow: none; transform: none; filter: none; transition: background-color 120ms ease; flex: 0 1 auto; }
+:is(.alh-modal-overlay, .alh-controls-scope) .arz-btn-primary { background: var(--alh-accent); }
+:is(.alh-modal-overlay, .alh-controls-scope) .arz-btn-primary:hover { background: var(--az-accent-hover, #e02d2d); box-shadow: none; transform: none; filter: none; }
+:is(.alh-modal-overlay, .alh-controls-scope) :is(.arz-btn-secondary, .arz-btn-danger):hover { transform: none; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-modal-footer [id*='close'] { margin-right: auto; background: transparent; border: 1px solid var(--alh-line); color: var(--alh-muted); flex: 0 0 auto; }
+:is(.alh-modal-overlay, .alh-controls-scope) .arz-date-shortcuts { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+:is(.alh-modal-overlay, .alh-controls-scope) .arz-btn-shortcut { font: 12px/1.4 'Segoe UI', sans-serif; min-height: 30px; padding: 5px 9px; border-radius: 5px; border: 1px solid var(--alh-line); background: transparent; color: var(--alh-muted); cursor: pointer; box-shadow: none; transform: none; }
+:is(.alh-modal-overlay, .alh-controls-scope) .arz-btn-shortcut:hover, :is(.alh-modal-overlay, .alh-controls-scope) .arz-btn-shortcut[aria-pressed='true'] { background: var(--alh-inset); color: var(--alh-text); border-color: var(--alh-accent); }
+:is(.alh-modal-overlay, .alh-controls-scope) :is(.arz-accordion, .arz-list-container) { border-radius: 6px; }
+:is(.alh-modal-overlay, .alh-controls-scope) .arz-accordion-header { padding: 11px 12px; }
+:is(.alh-modal-overlay, .alh-controls-scope) .arz-accordion-header-left > i { display: none; }
+:is(.alh-modal-overlay, .alh-controls-scope) :is(.forms-switch-btn, .similar-mode-btn, .repeats-mode-btn) { font: 13px/1.4 'Segoe UI', sans-serif; border-radius: 5px; min-height: 34px; background: transparent; color: var(--alh-muted); }
+:is(.alh-modal-overlay, .alh-controls-scope) :is(.forms-switch-btn, .similar-mode-btn, .repeats-mode-btn).active { background: var(--alh-accent); color: white; }
+:is(.alh-modal-overlay, .alh-controls-scope) :is(#arz-commands-count, #arz-similar-groups-count, #arz-repeats-groups-count) { background: transparent; color: var(--alh-muted); font-size: 12px; font-weight: 500; padding: 0; }
+:is(.alh-modal-overlay, .alh-controls-scope) #arz-lookup-date-group { padding-top: 16px; border-top: 1px solid var(--alh-line); }
+:is(.alh-modal-overlay, .alh-controls-scope) :is(#arz-lookup-extract-btn, #arz-lookup-my-nick-btn, #arz-leader-extract-btn, #arz-admin-extract-btn) { color: var(--alh-muted); border: 0; padding: 2px 0; text-decoration: underline; text-underline-offset: 3px; }
+:is(.alh-modal-overlay, .alh-controls-scope) :is(#arz-lookup-extract-btn, #arz-lookup-my-nick-btn, #arz-leader-extract-btn, #arz-admin-extract-btn) > i { display: none; }
+:is(.alh-modal-overlay, .alh-controls-scope) .arz-template-card { padding: 12px 14px; gap: 12px; border-radius: 0; box-shadow: none; background: transparent; }
+:is(.alh-modal-overlay, .alh-controls-scope) .arz-template-card-title { font-size: 14px; }
+:is(.alh-modal-overlay, .alh-controls-scope) .arz-template-card-subtitle { font: 12px/1.5 'Segoe UI', sans-serif; white-space: normal; overflow-wrap: anywhere; }
+:is(.alh-modal-overlay, .alh-controls-scope) :is(.arz-list-item-text, #alh-form-template, #alh-form-commands, pre, code) { font-family: Consolas, 'Courier New', monospace; }
+:is(.alh-modal-overlay, .alh-controls-scope) :is(#arz-similar-groups-list, #arz-repeats-groups-list) { border-top: 2px solid var(--alh-line); }
+:is(.alh-modal-overlay, .alh-controls-scope) .arz-business-card { border-radius: 6px; box-shadow: none; background: var(--alh-inset); }
+:is(.alh-modal-overlay, .alh-controls-scope) :is(.arz-business-table-scroll, .arz-dump-result) { scrollbar-width: thin; }
+:is(.alh-modal-overlay, .alh-controls-scope) button:disabled { opacity: .45; cursor: default; }
+/* Popovers are siblings of the scrolling dialog, so they are never clipped. */
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-control-popover { position: fixed; z-index: 2; width: 308px; max-width: calc(100vw - 24px); overflow: auto; box-sizing: border-box; padding: 10px; border: 1px solid var(--alh-line); border-radius: 8px; background: var(--alh-surface); color: var(--alh-text); box-shadow: 0 12px 32px rgb(0 0 0 / 30%); font: 13px/1.4 'Segoe UI', sans-serif; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-control-button { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; min-height: 32px; padding: 5px 8px; border: 0; border-radius: 4px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-control-button:hover { background: var(--alh-inset); }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-field-control { flex: 1 1 0; min-width: 0; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-field-shell { display: flex; align-items: center; box-sizing: border-box; height: 38px; min-width: 0; border: 1px solid var(--alh-line); border-radius: 6px; background: var(--alh-inset); }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-field-shell:focus-within { border-color: var(--alh-accent); }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-field-shell:has([aria-expanded='true']) { border-color: var(--alh-accent); }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-field-shell:has([aria-expanded='true']) .alh-field-trigger { color: var(--alh-accent); }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-field-shell:has([aria-invalid='true']) { border-color: var(--az-danger, #ef6464); }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-field-shell:has(input:disabled) { opacity: .45; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-field-shell .alh-field-display { flex: 1 1 auto; width: 0; height: 36px; min-height: 0; padding: 7px 11px; border: 0; background: transparent; outline: none; box-shadow: none; font-variant-numeric: tabular-nums; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-field-trigger { flex: 0 0 36px; min-height: 36px; height: 36px; padding: 8px; color: var(--alh-muted); }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-field-trigger:focus-visible { outline: none; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-field-trigger svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-field-error { display: block; margin-top: 5px; font-size: 12px; color: var(--az-danger, #ef6464); }
+:is(.alh-modal-overlay, .alh-controls-scope) [aria-invalid='true'] { border-color: var(--az-danger, #ef6464); }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-calendar-header { display: grid; grid-template-columns: 30px 1fr 70px 30px; align-items: center; gap: 2px; margin-bottom: 10px; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-calendar-year { box-sizing: border-box; width: 70px; height: 30px; padding: 4px; border: 1px solid var(--alh-line); border-radius: 4px; background: var(--alh-inset); color: inherit; font: inherit; }
+:is(.alh-modal-overlay, .alh-controls-scope) :is(.alh-calendar-grid, .alh-calendar-week) { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-calendar-week { margin-bottom: 5px; color: var(--alh-muted); font-size: 11px; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-calendar-grid .alh-control-button { padding: 4px 0; min-width: 0; height: 34px; font-variant-numeric: tabular-nums; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-calendar-grid .is-outside { color: var(--alh-muted); opacity: .6; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-calendar-grid .is-range { background: var(--alh-inset); }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-calendar-grid .is-today { box-shadow: inset 0 0 0 1px var(--alh-accent); }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-calendar-grid .is-selected { background: var(--alh-accent); color: white; opacity: 1; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-calendar-grid .alh-control-button:focus-visible { outline: none; box-shadow: inset 0 0 0 1px var(--alh-text); }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-calendar-months { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-calendar-footer { display: flex; justify-content: space-between; border-top: 1px solid var(--alh-line); padding-top: 7px; margin-top: 8px; color: var(--alh-muted); }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-time-picker { display: flex; flex-wrap: wrap; gap: 8px; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-time-part { flex: 1 1 40%; display: flex; flex-direction: column; gap: 5px; color: var(--alh-muted); }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-time-part input { width: 100%; min-height: 36px; box-sizing: border-box; padding: 6px; color: var(--alh-text); background: var(--alh-inset); border: 1px solid var(--alh-line); border-radius: 4px; font: inherit; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-combo-list { width: 380px; max-height: 280px; padding: 4px; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-combo-list [role='option'] { width: 100%; flex-direction: column; align-items: flex-start; text-align: left; padding: 8px 10px; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-combo-list .is-active { background: var(--alh-inset); outline: 1px solid var(--alh-accent); outline-offset: -1px; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-combo-list small { color: var(--alh-muted); font: 11px/1.5 Consolas, monospace; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-combo-empty { padding: 12px; color: var(--alh-muted); }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-clean-online { border: 0; border-top: 1px solid var(--alh-line); border-radius: 0; background: transparent; overflow: visible; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-clean-online .arz-accordion-header { padding: 14px 0 6px; background: transparent; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-clean-online .arz-accordion-content { padding: 10px 0 0; border: 0; background: transparent; gap: 12px; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-clean-row { display: grid; grid-template-columns: minmax(80px, 1fr) minmax(0, 1fr); align-items: center; gap: 16px; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-time-range { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; }
+:is(.alh-modal-overlay, .alh-controls-scope) .alh-clean-hint { color: var(--alh-muted); font-size: 12px; }
+:is(.alh-modal-overlay,.alh-controls-scope) .alh-clean-online svg.arz-accordion-chevron { width: 16px; height: 16px; flex: 0 0 16px; border: 0; rotate: none; margin: 0; display: block; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+@media (max-width: 600px) {
+  :is(.alh-modal-overlay, .alh-controls-scope) { padding: 8px; }
+  :is(.alh-modal-overlay, .alh-controls-scope) :is(.arz-modal-container, .arz-modal) { width: 100%; max-height: calc(100dvh - 16px); }
+  :is(.alh-modal-overlay, .alh-controls-scope) :is(.alh-modal-header, .alh-modal-body) { padding: 16px; }
+  :is(.alh-modal-overlay, .alh-controls-scope) .alh-modal-footer { padding: 12px 16px; flex-wrap: wrap; }
+  :is(.alh-modal-overlay, .alh-controls-scope) .arz-lookup-tabs { padding: 0 14px; gap: 14px; }
+  :is(.alh-modal-overlay, .alh-controls-scope) .arz-modal-title { font-size: 17px; }
+  :is(.alh-modal-overlay, .alh-controls-scope) .arz-business-date-grid { grid-template-columns: 1fr; }
+  :is(.alh-modal-overlay, .alh-controls-scope) .arz-date-shortcuts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  :is(.alh-modal-overlay, .alh-controls-scope) .arz-btn-shortcut { white-space: nowrap; }
+  :is(.alh-modal-overlay, .alh-controls-scope) #arz-lookup-date-group > div:first-child { flex-direction: column; }
+  :is(.alh-modal-overlay, .alh-controls-scope) .arz-modal-form-group > div:has(> .arz-modal-form-group) { flex-direction: column; align-items: stretch; }
+  :is(.alh-modal-overlay, .alh-controls-scope) .arz-modal-form-group > div:has(> .arz-modal-label) { gap: 8px; }
+  :is(.alh-modal-overlay, .alh-controls-scope) .alh-modal-footer .arz-btn-primary { flex: 1 1 auto; }
+  :is(.alh-modal-overlay, .alh-controls-scope) .alh-clean-row { grid-template-columns: 1fr; gap: 6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(.alh-modal-overlay, .alh-controls-scope), :is(.alh-modal-overlay, .alh-controls-scope) * { transition: none; animation: none; scroll-behavior: auto; }
+}
+
+/* One centered vector close icon, independent of font metrics. */
+.alh-modal-overlay .alh-modal-close-btn { flex: 0 0 32px; width: 32px; height: 32px; padding: 7px; display: grid; place-items: center; }
+.alh-modal-overlay .alh-modal-close-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.alh-modal-overlay .arz-lookup-tabs { padding: 7px 18px; gap: 5px; }
+.alh-modal-overlay .arz-tab-btn { border: 0; border-radius: 6px; min-height: 34px; padding: 7px 10px; }
+.alh-modal-overlay .arz-tab-btn.active { color: var(--az-text); background: color-mix(in srgb, var(--az-accent) 16%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--az-accent) 35%, transparent); }
+.alh-modal-overlay .alh-modal-footer[hidden] { display: none; }
+
+/* Inventory details share dialog tokens without changing the popup catalogue. */
+.alh-item-dialog .alh-item-dialog-box { --alh-dialog-width: 620px; }
+.alh-item-dialog .alh-item-card { font-size: 14px; line-height: 1.5; }
+.alh-item-dialog .alh-item-card-heading { gap: 16px; padding-bottom: 20px; }
+.alh-item-dialog .alh-item-card-heading .alh-item-image { width: 72px; height: 72px; background: var(--alh-inset); border-radius: 6px; }
+.alh-item-dialog .alh-item-eyebrow { display: none; }
+.alh-item-dialog .alh-item-card h3 { font: 600 20px/1.3 'Segoe UI',sans-serif; margin: 0 0 8px; }
+.alh-item-dialog .alh-item-badge { font-size: 12px; padding: 2px 6px; border-radius: 4px; }
+.alh-item-dialog .alh-item-section { padding: 16px 0; margin: 0; background: transparent; border: 0; border-top: 1px solid var(--alh-line); border-radius: 0; }
+.alh-item-dialog .alh-item-card h4 { font: 600 13px/1.4 'Segoe UI',sans-serif; letter-spacing: normal; text-transform: none; color: var(--alh-text); margin: 0 0 12px; }
+.alh-item-dialog .alh-item-fields { grid-template-columns: minmax(0,1fr) minmax(0,1.25fr); font-size: 13px; gap: 8px 16px; }
+.alh-item-dialog .alh-item-fields dd { font-family: Consolas,monospace; }
+.alh-item-dialog .alh-item-capabilities { gap: 10px 20px; }
+.alh-item-dialog .alh-item-capability { font-size: 13px; gap: 8px; }
+.alh-item-dialog .alh-item-capability > i { display: none; }
+.alh-item-dialog .alh-item-capability strong { font-size: 12px; font-weight: 500; }
+.alh-item-dialog .alh-item-technical summary { font-size: 13px; }
+.alh-item-dialog .alh-item-source { font-size: 12px; }
+.alh-item-dialog .alh-item-dialog-status { font-size: 12px; }
+.alh-item-dialog .alh-item-dialog-footer { flex-wrap: wrap; align-items: center; gap: 12px; }
+.alh-online-result .arz-modal-container { --alh-dialog-width: 560px; }
+.alh-online-result .online-result-body { padding-top: 0; }
+.alh-online-result .online-result-summary { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 16px; padding: 20px 0; margin: 0; border-bottom: 1px solid var(--alh-line); }
+.alh-online-result .online-result-summary dt { font-size: 12px; color: var(--alh-muted); font-weight: 400; margin-bottom: 6px; }
+.alh-online-result .online-result-summary dd { margin: 0; color: var(--alh-text); font: 600 24px/1.3 Consolas,monospace; }
+.alh-online-result .online-result-summary small { font: 13px 'Segoe UI',sans-serif; color: var(--alh-muted); }
+.alh-online-result .online-result-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.alh-online-result .online-result-table th { position: sticky; top: 0; background: var(--alh-surface); padding: 10px 0; text-align: left; font-weight: 500; color: var(--alh-muted); }
+.alh-online-result .online-result-table td { padding: 9px 0; border-top: 1px solid var(--alh-line); }
+.alh-online-result .online-result-table :is(th,td):last-child { text-align: right; font-family: Consolas,monospace; }
+.alh-online-result .online-result-weekday { color: var(--alh-muted); padding-left: 12px; }
+.alh-online-result .online-result-table tr.alh-online-empty { color: var(--alh-muted); }
+.alh-online-result #arz-online-reopen-btn { margin-right: auto; }
+@media (max-width: 480px) {
+  .alh-item-dialog .alh-item-capabilities { grid-template-columns: 1fr; }
+  .alh-item-dialog .alh-item-dialog-status { flex-basis: 100%; }
+  .alh-online-result .online-result-summary { grid-template-columns: 1fr 1fr; gap: 16px; }
+  .alh-online-result .online-result-summary > div:first-child { grid-column: 1/-1; }
+  .alh-online-result .online-result-summary dd { font-size: 22px; }
+}

@@ -6,7 +6,7 @@
     const link = document.createElement('link');
     link.id = 'arz-icon-styles';
     link.rel = 'stylesheet';
-    link.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css';
+    link.href = chrome.runtime.getURL('popup/vendor/css/fontawesome.min.css');
     (document.head || document.documentElement).appendChild(link);
   }
 
@@ -223,25 +223,42 @@
   const runWhenElementExists = window.ArizonaRuntime.waitFor;
 
   function openOverlay(overlay) {
+    // Templates historically included a second full-screen overlay. Keep one
+    // overlay so focus management and sibling popovers share a stacking context.
+    const nested = overlay.firstElementChild;
+    if (nested?.classList.contains('alh-modal-overlay') && overlay.children.length === 1) {
+      if (nested.id) overlay.id = nested.id;
+      overlay.replaceChildren(...nested.childNodes);
+    }
+    overlay.arzScrollPosition = {left:window.scrollX,top:window.scrollY};
     overlay.arzLogController = new AbortController();
     document.body.appendChild(overlay);
+    const requestClose = () => {
+      // Reuse cancel handlers: progress dialogs also stop their processing loops.
+      const cancel = [...overlay.querySelectorAll('button')].find(button => /cancel/.test(button.id) && !button.disabled);
+      const close = cancel || overlay.querySelector('.alh-modal-close-btn');
+      if (close?.onclick && !close.disabled) close.click();
+      else closeOverlay(overlay);
+    };
+    window.ArizonaModalControls?.mount(overlay, requestClose);
     overlay.getBoundingClientRect();
     overlay.classList.add('open-active');
     document.body.classList.add('arz-modal-open');
 
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) {
-        const container = overlay.querySelector('.arz-modal-container, .arz-modal');
-        if (container) {
-          container.classList.remove('arz-modal-bounce');
-          void container.offsetWidth;
-          container.classList.add('arz-modal-bounce');
-        }
+    let backdropDown = false;
+    overlay.addEventListener('pointerdown', e => { backdropDown = e.target === overlay; });
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay && backdropDown) {
+        const top = [...document.querySelectorAll('.alh-modal-overlay.open-active')].at(-1);
+        if (top === overlay) requestClose();
       }
+      backdropDown = false;
     });
   }
 
   function closeOverlay(overlay) {
+    if (overlay.classList.contains('closing')) return;
+    window.ArizonaModalControls?.unmount(overlay);
     overlay.arzLogController?.abort();
     overlay.classList.remove('open-active');
     overlay.classList.add('closing');
@@ -252,6 +269,7 @@
       const isFilterOpen = filterModal && filterModal.style.display === 'flex';
       if (openOverlays.length === 0 && !isFilterOpen) {
         document.body.classList.remove('arz-modal-open');
+        if (overlay.arzScrollPosition) window.scrollTo({...overlay.arzScrollPosition,behavior:'instant'});
       }
     }, 250);
   }
@@ -685,12 +703,6 @@
     });
   }
 
-  function injectRowActions(tr) {
-    if (!tr) return;
-    const wrappers = tr.querySelectorAll('.arz-row-actions-wrapper');
-    wrappers.forEach(el => el.remove());
-  }
-
   function copyCellText(cell, btn) {
     const clone = cell.cloneNode(true);
     clone.querySelectorAll('.arz-row-actions-wrapper, .arz-cell-copy-btn, .arz-log-copy-menu-btn, .alh-col-eye-btn, .badge, .bi, svg, i, .az-geo-inserted, .arz-geo-inserted, .arz-dup-badge, button, .arizona-ecosystem-badge').forEach(el => el.remove());
@@ -719,34 +731,6 @@
     });
   }
 
-  function processSnippetsInElement(element) {
-    if (!element) return;
-    if (currentSettings['tweak-copy-cells'] === false) return;
-    if (element.querySelector('.arz-copyable-snippet') || element.classList.contains('arz-copyable-snippet')) return;
-
-    const textNodes = [];
-    const walk = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
-      acceptNode: function (node) {
-        const parent = node.parentElement;
-        if (!parent) return NodeFilter.FILTER_REJECT;
-        if (parent.tagName === 'BUTTON' || parent.tagName === 'A' || parent.tagName === 'SCRIPT' || parent.tagName === 'STYLE') {
-          return NodeFilter.FILTER_REJECT;
-        }
-        if (parent.closest('.arz-geo-inserted, .arz-dup-badge')) return NodeFilter.FILTER_REJECT;
-        if (parent.closest('.arz-row-actions-wrapper') || parent.closest('.alh-col-eye-btn') || parent.closest('.badge') || parent.closest('.arz-cell-copy-btn')) {
-          return NodeFilter.FILTER_REJECT;
-        }
-        return NodeFilter.FILTER_ACCEPT;
-      }
-    });
-
-    let node;
-    while (node = walk.nextNode()) {
-      textNodes.push(node);
-    }
-  }
-
-  let copyBtnObserver = null;
 
   function lazyInjectCopyBtn(tr) {
     if (!tr.cells[1]) return;
@@ -757,40 +741,42 @@
     const cell = tr.cells[1];
     if (cell.querySelector('.arz-log-copy-menu-btn')) return;
 
-    cell.style.setProperty('position', 'relative', 'important');
-    cell.style.setProperty('padding-right', '36px', 'important');
 
     const copyBtn = document.createElement('span');
     copyBtn.setAttribute('role', 'button');
     copyBtn.className = 'arz-log-copy-menu-btn';
     copyBtn.title = 'Копировать...';
     copyBtn.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
-    copyBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      window.ArizonaCopyPopupMenu.open(e, tr);
-    });
-
+    copyBtn.tabIndex = 0;
     cell.appendChild(copyBtn);
   }
+
+  function activateRowCopy(event) {
+    const button = event.target.closest?.('.arz-log-copy-menu-btn');
+    if (!button || currentSettings['extension-toggle'] === false) return;
+    if (event.type === 'keydown' && !['Enter',' '].includes(event.key)) return;
+    event.preventDefault(); event.stopPropagation();
+    window.ArizonaCopyPopupMenu.open(event, button.closest('tr'));
+  }
+  document.addEventListener('click', activateRowCopy);
+  document.addEventListener('keydown', activateRowCopy);
 
   function handleRowHover(e) {
     if (document.body.classList.contains('arz-extension-disabled')) return;
 
     const tr = e.target.closest('table.table tbody tr');
-    if (!tr) return;
+    if (!tr || tr.contains(e.relatedTarget)) return;
 
     lazyInjectCopyBtn(tr);
   }
 
   function initCopyButtonsLazy(settings) {
+    document.querySelectorAll('.arz-row-actions-wrapper').forEach(node => node.remove());
     const isEnabled = settings['extension-toggle'] !== false &&
       settings['tweak-copy-btn-visibility'] !== 'off';
+    document.querySelector('table.table')?.classList.toggle('alh-copy-gutter', isEnabled);
     if (!isEnabled) {
       document.removeEventListener('mouseover', handleRowHover);
-      if (copyBtnObserver) {
-        copyBtnObserver.disconnect();
-        copyBtnObserver = null;
-      }
       document.querySelectorAll('.arz-log-copy-menu-btn').forEach(btn => btn.remove());
       document.querySelectorAll('tr[data-arz-copy-btn-injected="true"]').forEach((tr) => {
         tr.removeAttribute('data-arz-copy-btn-injected');
@@ -805,37 +791,7 @@
 
     const visibilityMode = settings['tweak-copy-btn-visibility'] || 'hover';
 
-    if (visibilityMode === 'always') {
-      if (!copyBtnObserver) {
-        copyBtnObserver = new IntersectionObserver((entries) => {
-          if (!copyBtnObserver || currentSettings['extension-toggle'] === false) return;
-          entries.forEach(entry => {
-            if (entry.isIntersecting) {
-              const tr = entry.target;
-              copyBtnObserver.unobserve(tr);
-              lazyInjectCopyBtn(tr);
-            }
-          });
-        }, {
-          rootMargin: '1000px 0px',
-          threshold: 0.01
-        });
-      }
-
-      const table = isInitialized && document.querySelector('table.table');
-      if (table) {
-        table.querySelectorAll('tbody tr').forEach(tr => {
-          if (tr.getAttribute('data-arz-copy-btn-injected') !== 'true') {
-            copyBtnObserver.observe(tr);
-          }
-        });
-      }
-    } else {
-      if (copyBtnObserver) {
-        copyBtnObserver.disconnect();
-        copyBtnObserver = null;
-      }
-    }
+    if (visibilityMode === 'always' && isInitialized) refreshRowControls();
 
     document.removeEventListener('mouseover', handleRowHover);
     document.addEventListener('mouseover', handleRowHover, { passive: true });
@@ -975,21 +931,39 @@
   }
 
   let rowControlsObserver = null;
+  const pendingRowControls = new Set();
+  let rowControlsTask = null;
+  function scheduleRowControls() {
+    if (rowControlsTask !== null || !pendingRowControls.size) return;
+    rowControlsTask = window.ArizonaRuntime.scheduleFrame(() => {
+      rowControlsTask = null;
+      const deadline = performance.now() + 4;
+      window.ArizonaObservers.write(() => {
+        for (const row of pendingRowControls) {
+          pendingRowControls.delete(row);
+          if (row.isConnected && currentSettings['extension-toggle'] !== false) {
+            if (arizonaSettings.tools?.markLogsEnabled !== false) injectMarkHandle(row);
+            window.ArizonaMultiSelectManager.injectCheckbox(row);
+            if (currentSettings['tweak-copy-btn-visibility'] === 'always') lazyInjectCopyBtn(row);
+          }
+          if (performance.now() >= deadline) break;
+        }
+      });
+      scheduleRowControls();
+    });
+  }
 
   function observeRowControls(row) {
     if (currentSettings['extension-toggle'] === false) return;
     if (!rowControlsObserver) {
-      rowControlsObserver = new IntersectionObserver(entries => {
-        window.ArizonaObservers.write(() => {
-          for (const entry of entries) {
-            if (currentSettings['extension-toggle'] === false || !rowControlsObserver || !entry.isIntersecting || !entry.target.isConnected) continue;
-            const row = entry.target;
-            rowControlsObserver.unobserve(row);
-            if (arizonaSettings.tools?.markLogsEnabled !== false) injectMarkHandle(row);
-            window.ArizonaMultiSelectManager.injectCheckbox(row);
-          }
-        });
-      }, { rootMargin: '1000px 0px' });
+      rowControlsObserver = window.ArizonaRuntime.createRowObserver(entries => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting || !entry.target.isConnected) continue;
+          pendingRowControls.add(entry.target);
+          rowControlsObserver.unobserve(entry.target);
+        }
+        scheduleRowControls();
+      });
     }
     rowControlsObserver.observe(row);
   }
@@ -1163,22 +1137,14 @@
 
     try { highlightIdenticalIps(tr); } catch (e) { }
     try { highlightTuningAHK(tr); } catch (e) { }
-    try { injectRowActions(tr); } catch (e) { }
     window.ArizonaInventoryLogs?.processRow(tr);
-
-    if (currentSettings['tweak-copy-cells'] !== false) {
-      try { processSnippetsInElement(tr.cells[1]); } catch (e) { }
-    }
-    if (tr.cells[2]) {
-      if (currentSettings['tweak-copy-cells'] !== false) {
-        try { processSnippetsInElement(tr.cells[2]); } catch (e) { }
-      }
-    }
 
     const isEnabled = currentSettings['extension-toggle'] !== false;
     const isIpEnabled = isEnabled && (currentSettings['tweak-ip-info'] || arizonaSettings.ipLookupEnabled);
     if (isIpEnabled) {
       try {
+        reserveInlineGeoText(tr, parseAllIpsFromCell(getIpCellFromRow(tr)));
+        if (currentSettings['tweak-ip-info']) injectIpPlaceholder(tr);
         const observer = getIpRowObserver();
         if (observer) {
           const processed = tr.getAttribute('data-arz-ip-processed');
@@ -1191,10 +1157,6 @@
       }
     }
 
-    const visibilityMode = currentSettings['tweak-copy-btn-visibility'] || 'hover';
-    if (visibilityMode === 'always' && copyBtnObserver) {
-      try { copyBtnObserver.observe(tr); } catch (e) { }
-    }
   }
 
   window.ArizonaCopyPopupMenu = (function () {
@@ -1610,7 +1572,8 @@
           alertClass = 'dist-warning';
         }
         distEl.classList.add(alertClass);
-        distEl.innerHTML = `~${dist.toFixed(2)}km`;
+        distEl.textContent = `~${dist.toFixed(2)}km`;
+        distEl.title = distEl.textContent;
 
         parent.appendChild(distEl);
       }
@@ -1618,10 +1581,15 @@
   }
 
   let accountScanGeneration = 0;
+  let accountScanDirty = true, accountScanSignature = null, accountScanBody = null;
   let accountScanTask = null;
   let accountMarkedRows = new Set();
 
   function scanAccountSignals() {
+    const body = document.querySelector('table.table tbody');
+    const signature = JSON.stringify([currentSettings['extension-toggle'], sakaiCompatible(), arizonaSettings.bindingDetector, arizonaSettings.guaranteeDetector]);
+    if (!accountScanDirty && accountScanSignature === signature && accountScanBody === body) return;
+    accountScanDirty = false; accountScanSignature = signature; accountScanBody = body;
     const generation = ++accountScanGeneration;
     window.ArizonaRuntime.cancelTask(accountScanTask);
     accountScanTask = null;
@@ -1643,7 +1611,7 @@
     const step = () => {
       accountScanTask = null;
       if (generation !== accountScanGeneration || (tbody && !tbody.isConnected)) return;
-      const deadline = performance.now() + 7;
+      const deadline = performance.now() + 4;
       if (!updates) {
         while (position < rows.length) {
           const row = rows[position++];
@@ -1667,7 +1635,7 @@
             }
           }
           if (performance.now() >= deadline) {
-            accountScanTask = window.ArizonaRuntime.schedule(step);
+            accountScanTask = window.ArizonaRuntime.scheduleFrame(step);
             return;
           }
         }
@@ -1707,9 +1675,9 @@
           if (performance.now() >= deadline) break;
         }
       });
-      if (position < updates.length) accountScanTask = window.ArizonaRuntime.schedule(step);
+      if (position < updates.length) accountScanTask = window.ArizonaRuntime.scheduleFrame(step);
     };
-    accountScanTask = window.ArizonaRuntime.schedule(step);
+    accountScanTask = window.ArizonaRuntime.scheduleFrame(step);
   }
 
   function formatGeoText(ipData, distance) {
@@ -1773,6 +1741,21 @@
       text.includes('вышел');
   }
 
+  function reserveInlineGeoText(row, pairs) {
+    if (!arizonaSettings.ipLookupEnabled || !shouldShowInlineGeoText(row)) return null;
+    const count = pairs.filter(pair => pair.lastIp).length;
+    if (!count) return null;
+    let slot = row.cells[1].querySelector('.az-geo-inserted');
+    if (!slot) {
+      slot = document.createElement('span');
+      slot.className = 'az-geo-inserted alh-geo-slot';
+      slot.textContent = '—';
+      row.cells[1].appendChild(slot);
+    }
+    slot.style.setProperty('--alh-geo-lines', count);
+    return slot;
+  }
+
   function renderInlineGeoText(row, pairs) {
 
     pairs.forEach(pair => {
@@ -1816,14 +1799,10 @@
 
     if (htmls.length === 0) return;
 
-    let existing = actionCell.querySelector('.az-geo-inserted');
-    if (!existing) {
-      existing = document.createElement('span');
-      existing.className = 'az-geo-inserted';
-      existing.style.cssText = 'display: block; font-size: 12px; margin-top: 4px; padding: 4px 0; border-top: 1px solid rgba(128, 128, 128, 0.2);';
-      actionCell.appendChild(existing);
-    }
+    const existing = reserveInlineGeoText(row, pairs);
+    if (!existing) return;
     existing.innerHTML = htmls.join('<br>');
+    existing.title = existing.textContent;
   }
 
   function injectIpPlaceholder(tr) {
@@ -1834,6 +1813,7 @@
 
     const pairs = parseAllIpsFromCell(ipCell);
     pairs.forEach(pair => {
+      if (!pair.lastIp || !pair.regIp) return;
       const parent = pair.divElement || ipCell;
       if (!parent.querySelector('.arz-ip-distance-inline')) {
         const distEl = document.createElement('span');
@@ -1890,7 +1870,7 @@
     }
 
     if (!ipRowObserver) {
-      ipRowObserver = new IntersectionObserver((entries) => {
+      ipRowObserver = window.ArizonaRuntime.createRowObserver((entries) => {
         if (!ipRowObserver || currentSettings['extension-toggle'] === false) return;
         entries.forEach(entry => {
           if (entry.isIntersecting) {
@@ -1985,7 +1965,14 @@
             tr.removeAttribute('data-arz-ip-processed');
             scheduleIpRetry(tr);
           }
-          if (complete || final) ipCell.querySelectorAll('.arz-ip-loading-placeholder, .dist-placeholder').forEach(node => node.remove());
+          if (complete || final) {
+            ipCell.querySelectorAll('.arz-ip-loading-placeholder').forEach(node => node.remove());
+            ipCell.querySelectorAll('.dist-placeholder').forEach(node => {
+              node.classList.remove('dist-placeholder');
+              node.textContent = '—';
+              node.title = 'Геоданные недоступны';
+            });
+          }
         }
       });
     }
@@ -1993,11 +1980,13 @@
     renderRows(waiting, true);
   }
 
+  let tableStructureReady = false;
   const queuedRows = new Set();
   const priorityRows = new Set();
   const rowReasons = new WeakMap();
   let rowTimer = null;
   let finishTask = null;
+  let revealTask = null;
   let tableLayoutLock = null;
   let tableHasProcessedRows = false;
 
@@ -2036,11 +2025,19 @@
     table.style.setProperty('table-layout', 'fixed', 'important');
   }
 
+  function scheduleRowBatch() {
+    // The preparing screen can drain without forcing a table layout every frame.
+    return document.documentElement.dataset.alhStartup
+      ? window.ArizonaRuntime.scheduleFrame(processRowBatch)
+      : window.ArizonaRuntime.schedule(processRowBatch);
+  }
+
   function queueRows(rows, reason = 1) {
     if (currentSettings['extension-toggle'] === false) return;
     let first = true;
     for (const row of rows) {
       if (!row.isConnected) continue;
+      if (reason !== 2) accountScanDirty = true;
       const previous = rowReasons.get(row);
       const next = (!queuedRows.has(row) && !row.hasAttribute('data-arz-processed')) || previous === 1 || reason === 1 ? 1 : (previous || 0) | reason;
       rowReasons.set(row, next);
@@ -2054,7 +2051,7 @@
       first = false;
       queuedRows.add(row);
     }
-    if (rowTimer === null && queuedRows.size) rowTimer = window.ArizonaRuntime.schedule(processRowBatch);
+    if (tableStructureReady && rowTimer === null && queuedRows.size) rowTimer = scheduleRowBatch();
   }
 
   let priorityFrame = null;
@@ -2094,7 +2091,7 @@
     try {
       window.ArizonaObservers.write(() => {
         lockTableLayout();
-        const deadline = performance.now() + 8;
+        const deadline = performance.now() + 4;
         while (queuedRows.size) {
           const row = priorityRows.values().next().value || queuedRows.values().next().value;
           priorityRows.delete(row);
@@ -2120,8 +2117,23 @@
         }
       });
     } finally { isProcessingTable = false; }
-    if (queuedRows.size) rowTimer = window.ArizonaRuntime.schedule(processRowBatch);
+    if (queuedRows.size) rowTimer = scheduleRowBatch();
     else if (isInitialized) finishTableProcessing();
+  }
+
+  function revealPreparedTable() {
+    if (revealTask !== null || document.documentElement.dataset.alhStartup) return;
+    let waited = false;
+    const check = () => {
+      revealTask = null;
+      if (currentSettings['extension-toggle'] === false || document.documentElement.dataset.alhStartup) return;
+      // Give IntersectionObserver its initial delivery, then drain visible controls.
+      if (!waited || pendingRowControls.size || rowControlsTask !== null) {
+        waited = true; revealTask = window.ArizonaRuntime.scheduleFrame(check); return;
+      }
+      if (!queuedRows.size) window.ArizonaBootstrap?.markReady();
+    };
+    revealTask = window.ArizonaRuntime.scheduleFrame(check);
   }
 
   function finishTableProcessing() {
@@ -2138,6 +2150,7 @@
         scanAccountSignals();
         window.ArizonaOnlineManager.checkAutoCalculation();
         window.ArizonaDateShortcut.reposition();
+        revealPreparedTable();
       });
     });
   }
@@ -2151,6 +2164,8 @@
   }
 
   function stopTableWork() {
+    window.ArizonaRuntime.cancelTask(revealTask); revealTask = null;
+    window.ArizonaRuntime.cancelTask(rowControlsTask); rowControlsTask = null; pendingRowControls.clear();
     releaseTableLayout();
     window.ArizonaRuntime.cancelTask(rowTimer);
     window.ArizonaRuntime.cancelTask(finishTask);
@@ -2171,7 +2186,6 @@
     ipRetryRows.clear();
     ipRowObserver?.disconnect();
     ipRowObserver = null;
-    copyBtnObserver?.disconnect();
     rowControlsObserver?.disconnect();
     rowControlsObserver = null;
     ipGeneration++;
@@ -2283,7 +2297,7 @@
   let floatingActions = null;
   let scrollButtons = [];
   let scrollButtonsObserver = null;
-  let scrollButtonsFrame = null;
+  let scrollSentinels = [];
 
   function getFloatingActions() {
     if (!floatingActions) {
@@ -2294,55 +2308,32 @@
     return floatingActions;
   }
 
-  function updateScrollButtons() {
-    scrollButtonsFrame = null;
-    const root = document.scrollingElement || document.documentElement;
-    const position = root.scrollTop;
-    const maxScroll = Math.max(0, root.scrollHeight - root.clientHeight);
-    scrollButtons.forEach(({ button, direction }) => {
-      button.classList.toggle('visible', direction === 'top' ? position > 1 : position < maxScroll - 1);
-    });
-  }
-
-  function scheduleScrollButtonsUpdate() {
-    if (scrollButtonsFrame === null) scrollButtonsFrame = requestAnimationFrame(updateScrollButtons);
-  }
-
   function setupScrollButtons(settings) {
-    window.removeEventListener('scroll', scheduleScrollButtonsUpdate);
-    window.removeEventListener('resize', scheduleScrollButtonsUpdate);
-    if (scrollButtonsObserver) scrollButtonsObserver.disconnect();
-    scrollButtonsObserver = null;
-    if (scrollButtonsFrame !== null) cancelAnimationFrame(scrollButtonsFrame);
-    scrollButtonsFrame = null;
-    scrollButtons.forEach(({ button }) => button.remove());
-    scrollButtons = [];
-
+    scrollButtonsObserver?.disconnect(); scrollButtonsObserver = null;
+    scrollButtons.forEach(({button}) => button.remove()); scrollButtons = [];
+    scrollSentinels.forEach(node => node.remove()); scrollSentinels = [];
     if (settings['extension-toggle'] === false) return;
-    ['top', 'bottom'].forEach(direction => {
-      if (!settings[`tweak-scroll-${direction}`]) return;
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'arz-floating-filter-btn';
-      button.id = `arz-scroll-${direction}-btn`;
+    const targets = new Map();
+    scrollButtonsObserver = new IntersectionObserver(entries => {
+      for (const entry of entries) {
+        const button = targets.get(entry.target);
+        const visible = !entry.isIntersecting;
+        if (button && button.classList.contains('visible') !== visible) button.classList.toggle('visible', visible);
+      }
+    });
+    for (const direction of ['top','bottom']) {
+      if (!settings[`tweak-scroll-${direction}`]) continue;
+      const button = document.createElement('button'); button.type = 'button';
+      button.className = 'arz-floating-filter-btn'; button.id = `arz-scroll-${direction}-btn`;
       button.title = direction === 'top' ? 'Прокрутить вверх' : 'Прокрутить вниз';
       button.setAttribute('aria-label', button.title);
       button.innerHTML = `<i class="fa-solid fa-arrow-${direction === 'top' ? 'up' : 'down'}"></i>`;
-      button.addEventListener('click', () => {
-        const root = document.scrollingElement || document.documentElement;
-        window.scrollTo({ top: direction === 'top' ? 0 : root.scrollHeight, behavior: 'smooth' });
-      });
-      getFloatingActions().appendChild(button);
-      scrollButtons.push({ button, direction });
-    });
-
-    if (!scrollButtons.length) return;
-    window.addEventListener('scroll', scheduleScrollButtonsUpdate, { passive: true });
-    window.addEventListener('resize', scheduleScrollButtonsUpdate);
-    scrollButtonsObserver = new ResizeObserver(scheduleScrollButtonsUpdate);
-    scrollButtonsObserver.observe(document.documentElement);
-    scrollButtonsObserver.observe(document.body);
-    updateScrollButtons();
+      button.addEventListener('click', () => window.scrollTo({top: direction === 'top' ? 0 : document.scrollingElement.scrollHeight, behavior:'smooth'}));
+      getFloatingActions().append(button); scrollButtons.push({button,direction});
+      const sentinel = document.createElement('div'); sentinel.className = `alh-scroll-sentinel alh-scroll-${direction}`; sentinel.setAttribute('aria-hidden','true');
+      if (direction === 'top') document.body.prepend(sentinel); else document.body.append(sentinel);
+      scrollSentinels.push(sentinel); targets.set(sentinel,button); scrollButtonsObserver.observe(sentinel);
+    }
   }
 
   function setupFloatingFilter(enabled) {
@@ -2427,7 +2418,9 @@
 
       const closeBtn = document.createElement('button');
       closeBtn.className = 'arz-filter-modal-close';
-      closeBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+      closeBtn.type = 'button';
+      closeBtn.setAttribute('aria-label', 'Закрыть фильтры');
+      closeBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>';
       closeBtn.addEventListener('click', closeFilterModal);
 
       modalHeader.appendChild(modalTitle);
@@ -2441,9 +2434,20 @@
       filterModal.appendChild(modalContent);
       document.body.appendChild(filterModal);
 
+      let backdropDown = false;
+      filterModal.addEventListener('pointerdown', e => { backdropDown = e.target === filterModal; });
       filterModal.addEventListener('click', (e) => {
-        if (e.target === filterModal) {
+        if (e.target === filterModal && backdropDown) {
           closeFilterModal();
+        }
+        backdropDown = false;
+      });
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && isModalOpen() && !document.querySelector('.alh-modal-overlay.open-active, .alh-control-popover')) { e.preventDefault(); closeFilterModal(); }
+        if (e.key === 'Tab' && isModalOpen() && !document.querySelector('.alh-modal-overlay.open-active')) {
+          const items = [...filterModal.querySelectorAll('button,input,textarea,select,a[href],[tabindex="0"]')].filter(el => !el.disabled && el.tabIndex >= 0 && el.getClientRects().length);
+          if (e.shiftKey && document.activeElement === items[0]) {e.preventDefault();items.at(-1)?.focus();}
+          else if (!e.shiftKey && document.activeElement === items.at(-1)) {e.preventDefault();items[0]?.focus();}
         }
       });
     }
@@ -2457,10 +2461,13 @@
       form.parentNode.insertBefore(formPlaceholder, form);
     }
 
+    filterModal.arzScrollPosition = {left:scrollX,top:scrollY};
+    formPlaceholder.style.height = `${form.getBoundingClientRect().height}px`; formPlaceholder.style.display='block';
     formContainer.appendChild(form);
 
     filterModal.style.display = 'flex';
     document.body.classList.add('arz-modal-open');
+    filterModal.querySelector('.arz-filter-modal-close')?.focus({preventScroll:true});
 
     if (filterFab) {
       filterFab.classList.remove('visible');
@@ -2482,6 +2489,7 @@
 
   function closeFilterModal() {
     if (!filterModal || filterModal.style.display !== 'flex') return;
+    window.ArizonaModalControls?.dismissAll();
 
     const form = filterModal.querySelector('form.filter');
     if (form && formPlaceholder) {
@@ -2492,12 +2500,14 @@
     }
 
     filterModal.style.display = 'none';
+    filterFab?.focus({preventScroll:true});
 
     const openOverlays = document.querySelectorAll('.alh-modal-overlay.open-active');
     if (openOverlays.length === 0) {
       document.body.classList.remove('arz-modal-open');
     }
 
+    if (filterModal.arzScrollPosition) window.scrollTo({...filterModal.arzScrollPosition,behavior:'instant'});
     if (scrollHandler) {
       scrollHandler();
     }
@@ -3142,7 +3152,9 @@
     const ownedSelector = '[class*="arz-"], [class*="alh-"], .az-geo-inserted, .arizona-ecosystem-badge';
 
     function forget(row) {
+      accountScanDirty = true;
       queuedRows.delete(row);
+      pendingRowControls.delete(row);
       priorityRows.delete(row);
       rowReasons.delete(row);
       accountMarkedRows.delete(row);
@@ -3150,7 +3162,6 @@
       ipRetryRows.delete(row);
       ipRetryAttempts.delete(row);
       ipRowObserver?.unobserve(row);
-      copyBtnObserver?.unobserve(row);
       rowControlsObserver?.unobserve(row);
       window.ArizonaInventoryLogs?.forget(row);
       rowIndex.remove(row);
@@ -3187,7 +3198,7 @@
     function structureChanges(records) {
       if (currentSettings['extension-toggle'] === false) return;
       for (const record of records) {
-        if (tbody && (record.target === tbody || tbody.contains(record.target))) continue;
+        if (record.target.nodeType === 1 && record.target.closest('tbody, form.filter, .alh-page-popovers, #arz-bulk-actions-bar')) continue;
         if (record.target.nodeType === 1 && record.target.closest('thead')) {
           const table = record.target.closest('table.table');
           if (table) {
@@ -3648,7 +3659,8 @@
     let settings = {};
 
     function toggle(idx, hide) {
-      document.documentElement.classList.toggle(`arz-hide-column-${idx}`, hide);
+      const name = `arz-hide-column-${idx}`;
+      if (document.documentElement.classList.contains(name) !== hide) document.documentElement.classList.toggle(name, hide);
     }
 
     function addEye(th, type, getHidden, setHidden, idx) {
@@ -3670,8 +3682,10 @@
         };
         th.appendChild(btn);
       }
-      btn.innerHTML = `<i class="fa-regular fa-eye${getHidden() ? '-slash' : ''}" style="font-size:13px;"></i>`;
-      th.style.opacity = getHidden() ? '0.4' : '';
+      const icon = getHidden() ? 'fa-eye-slash' : 'fa-eye';
+      if (!btn.firstElementChild?.classList.contains(icon)) btn.innerHTML = `<i class="fa-regular ${icon}" style="font-size:13px;"></i>`;
+      const opacity = getHidden() ? '0.4' : '';
+      if (th.style.opacity !== opacity) th.style.opacity = opacity;
       toggle(idx, getHidden());
     }
 
@@ -3793,23 +3807,24 @@
         div.id = 'alh-log-filter-root';
         div.className = 'col-sm-4 pt-3';
         div.innerHTML = `
-          <div class="arz-filter-field-title" style="visibility: hidden;">&nbsp;</div>
-          <div style="display: flex; gap: 8px; align-items: center;">
-            <button type="button" id="alh-filter-logs-submit" class="btn btn-success"><i class="fa-solid fa-magnifying-glass" style="margin-right:6px;"></i> Применить поиск</button>
-            <button type="button" id="alh-filter-logs-reset" class="btn btn-secondary" title="Сбросить поиск"><i class="fa-solid fa-arrows-rotate" style="margin-right: 0px !important;"></i></button>
+          
+          <div class="alh-search-actions">
+            <button type="button" id="alh-filter-logs-submit" class="btn btn-success"><i class="fa-solid fa-magnifying-glass"></i> Применить поиск</button>
+            <button type="button" id="alh-filter-logs-reset" class="btn btn-secondary" title="Сбросить поиск"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M20 12a8 8 0 1 0-2 5M20 7l-3-3"/></svg></button>
           </div>
-          <div id="arz-filter-logs-options" style="margin-top: 10px;">
-            <div class="form-check" style="margin-bottom: 5px;">
+          <div id="arz-filter-logs-options">
+            <div class="alh-search-segments" role="group" aria-label="Режим поиска"><div class="form-check alh-search-mode">
               <input class="form-check-input" type="radio" name="arz-filter-logs-mode" id="arz-filter-mode-show" value="show" checked>
-              <label class="form-check-label" for="arz-filter-mode-show" style="color:var(--az-text);cursor:pointer;margin-left:5px;">Оставить с указанным текстом</label>
+              <label class="form-check-label" for="arz-filter-mode-show">Оставить</label>
             </div>
-            <div class="form-check" style="margin-bottom: 5px;">
+            <div class="form-check alh-search-mode">
               <input class="form-check-input" type="radio" name="arz-filter-logs-mode" id="arz-filter-mode-hide" value="hide">
-              <label class="form-check-label" for="arz-filter-mode-hide" style="color:var(--az-text);cursor:pointer;margin-left:5px;">Скрыть с указанным текстом</label>
+              <label class="form-check-label" for="arz-filter-mode-hide">Скрыть</label>
+            </div>
             </div>
             <div class="form-check">
               <input class="form-check-input" type="checkbox" id="arz-filter-logs-auto">
-              <label class="form-check-label" for="arz-filter-logs-auto" style="color:var(--az-text);cursor:pointer;margin-left:5px;">Автоматически применять при загрузке страницы</label>
+              <label class="form-check-label" for="arz-filter-logs-auto">Применять при загрузке страницы</label>
             </div>
           </div>
         `;
@@ -3829,7 +3844,7 @@
           </div>
         `;
 
-        const row = container.closest('.row') || container.parentElement;
+        const row = container.closest('form') || container.parentElement;
         row.appendChild(taDiv);
         row.appendChild(div);
 
@@ -3890,7 +3905,7 @@
       const old = document.getElementById('arz-top-pagination');
       const bottom = document.querySelector('nav[role="navigation"]:not(#arz-top-pagination)');
       const table = document.querySelector('table.table');
-      const host = table?.closest('.table-responsive') || table?.parentElement;
+      const host = table?.closest('.alh-table-frame, .table-responsive') || table?.parentElement;
       if (!enabled) { old?.remove(); return; }
       if (!bottom || !table || !host) return;
 
@@ -3966,7 +3981,7 @@
       btn.id = 'arz-load-more-btn';
       btn.type = 'button';
       btn.className = 'btn btn-primary';
-      btn.style.cssText = 'margin-right: 12px; height: 38px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; font-size: 13px; background: linear-gradient(135deg, var(--az-accent) 0%, var(--az-accent-hover) 100%) !important; border: none !important; color: white !important;';
+      btn.style.cssText = 'margin-right: 12px; height: 38px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; font-size: 13px; border: none !important; color: white !important;';
       btn.innerHTML = `<i class="fa-solid fa-angles-down"></i> Загрузить ещё`;
 
       btn.onclick = () => loadNextPage();
@@ -3988,8 +4003,8 @@
       }
 
       const btn = document.getElementById('arz-load-more-btn');
-      if (btn) {
-        isLoading = true;
+      isLoading = true;
+      for (const btn of document.querySelectorAll('#arz-load-more-btn, #arz-load-more-btn-top')) {
         btn.disabled = true;
         btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Загрузка...`;
       }
@@ -4015,7 +4030,7 @@
         }
 
         const newNav = newDoc.querySelector('nav[role="navigation"]');
-        const currentNav = document.querySelector('nav[role="navigation"]');
+        const currentNav = document.querySelector('nav[role="navigation"]:not(#arz-top-pagination)');
 
         if (newNav && currentNav) {
           const currentStrongTo = currentNav.querySelector('p.text-muted strong:nth-of-type(2)');
@@ -4043,7 +4058,7 @@
         window.ArizonaNotifications.show(`Ошибка загрузки: ${err.message}`, 'error');
       } finally {
         isLoading = false;
-        if (btn) {
+        for (const btn of document.querySelectorAll('#arz-load-more-btn, #arz-load-more-btn-top')) {
           btn.disabled = false;
           btn.innerHTML = `<i class="fa-solid fa-angles-down"></i> Загрузить ещё`;
         }
@@ -4051,6 +4066,7 @@
         const hasMorePages = getNextPageUrl();
         if (!hasMorePages && btn) {
           btn.remove();
+          updateTopPagination();
         }
       }
     }
@@ -4096,7 +4112,7 @@
 
     const modalHTML = `
       <div id="arz-lookup-overlay" class="alh-modal-overlay">
-        <div class="arz-modal-container" style="max-width: 850px; width: 95%;">
+        <div class="alh-layout-1 arz-modal-container">
           <div class="alh-modal-header">
             <div class="arz-modal-icon-wrapper"><i class="fa-solid fa-user-shield"></i></div>
             <div class="arz-modal-title-block">
@@ -4115,31 +4131,31 @@
             <button class="arz-tab-btn" data-tab="dump"><i class="fa-solid fa-file-export"></i> Выгрузка логов</button>
           </div>
 
-          <div class="alh-modal-body" style="gap: 16px !important;">
+          <div class="alh-layout-2 alh-modal-body">
             <div class="arz-modal-form-group">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                <label class="arz-modal-label" id="arz-lookup-input-label" style="margin: 0;"><i class="fa-solid fa-users"></i> Ник(и) игрока(ов)</label>
-                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                  <span style="font-size: 11px; color: var(--az-text-secondary); background: var(--az-input-bg); border: 1px solid var(--az-border); padding: 2px 8px; border-radius: 12px; white-space: nowrap;">Введено: <strong id="arz-lookup-count-num" style="color: var(--az-accent-hover);">0</strong></span>
-                  <span id="arz-lookup-extract-btn" style="font-size: 11px; color: var(--az-accent-hover); cursor: pointer; display: flex; align-items: center; gap: 4px; user-select: none; border-bottom: 1px dashed currentColor; white-space: nowrap;" title="Извлечь ники Nick_Name из любого текста"><i class="fa-solid fa-wand-magic-sparkles"></i> Извлечь ники</span>
-                  <span id="arz-lookup-my-nick-btn" style="font-size: 11px; color: var(--az-accent-hover); cursor: pointer; display: flex; align-items: center; gap: 4px; user-select: none; border-bottom: 1px dashed currentColor; white-space: nowrap;" title="Добавить ваш авторизованный никнейм"><i class="fa-solid fa-user-plus"></i> Свой никнейм</span>
+              <div class="alh-layout-3">
+                <label class="alh-layout-4 arz-modal-label" id="arz-lookup-input-label"><i class="fa-solid fa-users"></i> Ник(и) игрока(ов)</label>
+                <div class="alh-layout-5">
+                  <span class="alh-layout-6">Введено: <strong id="arz-lookup-count-num" class="alh-layout-7">0</strong></span>
+                  <span id="arz-lookup-extract-btn" title="Извлечь ники Nick_Name из любого текста" class="alh-layout-8"><i class="fa-solid fa-wand-magic-sparkles"></i> Извлечь ники</span>
+                  <span id="arz-lookup-my-nick-btn" title="Добавить ваш авторизованный никнейм" class="alh-layout-8"><i class="fa-solid fa-user-plus"></i> Свой никнейм</span>
                 </div>
               </div>
               <textarea id="arz-lookup-nicks" class="arz-textarea" rows="4" placeholder="Введите никнеймы (каждый с новой строки или через запятую) или вставьте текст для извлечения"></textarea>
             </div>
 
-            <div id="arz-lookup-date-group" style="display: flex; flex-direction: column; gap: 12px;">
-              <div style="display: flex; gap: 12px; width: 100%; box-sizing: border-box;">
-                <div class="arz-modal-form-group" style="flex: 1;">
+            <div id="arz-lookup-date-group" class="alh-layout-9">
+              <div class="alh-layout-10">
+                <div class="alh-layout-11 arz-modal-form-group">
                   <label class="arz-modal-label"><i class="fa-regular fa-calendar"></i> Дата от</label>
                   <input type="date" id="arz-lookup-date-from" class="arz-input">
                 </div>
-                <div class="arz-modal-form-group" style="flex: 1;">
+                <div class="alh-layout-11 arz-modal-form-group">
                   <label class="arz-modal-label"><i class="fa-regular fa-calendar"></i> Дата до</label>
                   <input type="date" id="arz-lookup-date-to" class="arz-input">
                 </div>
               </div>
-              <div class="arz-date-shortcuts" style="display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 6px !important; width: 100% !important; box-sizing: border-box !important; margin-top: -4px !important;">
+              <div class="alh-layout-12 arz-date-shortcuts">
                 <button type="button" class="arz-btn-shortcut" data-range="day">За день</button>
                 <button type="button" class="arz-btn-shortcut" data-range="week">За неделю</button>
                 <button type="button" class="arz-btn-shortcut" data-range="month">За месяц</button>
@@ -4149,66 +4165,66 @@
               </div>
             </div>
 
-            <div id="arz-lookup-tab-online" class="arz-tab-content active" style="display: flex; flex-direction: column; gap: 12px;">
-              <div class="arz-modal-form-group" style="display: flex; align-items: center; gap: 8px; flex-direction: row !important;">
-                <input type="checkbox" id="arz-lookup-stealth" style="cursor: pointer; width: 16px; height: 16px; accent-color: var(--az-accent);">
-                <label for="arz-lookup-stealth" class="arz-modal-label" style="margin: 0; cursor: pointer; display: flex; align-items: center; gap: 6px; user-select: none; text-transform: none !important;">
+            <div id="arz-lookup-tab-online" class="alh-layout-9 arz-tab-content active">
+              <div class="alh-layout-13 arz-modal-form-group">
+                <input type="checkbox" id="arz-lookup-stealth" class="alh-stealth-switch">
+                <label for="arz-lookup-stealth" class="alh-layout-15 arz-modal-label">
                   <i class="fa-solid fa-user-secret"></i> Скрытный режим (анализ общих логов)
                 </label>
               </div>
-              <div class="arz-accordion">
+              <div class="arz-accordion alh-clean-online">
                 <div class="arz-accordion-header">
                   <div class="arz-accordion-header-left"><i class="fa-solid fa-filter"></i> <span>Чистый онлайн</span></div>
                   <i class="fa-solid fa-chevron-down arz-accordion-chevron"></i>
                 </div>
-                <div class="arz-accordion-content" style="display: none; flex-direction: column !important; gap: 14px !important; padding: 16px !important; border-top: 1px solid var(--az-border) !important; background: var(--az-bg) !important;">
-                  <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--az-text-secondary);"><i class="fa-solid fa-circle-info"></i> Учитывать только указанный промежуток суток</div>
-                  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-                    <span style="font-size: 12px; color: var(--az-text); min-width: 70px;">Будние дни</span>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                      <input type="time" id="arz-lookup-wd-from" class="arz-input" style="padding: 6px 10px !important; width: auto !important;">
-                      <span style="color: var(--az-text-secondary);">—</span>
-                      <input type="time" id="arz-lookup-wd-to" class="arz-input" style="padding: 6px 10px !important; width: auto !important;">
+                <div class="alh-layout-16 arz-accordion-content">
+                  <div class="alh-clean-hint"> Учитывать только указанный промежуток суток</div>
+                  <div class="alh-clean-row">
+                    <span class="alh-layout-19">Будни</span>
+                    <div class="alh-time-range">
+                      <input type="time" id="arz-lookup-wd-from" class="alh-layout-21 arz-input">
+                      <span class="alh-layout-22">—</span>
+                      <input type="time" id="arz-lookup-wd-to" class="alh-layout-21 arz-input">
                     </div>
                   </div>
-                  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-                    <span style="font-size: 12px; color: var(--az-text); min-width: 70px;">Выходные</span>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                      <input type="time" id="arz-lookup-we-from" class="arz-input" style="padding: 6px 10px !important; width: auto !important;">
-                      <span style="color: var(--az-text-secondary);">—</span>
-                      <input type="time" id="arz-lookup-we-to" class="arz-input" style="padding: 6px 10px !important; width: auto !important;">
+                  <div class="alh-clean-row">
+                    <span class="alh-layout-19">Выходные</span>
+                    <div class="alh-time-range">
+                      <input type="time" id="arz-lookup-we-from" class="alh-layout-21 arz-input">
+                      <span class="alh-layout-22">—</span>
+                      <input type="time" id="arz-lookup-we-to" class="alh-layout-21 arz-input">
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div id="arz-lookup-tab-punish" class="arz-tab-content" style="display: none; flex-direction: column; gap: 12px;">
-              <div style="font-size: 12px; color: var(--az-text-secondary); line-height: 1.4; display: flex; align-items: center; gap: 8px;">
-                <i class="fa-solid fa-circle-info" style="color: var(--az-accent-hover);"></i>
+            <div id="arz-lookup-tab-punish" class="alh-layout-23 arz-tab-content">
+              <div class="alh-layout-24">
+                <i class="alh-layout-7 fa-solid fa-circle-info"></i>
                 <span>Будут выгружены все наказания игроков за выбранный период (баны, муты, джайлы и др.)</span>
               </div>
             </div>
 
-            <div id="arz-lookup-tab-ip" class="arz-tab-content" style="display: none; flex-direction: column; gap: 12px;">
-              <div style="font-size: 12px; color: var(--az-text-secondary); line-height: 1.4; display: flex; align-items: center; gap: 8px;">
-                <i class="fa-solid fa-circle-info" style="color: var(--az-accent-hover);"></i>
+            <div id="arz-lookup-tab-ip" class="alh-layout-23 arz-tab-content">
+              <div class="alh-layout-24">
+                <i class="alh-layout-7 fa-solid fa-circle-info"></i>
                 <span>Поиск IP-адресов по последнему выходу с сервера. Поиск производится вглубь истории.</span>
               </div>
             </div>
 
-            <div id="arz-lookup-tab-idnick" class="arz-tab-content" style="display: none; flex-direction: column; gap: 12px;">
-              <div style="font-size: 12px; color: var(--az-text-secondary); line-height: 1.4; display: flex; align-items: center; gap: 8px;">
-                <i class="fa-solid fa-circle-info" style="color: var(--az-accent-hover);"></i>
+            <div id="arz-lookup-tab-idnick" class="alh-layout-23 arz-tab-content">
+              <div class="alh-layout-24">
+                <i class="alh-layout-7 fa-solid fa-circle-info"></i>
                 <span>Поиск ID аккаунта по никнейму или наоборот. Можно вводить как Nick_Name, так и числовые ID.</span>
               </div>
             </div>
 
-            <div id="arz-lookup-tab-dump" class="arz-tab-content" style="display: none; flex-direction: column; gap: 12px;">
+            <div id="arz-lookup-tab-dump" class="alh-layout-23 arz-tab-content">
               <div class="arz-dump-hint"><i class="fa-solid fa-circle-info"></i><span>Выберите тип лога и период. При необходимости задайте фильтры и слова для поиска в действиях.</span></div>
               <div class="arz-modal-form-group">
                 <label class="arz-modal-label" for="arz-dump-type"><i class="fa-solid fa-list"></i> Тип лога</label>
-                <input id="arz-dump-type" class="arz-input" list="arz-dump-types" placeholder="Выберите или введите тип лога" autocomplete="off">
+                <select id="arz-dump-type" class="arz-input" multiple data-alh-allow-custom="true" aria-label="Типы логов"></select>
                 <datalist id="arz-dump-types"></datalist>
               </div>
               <div id="arz-dump-fields" class="arz-dump-fields"></div>
@@ -4231,17 +4247,17 @@
               </div>
             </div>
 
-            <div id="arz-lookup-tab-report" class="arz-tab-content" style="display: none; flex-direction: column; gap: 12px;">
-              <div style="font-size: 12px; color: var(--az-text-secondary); line-height: 1.4; display: flex; align-items: center; gap: 8px;">
-                <i class="fa-solid fa-circle-info" style="color: var(--az-accent-hover);"></i>
+            <div id="arz-lookup-tab-report" class="alh-layout-23 arz-tab-content">
+              <div class="alh-layout-24">
+                <i class="alh-layout-7 fa-solid fa-circle-info"></i>
                 <span>Вывод количества отвеченных репортов за выбранный период и детальная статистика ответов.</span>
               </div>
             </div>
           </div>
 
           <div class="alh-modal-footer">
-            <button id="arz-lookup-close-bottom" class="arz-btn-danger" style="flex: 1;">Закрыть</button>
-            <button id="arz-lookup-start-btn" class="arz-btn-primary" style="flex: 1.5;"><i class="fa-solid fa-magnifying-glass"></i> Пробить онлайн</button>
+            <button id="arz-lookup-close-bottom" class="alh-layout-11 arz-btn-danger">Закрыть</button>
+            <button id="arz-lookup-start-btn" class="alh-layout-25 arz-btn-primary"><i class="fa-solid fa-magnifying-glass"></i> Пробить онлайн</button>
           </div>
         </div>
       </div>
@@ -4340,12 +4356,13 @@
         const item = document.createElement('option');
         item.value = option.value;
         item.label = option.textContent.trim();
-        overlay.querySelector('#arz-dump-types').appendChild(item);
+        dumpType.appendChild(item);
       });
       dumpType.addEventListener('input', () => {
         dumpFields.replaceChildren();
         document.querySelectorAll('.js_component_filter_item').forEach(field => {
-          if ((field.dataset.filterType || '').toLowerCase() !== dumpType.value.trim().toLowerCase()) return;
+          if (![...dumpType.selectedOptions].some(option => option.value.toLowerCase() === (field.dataset.filterType || '').toLowerCase())) return;
+          if ([...dumpFields.querySelectorAll('input')].some(input => input.name === field.querySelector('input[name^="dynamic["]')?.name)) return;
           const original = field.querySelector('input[name^="dynamic["]');
           if (!original) return;
           const label = document.createElement('label');
@@ -4371,19 +4388,19 @@
         setTimeout(() => URL.revokeObjectURL(url), 1000);
       };
       async function runDump() {
-        const type = dumpType.value.trim();
+        const types = [...dumpType.selectedOptions].map(option => option.value).filter(Boolean);
         const from = overlay.querySelector('#arz-lookup-date-from').value;
         const to = overlay.querySelector('#arz-lookup-date-to').value;
         const limit = Number(overlay.querySelector('#arz-dump-limit').value);
         overlay.querySelector('#arz-dump-output').hidden = false;
         dumpDownload.disabled = true;
         dumpText = '';
-        if (!type || !from || !to || from > to || !Number.isInteger(limit) || limit < 0) { dumpResult.textContent = 'Укажите тип, корректный период и лимит страниц.'; return; }
+        if (!types.length || !from || !to || from > to || !Number.isInteger(limit) || limit < 0) { dumpResult.textContent = 'Укажите тип, корректный период и лимит страниц.'; return; }
         const search = overlay.querySelector('#arz-dump-search').value.split(/[\n,]+/).map(x => x.trim().toLowerCase()).filter(Boolean);
         const url = new URL(location.pathname, location.origin);
         const server = new URL(location.href).searchParams.get('server_number');
         if (server) url.searchParams.set('server_number', server);
-        url.searchParams.set('type[]', type);
+        types.forEach(type => url.searchParams.append('type[]',type));
         url.searchParams.set('min_period', `${from} 00:00:00`);
         url.searchParams.set('max_period', `${to} 23:59:59`);
         url.searchParams.set('limit', '1000');
@@ -4596,7 +4613,7 @@
         btn.type = 'button';
         btn.id = 'arz-lookup-btn';
         btn.className = 'btn btn-success';
-        btn.style.cssText = 'margin-left: 10px; background: linear-gradient(135deg, var(--az-accent) 0%, var(--az-accent-hover) 100%) !important;';
+        btn.style.cssText = 'margin-left: 10px;';
         btn.innerHTML = `<i class="fa-solid fa-user-shield" style="margin-right: 6px;"></i> Пробив`;
         btn.onclick = () => openModal();
         container.appendChild(btn);
@@ -4788,6 +4805,13 @@
     }
 
     function appendEmojiToType(container, emoji) {
+      const custom = container.querySelector('.alh-combo-display');
+      if (custom) {
+        custom.click();
+        const search = document.querySelector('.alh-page-popovers .alh-combo-search');
+        if (search) { search.value = emoji; search.dispatchEvent(new Event('input', {bubbles:true})); }
+        return;
+      }
       const select2Selection = container.querySelector('.select2-selection');
       if (select2Selection && !document.querySelector('.select2-container--open')) {
         select2Selection.click();
@@ -5696,17 +5720,17 @@
       document.getElementById('arz-templates-total-count').textContent = templates.length;
 
       if (filtered.length === 0) {
-        container.innerHTML = `<div class="alh-empty-state"><i class="fa-regular fa-folder-open" style="font-size:24px;margin-bottom:8px;color:var(--az-danger);"></i> Нет сохраненных шаблонов</div>`;
+        container.innerHTML = `<div class="alh-empty-state"><i class="alh-layout-134 fa-regular fa-folder-open"></i> Нет сохраненных шаблонов</div>`;
         return;
       }
 
       container.innerHTML = filtered.map(t => `
         <div class="arz-template-card" data-id="${t.id}">
-          <div style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;">
+          <div class="alh-layout-26">
             <div class="arz-template-card-title">${window.ArizonaUtils.escapeHtml(t.name)}</div>
             <div class="arz-template-card-subtitle">${window.ArizonaUtils.escapeHtml(t.filters || 'Шаблон фильтров')}</div>
           </div>
-          <div style="display:flex;align-items:center;">
+          <div class="alh-layout-27">
             <button class="btn-delete arz-list-item-btn" data-id="${t.id}"><i class="fa-regular fa-trash-can"></i></button>
           </div>
         </div>
@@ -5802,9 +5826,9 @@
           <div class="alh-modal-body">
             <div class="arz-modal-form-group">
               <label class="arz-modal-label"><i class="fa-solid fa-square-plus"></i> Новый шаблон</label>
-              <div style="display:flex;gap:12px;width:100%;box-sizing:border-box;">
-                <input type="text" id="arz-new-template-name" class="arz-input" placeholder="Название шаблона..." style="flex:1;">
-                <button id="arz-add-template-btn" class="arz-btn-primary" style="padding: 10px 20px !important;">Сохранить</button>
+              <div class="alh-layout-10">
+                <input type="text" id="arz-new-template-name" class="alh-layout-11 arz-input" placeholder="Название шаблона...">
+                <button id="arz-add-template-btn" class="alh-layout-135 arz-btn-primary">Сохранить</button>
               </div>
             </div>
             <div class="arz-modal-form-group">
@@ -5812,15 +5836,15 @@
               <input type="text" id="arz-templates-search" class="arz-input" placeholder="Поиск шаблонов...">
             </div>
             <div class="arz-modal-form-group">
-              <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+              <div class="alh-layout-136">
                 <label class="arz-modal-label"><i class="fa-solid fa-bookmark"></i> Сохраненные шаблоны</label>
-                <span style="font-size:10px;color:var(--az-text-secondary);background:var(--az-border);padding:3px 8px;border-radius:12px;">Всего: <span id="arz-templates-total-count">0</span></span>
+                <span class="alh-layout-137">Всего: <span id="arz-templates-total-count">0</span></span>
               </div>
               <div id="arz-templates-list" class="arz-list-container"></div>
             </div>
           </div>
           <div class="alh-modal-footer">
-            <button id="arz-templates-close-bottom" class="arz-btn-danger" style="flex:1;">Закрыть</button>
+            <button id="arz-templates-close-bottom" class="alh-layout-11 arz-btn-danger">Закрыть</button>
           </div>
         </div>
       </div>
@@ -5856,7 +5880,7 @@
         btn.id = 'arz-templates-btn';
         btn.className = 'btn btn-success';
         btn.style.cssText = 'margin-left: 10px;';
-        btn.innerHTML = `<i class="fa-solid fa-folder-open" style="margin-right: 6px;"></i> Шаблоны`;
+        btn.innerHTML = `<i class="alh-layout-62 fa-solid fa-folder-open"></i> Шаблоны`;
         btn.onclick = () => {
           const overlay = document.createElement('div');
           overlay.innerHTML = modalHTML;
@@ -5978,7 +6002,7 @@
 
     if (!resetBtn.querySelector('i')) {
       const text = resetBtn.textContent.replace(/\s+/g, ' ').trim();
-      resetBtn.innerHTML = `<i class="fa-solid fa-rotate-left" style="margin-right: 6px;"></i> ${text}`;
+      resetBtn.innerHTML = `<i class="alh-layout-62 fa-solid fa-rotate-left"></i> ${text}`;
     }
 
     if (resetBtn.parentElement !== container) {
@@ -5998,6 +6022,8 @@
   }
 
   function handleFilterSubmit(form, submitBtn) {
+    const invalid = (form || document.querySelector('form.filter'))?.querySelector('.alh-field-display[aria-invalid="true"]');
+    if (invalid) { invalid.focus(); return; }
     if (!submitBtn) {
       submitBtn = form ? form.querySelector('button[type="submit"]:not([id^="arz-"]), input[type="submit"]:not([id^="arz-"])') : null;
     }
@@ -6092,6 +6118,37 @@
   window.ArizonaMultiSelectManager = (function () {
     let isEnabled = true;
     let barElement = null;
+    let rangeAnchor = null;
+    let keyboardRange = false;
+    document.addEventListener('click', event => {
+      const checkbox = event.target.closest?.('.arz-row-checkbox');
+      if (!checkbox || checkbox.disabled || currentSettings['extension-toggle'] === false) return;
+      const row = checkbox.closest('tr');
+      const body = row?.parentElement;
+      if (!body) return;
+      if (!(event.shiftKey || keyboardRange) || !rangeAnchor?.isConnected || rangeAnchor.parentElement !== body) {
+        rangeAnchor = row; return;
+      }
+      // Read visibility before writing any row classes, avoiding layout work per row.
+      const rows = [...body.rows].filter(r => !r.hidden && !r.classList.contains('arz-row-hidden') && r.getClientRects().length);
+      const first = rows.indexOf(rangeAnchor), last = rows.indexOf(row);
+      if (first < 0 || last < 0) { rangeAnchor = row; return; }
+      for (const target of rows.slice(Math.min(first,last), Math.max(first,last) + 1)) {
+        injectCheckbox(target);
+        const cb = target.querySelector('.arz-row-checkbox');
+        if (cb.disabled) continue;
+        cb.checked = checkbox.checked;
+        target.classList.toggle('arz-row-selected', cb.checked);
+      }
+      // The native change event updates the counter once for the complete range.
+    });
+    document.addEventListener('keydown', event => {
+      if (event.code !== 'Space' || !event.shiftKey || !event.target.matches?.('.arz-row-checkbox')) return;
+      event.preventDefault();
+      if (event.repeat) return;
+      keyboardRange = true;
+      try { event.target.click(); } finally { keyboardRange = false; }
+    });
 
     function createBar() {
       if (document.getElementById('arz-bulk-actions-bar')) return;
@@ -6132,6 +6189,17 @@
           </button>
         </div>
       `;
+      const actions = barElement.querySelector('.arz-bulk-bar-actions');
+      for (const [label, ids] of [
+        ['Копирование', ['copy-logs', 'copy-nicks', 'copy-full']],
+        ['Экспорт', ['download-txt']], ['Метки', ['mark', 'unmark']],
+        ['Видимость', ['show', 'hide']], ['Выделение', ['deselect']]
+      ]) {
+        const group = document.createElement('div');
+        group.className = 'alh-bulk-group'; group.setAttribute('role', 'group'); group.setAttribute('aria-label', label);
+        ids.forEach(id => group.append(barElement.querySelector('#arz-bulk-' + id)));
+        actions.append(group);
+      }
       document.body.appendChild(barElement);
 
       barElement.querySelector('#arz-bulk-copy-logs').onclick = copyLogsTimeText;
@@ -6329,6 +6397,7 @@
     }
 
     function deselectAll() {
+      rangeAnchor = null;
       document.querySelectorAll('table.table tbody tr input.arz-row-checkbox').forEach(cb => {
         cb.checked = false;
         const tr = cb.closest('tr');
@@ -6420,6 +6489,7 @@
   async function init() {
     if (isInitialized || isInitializing) return;
 
+    try {
     const host = window.location.hostname;
 
     if (host.includes('arizonarp.logsparser.info')) {
@@ -6464,17 +6534,12 @@
         }
       }
       await loadAndApplySettings();
-      startupReady = true;
       window.ArizonaMaskingManager.init(arizonaSettings);
       window.ArizonaMultiSelectManager.init(arizonaSettings);
       window.ArizonaObservers.init();
-      if (queuedRows.size) {
-        window.ArizonaRuntime.cancelTask(rowTimer);
-        processRowBatch();
-      }
       await new Promise(resolve => setTimeout(resolve, 0));
 
-      if (currentSettings['extension-toggle'] !== false) initEcosystemApi();
+      if (currentSettings['extension-toggle'] !== false) { reserveEcosystemSlot(); initEcosystemApi(); }
       const startupManagers = [
         'ArizonaTuningAHKManager',
         'ArizonaTgVkDetector',
@@ -6497,19 +6562,28 @@
         'ArizonaSidebarManager',
         'ArizonaLoadMoreManager'
       ];
-      let deadline = performance.now() + 8;
+      let deadline = performance.now() + 4;
       for (const name of startupManagers) {
         const args = [arizonaSettings];
         if (name === 'ArizonaTemplatesManager') args.push(arizonaTemplates);
         try {
           window.ArizonaObservers.write(() => window[name].init(...args));
         } catch (error) {
+          window.ArizonaBootstrap?.failOpen();
           console.error(`Error in ${name}.init:`, error);
         }
         if (performance.now() >= deadline) {
           await new Promise(resolve => setTimeout(resolve, 0));
-          deadline = performance.now() + 8;
+          deadline = performance.now() + 4;
         }
+      }
+
+      await window.ArizonaPageControls?.init();
+      tableStructureReady = true;
+      startupReady = true;
+      if (queuedRows.size) {
+        window.ArizonaRuntime.cancelTask(rowTimer);
+        processRowBatch();
       }
 
       document.addEventListener('copy', (e) => {
@@ -6583,6 +6657,11 @@
         pendingSettingsChanges = {};
         handleStorageChanges?.(changes, 'local');
       }
+    }
+    } catch (error) {
+      isInitializing = false;
+      window.ArizonaBootstrap?.failOpen();
+      console.error('Arizona Helper startup failed:', error);
     }
   }
 
@@ -6863,9 +6942,24 @@
     });
   }
 
+  function reserveEcosystemSlot() {
+    const navbar = document.querySelector('a#navbarDropdown');
+    if (!navbar) return null;
+    let slot = navbar.querySelector('.alh-ecosystem-slot');
+    if (!slot) {
+      slot = document.createElement('span');
+      slot.className = 'alh-ecosystem-slot';
+      slot.setAttribute('aria-label', 'Значки профиля');
+      slot.tabIndex = 0;
+      navbar.appendChild(slot);
+    }
+    return slot;
+  }
+
   function renderEcosystemBadges() {
     if (currentSettings['extension-toggle'] === false) {
       resetBadges();
+      document.querySelector('.alh-ecosystem-slot')?.remove();
       return;
     }
     if (!ecosystemApiData || ecosystemApiData.length === 0) return;
@@ -6910,7 +7004,7 @@
         openNicknameGuideCard();
       });
 
-      el.appendChild(badge);
+      reserveEcosystemSlot()?.appendChild(badge);
 
       if (user.achievements) {
         const achievementsList = Array.isArray(user.achievements) ? user.achievements : Object.values(user.achievements);
@@ -6941,13 +7035,14 @@
             openNicknameGuideCard();
           });
 
-          el.appendChild(achBadge);
+          reserveEcosystemSlot()?.appendChild(achBadge);
         });
       }
     }
   }
 
   function checkAndInit() {
+    if (location.pathname === '/authenticator') document.documentElement.classList.add('alh-authenticator-page');
     runWhenElementExists('body', init);
   }
 

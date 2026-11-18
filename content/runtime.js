@@ -25,7 +25,62 @@
     }
     return id;
   }
-  function cancelTask(id) { tasks.delete(id); }
+  const frameTasks = new Map();
+  let frameHandle = null;
+  function armFrame() {
+    if (frameHandle !== null) return;
+    const run = () => {
+      frameHandle = null;
+      const next = frameTasks.entries().next().value;
+      if (!next) return;
+      frameTasks.delete(next[0]);
+      try { next[1](); } finally { if (frameTasks.size) armFrame(); }
+    };
+    // Hidden tabs must still finish masking and release startup state.
+    frameHandle = document.hidden ? setTimeout(run, 16) : requestAnimationFrame(run);
+  }
+  function scheduleFrame(callback) {
+    const id = ++taskId; frameTasks.set(id, callback); armFrame(); return id;
+  }
+  function cancelTask(id) { tasks.delete(id); frameTasks.delete(id); }
+
+  // One native viewport observer shared by row controls, copy buttons and inventory.
+  const subscriptions = new Map();
+  const lastEntries = new WeakMap();
+  let viewport = null;
+  function createRowObserver(callback) {
+    const rows = new Set();
+    const subscriber = {callback, rows};
+    const initial = new Set(); let initialTask = null;
+    function deliverInitial() {
+      initialTask = null;
+      const entries = [...initial].filter(row => rows.has(row) && row.isConnected).map(row => lastEntries.get(row)).filter(Boolean);
+      initial.clear(); if (entries.length) callback(entries);
+    }
+    if (!viewport && typeof IntersectionObserver !== 'undefined') viewport = new IntersectionObserver(entries => {
+      const deliveries = new Map();
+      for (const entry of entries) { lastEntries.set(entry.target, entry); }
+      for (const entry of entries) for (const sub of subscriptions.get(entry.target) || []) {
+        if (!deliveries.has(sub)) deliveries.set(sub, []);
+        deliveries.get(sub).push(entry);
+      }
+      for (const [sub, batch] of deliveries) sub.callback(batch);
+    }, {rootMargin: '480px 0px'});
+    return {
+      observe(row) {
+        if (rows.has(row)) return;
+        rows.add(row);
+        if (!subscriptions.has(row)) { subscriptions.set(row, new Set()); viewport?.observe(row); }
+        subscriptions.get(row).add(subscriber);
+        if (lastEntries.has(row)) { initial.add(row); if (initialTask === null) initialTask = schedule(deliverInitial); }
+      },
+      unobserve(row) {
+        rows.delete(row); initial.delete(row); const subs = subscriptions.get(row); subs?.delete(subscriber);
+        if (!subs?.size) { subscriptions.delete(row); lastEntries.delete(row); viewport?.unobserve(row); }
+      },
+      disconnect() { for (const row of [...rows]) this.unobserve(row); cancelTask(initialTask); initialTask = null; initial.clear(); }
+    };
+  }
 
   const waiters = new Map();
   let waiterObserver;
@@ -131,5 +186,5 @@
     };
   }
 
-  window.ArizonaRuntime = { waitFor, stopWaiting, createRowIndex, schedule, cancelTask };
+  window.ArizonaRuntime = { waitFor, stopWaiting, createRowIndex, schedule, scheduleFrame, createRowObserver, cancelTask };
 })();

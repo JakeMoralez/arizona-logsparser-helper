@@ -175,7 +175,7 @@
     if (next === enabled) return false;
     enabled = next;
     if (enabled) {
-      if (typeof IntersectionObserver !== 'undefined') observer = new IntersectionObserver(entries => {
+      if (typeof IntersectionObserver !== 'undefined') observer = (window.ArizonaRuntime?.createRowObserver || (cb => new IntersectionObserver(cb, {rootMargin: '480px 0px'})))(entries => {
         const rows = [];
         for (const entry of entries) {
           const row = entry.target;

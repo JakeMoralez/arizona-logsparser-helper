@@ -18,23 +18,23 @@ export function create(context) {
           </div>
           <div class="alh-modal-body">
             <div class="arz-modal-form-group">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                <label class="arz-modal-label" style="margin: 0;"><i class="fa-solid fa-users"></i> Ник(и) игрока(ов)</label>
-                <span style="font-size: 11px; color: var(--az-text-secondary); background: var(--az-input-bg); border: 1px solid var(--az-border); padding: 2px 8px; border-radius: 12px;">Введено: <strong id="arz-online-count-num" style="color: var(--az-accent-hover);">0</strong></span>
+              <div class="alh-layout-43">
+                <label class="alh-layout-4 arz-modal-label"><i class="fa-solid fa-users"></i> Ник(и) игрока(ов)</label>
+                <span class="alh-layout-68">Введено: <strong id="arz-online-count-num" class="alh-layout-7">0</strong></span>
               </div>
               <textarea id="arz-online-nicks" class="arz-textarea" rows="3" placeholder="Введите один или несколько ников (каждый с новой строки или через запятую)"></textarea>
             </div>
-            <div style="display: flex; gap: 12px; width: 100%; box-sizing: border-box;">
-              <div class="arz-modal-form-group" style="flex: 1;">
+            <div class="alh-layout-10">
+              <div class="alh-layout-11 arz-modal-form-group">
                 <label class="arz-modal-label"><i class="fa-regular fa-calendar"></i> Дата от</label>
                 <input type="date" id="alh-online-date-from" class="arz-input">
               </div>
-              <div class="arz-modal-form-group" style="flex: 1;">
+              <div class="alh-layout-11 arz-modal-form-group">
                 <label class="arz-modal-label"><i class="fa-regular fa-calendar"></i> Дата до</label>
                 <input type="date" id="alh-online-date-to" class="arz-input">
               </div>
             </div>
-            <div class="arz-date-shortcuts" style="display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 6px !important; width: 100% !important; box-sizing: border-box !important; margin-top: -4px !important;">
+            <div class="alh-layout-12 arz-date-shortcuts">
               <button type="button" class="arz-btn-shortcut" data-range="day">За день</button>
               <button type="button" class="arz-btn-shortcut" data-range="week">За неделю</button>
               <button type="button" class="arz-btn-shortcut" data-range="month">За месяц</button>
@@ -42,9 +42,9 @@ export function create(context) {
               <button type="button" class="arz-btn-shortcut" data-range="start-month">С начала месяца</button>
               <button type="button" class="arz-btn-shortcut" data-range="start-year">С начала года</button>
             </div>
-            <div class="arz-modal-form-group" style="margin-top: 12px; display: flex; align-items: center; gap: 8px;">
-              <input type="checkbox" id="arz-online-stealth" style="cursor: pointer; width: 16px; height: 16px; accent-color: var(--az-accent);">
-              <label for="arz-online-stealth" class="arz-modal-label" style="margin: 0; cursor: pointer; display: flex; align-items: center; gap: 6px; user-select: none;">
+            <div class="alh-layout-88 arz-modal-form-group">
+              <input type="checkbox" id="arz-online-stealth" class="alh-layout-14">
+              <label for="arz-online-stealth" class="alh-layout-15 arz-modal-label">
                 <i class="fa-solid fa-user-secret"></i> Скрытный режим (анализ общих логов)
               </label>
             </div>
@@ -54,29 +54,29 @@ export function create(context) {
                 <i class="fa-solid fa-chevron-down arz-accordion-chevron"></i>
               </div>
               <div class="arz-accordion-content">
-                <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--az-text-secondary);"><i class="fa-solid fa-circle-info"></i> Учитывать только указанный промежуток суток</div>
-                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-                  <span style="font-size: 12px; color: var(--az-text); min-width: 70px;">Будние дни</span>
-                  <div style="display: flex; align-items: center; gap: 8px;">
-                    <input type="time" id="alh-online-wd-from" class="arz-input" style="padding: 6px 10px !important; width: auto !important;">
-                    <span style="color: var(--az-text-secondary);">—</span>
-                    <input type="time" id="alh-online-wd-to" class="arz-input" style="padding: 6px 10px !important; width: auto !important;">
+                <div class="alh-layout-17"><i class="fa-solid fa-circle-info"></i> Учитывать только указанный промежуток суток</div>
+                <div class="alh-layout-18">
+                  <span class="alh-layout-19">Будние дни</span>
+                  <div class="alh-layout-20">
+                    <input type="time" id="alh-online-wd-from" class="alh-layout-21 arz-input">
+                    <span class="alh-layout-22">—</span>
+                    <input type="time" id="alh-online-wd-to" class="alh-layout-21 arz-input">
                   </div>
                 </div>
-                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-                  <span style="font-size: 12px; color: var(--az-text); min-width: 70px;">Выходные</span>
-                  <div style="display: flex; align-items: center; gap: 8px;">
-                    <input type="time" id="alh-online-we-from" class="arz-input" style="padding: 6px 10px !important; width: auto !important;">
-                    <span style="color: var(--az-text-secondary);">—</span>
-                    <input type="time" id="alh-online-we-to" class="arz-input" style="padding: 6px 10px !important; width: auto !important;">
+                <div class="alh-layout-18">
+                  <span class="alh-layout-19">Выходные</span>
+                  <div class="alh-layout-20">
+                    <input type="time" id="alh-online-we-from" class="alh-layout-21 arz-input">
+                    <span class="alh-layout-22">—</span>
+                    <input type="time" id="alh-online-we-to" class="alh-layout-21 arz-input">
                   </div>
                 </div>
               </div>
             </div>
           </div>
           <div class="alh-modal-footer">
-            <button data-action="cancel" class="arz-btn-danger" style="flex: 1;">Закрыть</button>
-            <button data-action="start" class="arz-btn-primary" style="flex: 1;">Пробить онлайн</button>
+            <button data-action="cancel" class="alh-layout-11 arz-btn-danger">Закрыть</button>
+            <button data-action="start" class="alh-layout-11 arz-btn-primary">Пробить онлайн</button>
           </div>
         </div>
       </div>
@@ -238,41 +238,37 @@ export function create(context) {
         copyLines.push(`${d}.${mo}.${y} → ${secsToHMS(v)}`);
       });
 
-      let rowsHtml = '';
-      entries.forEach(([k, v]) => {
-        const [y, mo, d] = k.split('-');
-        rowsHtml += `<tr><td style="padding: 8px 20px; font-family: monospace; font-size: 13px; color: ${v > 0 ? 'var(--az-text)' : 'var(--az-text-secondary)'}; border-bottom: 1px solid var(--az-border);">${d}.${mo}.${y}</td><td style="padding: 8px 20px; font-family: monospace; font-size: 13px; font-weight: 600; color: ${v > 0 ? 'var(--az-accent-hover)' : 'var(--az-text-secondary)'}; border-bottom: 1px solid var(--az-border);">${secsToHMS(v)}</td></tr>`;
-      });
-
+      const rowsHtml = entries.map(([key, seconds]) => {
+        const [y, mo, day] = key.split('-');
+        const weekday = new Date(+y, +mo - 1, +day).toLocaleDateString('ru-RU', {weekday: 'short'});
+        return `<tr class="${seconds ? '' : 'alh-online-empty'}"><td><time datetime="${key}">${day}.${mo}.${y}</time><span class="online-result-weekday">${weekday}</span></td><td>${secsToHMS(seconds)}</td></tr>`;
+      }).join('');
       const overlay = document.createElement('div');
-      overlay.className = 'alh-modal-overlay';
+      overlay.className = 'alh-modal-overlay alh-online-result';
       overlay.innerHTML = `
-        <div class="arz-modal-container" style="max-width: 480px; width: 90%;">
+        <div class="arz-modal-container">
           <div class="alh-modal-header">
-            <div class="arz-modal-icon-wrapper"><i class="fa-solid fa-clock"></i></div>
             <div class="arz-modal-title-block">
-              <div class="arz-modal-title">Результат расчета</div>
-              <div class="arz-modal-subtitle" style="display: flex; align-items: center; gap: 8px; margin-top: 2px;">
-                <span class="player-nick" style="color: #ffffff; font-weight: 600; background: linear-gradient(135deg, var(--az-accent) 0%, var(--az-accent-hover) 100%); padding: 2px 8px; border-radius: 12px; font-size: 11px;">${player}</span>
-                <span>Онлайн по дням</span>
-              </div>
+              <div class="arz-modal-title">Результат расчёта</div>
+              <div class="arz-modal-subtitle">${window.ArizonaUtils.escapeHtml(player)} · Онлайн по дням</div>
             </div>
-            <button id="arz-online-close-header-btn" class="alh-modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
+            <button id="arz-online-close-header-btn" class="alh-modal-close-btn" aria-label="Закрыть окно"></button>
           </div>
-          <div class="online-result-stats" style="text-align: center; padding: 20px; background: var(--az-table-row-hover); border-bottom: 1px solid var(--az-border);">
-            <div class="online-result-total" style="font-size: 38px; font-weight: 700; color: var(--az-accent-hover); font-family: monospace;">${secsToHMS(total)}</div>
-            <div class="online-result-sub" style="color: var(--az-text-secondary); font-size: 13px; margin-top: 6px;">за <strong>${allDays.length}</strong> дн. · <strong>${avg}</strong> ч/день</div>
+          <div class="alh-modal-body online-result-body">
+            <dl class="online-result-summary">
+              <div><dt>Общий онлайн</dt><dd>${secsToHMS(total)}</dd></div>
+              <div><dt>В среднем в день</dt><dd>${avg}<small> ч</small></dd></div>
+              <div><dt>Дней в периоде</dt><dd>${allDays.length}</dd></div>
+            </dl>
+            <table class="online-result-table"><thead><tr><th scope="col">Дата</th><th scope="col">Онлайн</th></tr></thead><tbody>${rowsHtml}</tbody></table>
           </div>
-          <div class="online-result-table-wrapper" style="max-height: 550px; overflow-y: auto; background: var(--az-input-bg); border-bottom: 1px solid var(--az-border);"><table class="online-result-table" style="width: 100%; border-collapse: collapse;"><thead><tr style="border-bottom: 1px solid var(--az-border); background: var(--az-bg-sidebar); position: sticky; top: 0;"><th style="text-align: left; padding: 12px 20px; color: var(--az-text-secondary); font-size: 11px; text-transform: uppercase;">Дата</th><th style="text-align: left; padding: 12px 20px; color: var(--az-text-secondary); font-size: 11px; text-transform: uppercase;">Онлайн</th></tr></thead><tbody>${rowsHtml}</tbody></table></div>
           <div class="alh-modal-footer">
-            <button id="alh-online-copy-btn" class="arz-btn-primary" style="flex: 1;"><i class="fa-regular fa-copy"></i> Копировать</button>
-            <button id="arz-online-reopen-btn" class="arz-btn-secondary" style="flex: 1;"><i class="fa-solid fa-rotate-left"></i> Новый расчет</button>
-            <button id="alh-online-close-btn" class="arz-btn-danger" style="flex: 1;"><i class="fa-solid fa-xmark"></i> Закрыть</button>
+            <button id="arz-online-reopen-btn" class="arz-btn-secondary">Новый расчёт</button>
+            <button id="alh-online-copy-btn" class="arz-btn-primary"><i class="fa-regular fa-copy"></i> Копировать</button>
           </div>
         </div>
       `;
       openOverlay(overlay);
-      overlay.querySelector('#alh-online-close-btn').onclick = () => closeOverlay(overlay);
       const closeHeader = overlay.querySelector('#arz-online-close-header-btn');
       if (closeHeader) closeHeader.onclick = () => closeOverlay(overlay);
       overlay.querySelector('#alh-online-copy-btn').onclick = () => {
@@ -305,7 +301,7 @@ export function create(context) {
       const progressOverlay = document.createElement('div');
       progressOverlay.className = 'alh-modal-overlay';
       progressOverlay.innerHTML = `
-        <div class="arz-modal-container" style="max-width: 400px; width: 90%;">
+        <div class="alh-layout-45 arz-modal-container">
           <div class="alh-modal-header">
             <div class="arz-modal-icon-wrapper"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
             <div class="arz-modal-title-block">
@@ -313,16 +309,16 @@ export function create(context) {
               <div class="arz-modal-subtitle">Анализ общих логов выхода...</div>
             </div>
           </div>
-          <div class="alh-modal-body" style="padding: 24px; text-align: center;">
-            <div id="arz-progress-player" style="font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 8px;">Загрузка страниц...</div>
-            <div id="arz-progress-status" style="font-size: 13px; color: #9aa0a6; margin-bottom: 20px;">Загружено страниц: 0</div>
+          <div class="alh-layout-47 alh-modal-body">
+            <div id="arz-progress-player" class="alh-layout-48">Загрузка страниц...</div>
+            <div id="arz-progress-status" class="alh-layout-49">Загружено страниц: 0</div>
             
-            <div class="arz-progress-bar-container" style="width: 100%; height: 6px; background: rgba(255, 255, 255, 0.08); border-radius: 3px; overflow: hidden; margin-bottom: 24px;">
-              <div id="alh-progress-bar-fill" style="width: 100%; height: 100%; background: linear-gradient(90deg, var(--az-accent) 0%, var(--az-accent-hover) 100%); border-radius: 3px;"></div>
+            <div class="alh-layout-50 arz-progress-bar-container">
+              <div id="alh-progress-bar-fill" class="alh-layout-98"></div>
             </div>
           </div>
           <div class="alh-modal-footer">
-            <button id="arz-progress-cancel-btn" class="arz-btn-danger" style="flex: 1;"><i class="fa-solid fa-ban"></i> Отмена</button>
+            <button id="arz-progress-cancel-btn" class="alh-layout-11 arz-btn-danger"><i class="fa-solid fa-ban"></i> Отмена</button>
           </div>
         </div>
       `;
@@ -455,7 +451,7 @@ export function create(context) {
       const progressOverlay = document.createElement('div');
       progressOverlay.className = 'alh-modal-overlay';
       progressOverlay.innerHTML = `
-        <div class="arz-modal-container" style="max-width: 400px; width: 90%;">
+        <div class="alh-layout-45 arz-modal-container">
           <div class="alh-modal-header">
             <div class="arz-modal-icon-wrapper"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
             <div class="arz-modal-title-block">
@@ -463,16 +459,16 @@ export function create(context) {
               <div class="arz-modal-subtitle">Сбор данных игроков...</div>
             </div>
           </div>
-          <div class="alh-modal-body" style="padding: 24px; text-align: center;">
-            <div id="arz-progress-player" style="font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 8px;">Запуск...</div>
-            <div id="arz-progress-status" style="font-size: 13px; color: #9aa0a6; margin-bottom: 20px;">Подготовка запросов</div>
+          <div class="alh-layout-47 alh-modal-body">
+            <div id="arz-progress-player" class="alh-layout-48">Запуск...</div>
+            <div id="arz-progress-status" class="alh-layout-49">Подготовка запросов</div>
             
-            <div class="arz-progress-bar-container" style="width: 100%; height: 6px; background: rgba(255, 255, 255, 0.08); border-radius: 3px; overflow: hidden; margin-bottom: 24px;">
-              <div id="alh-progress-bar-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--az-accent) 0%, var(--az-accent-hover) 100%); transition: width 0.3s ease; border-radius: 3px;"></div>
+            <div class="alh-layout-50 arz-progress-bar-container">
+              <div id="alh-progress-bar-fill" class="alh-layout-51"></div>
             </div>
           </div>
           <div class="alh-modal-footer">
-            <button id="arz-progress-cancel-btn" class="arz-btn-danger" style="flex: 1;"><i class="fa-solid fa-ban"></i> Отмена</button>
+            <button id="arz-progress-cancel-btn" class="alh-layout-11 arz-btn-danger"><i class="fa-solid fa-ban"></i> Отмена</button>
           </div>
         </div>
       `;
@@ -551,7 +547,7 @@ export function create(context) {
       let rowsHtml = '';
       results.forEach((res, index) => {
         const hasError = !!res.error;
-        const totalStr = hasError ? `<span style="color: var(--az-danger); font-size: 12px;">${res.error}</span>` : secsToHMS(res.total);
+        const totalStr = hasError ? `<span class="alh-layout-72">${res.error}</span>` : secsToHMS(res.total);
         const avgStr = hasError ? '—' : `${res.avg} ч/день`;
 
         let detailsHtml = '';
@@ -560,16 +556,16 @@ export function create(context) {
           res.entries.forEach(([k, v]) => {
             const [y, mo, d] = k.split('-');
             detailRows += `
-              <div style="display: flex; justify-content: space-between; padding: 6px 20px; font-family: monospace; font-size: 12px; border-bottom: 1px solid rgba(255,255,255,0.03);">
-                <span style="color: #9aa0a6;">${d}.${mo}.${y}</span>
+              <div class="alh-layout-99">
+                <span class="alh-layout-100">${d}.${mo}.${y}</span>
                 <span style="color: ${v > 0 ? 'var(--az-accent-hover)' : '#6f7377'}; font-weight: 500;">${secsToHMS(v)}</span>
               </div>
             `;
           });
           detailsHtml = `
-            <tr id="arz-details-row-${index}" class="arz-details-row" style="display: none; background: rgba(0, 0, 0, 0.15);">
-              <td colspan="4" style="padding: 0; border-bottom: 1px solid var(--az-border);">
-                <div style="max-height: 180px; overflow-y: auto; padding: 4px 0;">
+            <tr id="arz-details-row-${index}" class="alh-layout-101 arz-details-row">
+              <td colspan="4" class="alh-layout-102">
+                <div class="alh-layout-103">
                   ${detailRows}
                 </div>
               </td>
@@ -578,19 +574,19 @@ export function create(context) {
         }
 
         rowsHtml += `
-          <tr style="border-bottom: 1px solid var(--az-border); cursor: pointer;" class="arz-player-row" data-index="${index}">
-            <td style="padding: 12px 16px; font-weight: 600; color: var(--az-text); font-size: 13px;">
-              <span class="arz-toggle-details-btn" style="margin-right: 8px; color: var(--az-text-secondary);"><i class="fa-solid fa-chevron-right"></i></span>
+          <tr class="alh-layout-104 arz-player-row" data-index="${index}">
+            <td class="alh-layout-85">
+              <span class="alh-layout-105 arz-toggle-details-btn"><i class="fa-solid fa-chevron-right"></i></span>
               ${res.player}
             </td>
             <td style="padding: 12px 16px; font-family: monospace; font-weight: 700; color: ${hasError ? 'var(--az-danger)' : 'var(--az-accent-hover)'}; font-size: 14px;">
               ${totalStr}
             </td>
-            <td style="padding: 12px 16px; font-size: 13px; color: var(--az-text-secondary);">
+            <td class="alh-layout-106">
               ${avgStr}
             </td>
-            <td style="padding: 12px 16px; text-align: right;">
-              <button class="arz-btn-icon arz-copy-single-btn" data-index="${index}" title="Копировать онлайн игрока" style="background: none; border: none; color: var(--az-text-secondary); cursor: pointer; padding: 4px 8px; font-size: 14px; transition: color 0.2s;"><i class="fa-regular fa-copy"></i></button>
+            <td class="alh-layout-107">
+              <button class="alh-layout-108 arz-btn-icon arz-copy-single-btn" data-index="${index}" title="Копировать онлайн игрока"><i class="fa-regular fa-copy"></i></button>
             </td>
           </tr>
           ${detailsHtml}
@@ -610,7 +606,7 @@ export function create(context) {
       const overlay = document.createElement('div');
       overlay.className = 'alh-modal-overlay';
       overlay.innerHTML = `
-        <div class="arz-modal-container" style="max-width: 600px; width: 95%;">
+        <div class="alh-layout-78 arz-modal-container">
           <div class="alh-modal-header">
             <div class="arz-modal-icon-wrapper"><i class="fa-solid fa-users"></i></div>
             <div class="arz-modal-title-block">
@@ -619,14 +615,14 @@ export function create(context) {
             </div>
             <button id="arz-online-multi-close-header-btn" class="alh-modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
           </div>
-          <div class="online-result-table-wrapper" style="max-height: 550px; overflow-y: auto; background: var(--az-input-bg); border-bottom: 1px solid var(--az-border);">
-            <table class="online-result-table" style="width: 100%; border-collapse: collapse;">
+          <div class="alh-layout-95 online-result-table-wrapper">
+            <table class="alh-layout-80 online-result-table">
               <thead>
-                <tr style="border-bottom: 1px solid var(--az-border); background: var(--az-bg-sidebar); position: sticky; top: 0; z-index: 1;">
-                  <th style="text-align: left; padding: 12px 16px; color: var(--az-text-secondary); font-size: 11px; text-transform: uppercase;">Игрок</th>
-                  <th style="text-align: left; padding: 12px 16px; color: var(--az-text-secondary); font-size: 11px; text-transform: uppercase;">Суммарный онлайн</th>
-                  <th style="text-align: left; padding: 12px 16px; color: var(--az-text-secondary); font-size: 11px; text-transform: uppercase;">Средний</th>
-                  <th style="text-align: right; padding: 12px 16px; color: var(--az-text-secondary); font-size: 11px; text-transform: uppercase; width: 50px;">Копировать</th>
+                <tr class="alh-layout-109">
+                  <th class="alh-layout-82">Игрок</th>
+                  <th class="alh-layout-82">Суммарный онлайн</th>
+                  <th class="alh-layout-82">Средний</th>
+                  <th class="alh-layout-110">Копировать</th>
                 </tr>
               </thead>
               <tbody>
@@ -635,9 +631,9 @@ export function create(context) {
             </table>
           </div>
           <div class="alh-modal-footer">
-            <button id="arz-online-multi-copy-btn" class="arz-btn-primary" style="flex: 2;"><i class="fa-regular fa-copy"></i> Скопировать весь онлайн</button>
-            <button id="arz-online-multi-reopen-btn" class="arz-btn-secondary" style="flex: 1;"><i class="fa-solid fa-rotate-left"></i> Новый расчет</button>
-            <button id="arz-online-multi-close-btn" class="arz-btn-danger" style="flex: 1;"><i class="fa-solid fa-xmark"></i> Закрыть</button>
+            <button id="arz-online-multi-copy-btn" class="alh-layout-37 arz-btn-primary"><i class="fa-regular fa-copy"></i> Скопировать весь онлайн</button>
+            <button id="arz-online-multi-reopen-btn" class="alh-layout-11 arz-btn-secondary"><i class="fa-solid fa-rotate-left"></i> Новый расчет</button>
+            <button id="arz-online-multi-close-btn" class="alh-layout-11 arz-btn-danger"><i class="fa-solid fa-xmark"></i> Закрыть</button>
           </div>
         </div>
       `;
@@ -810,7 +806,7 @@ export function create(context) {
         btn.id = 'alh-online-btn';
         btn.className = 'btn btn-success';
         btn.style.cssText = 'margin-left: 10px;';
-        btn.innerHTML = `<i class="fa-solid fa-clock-rotate-left" style="margin-right:6px;"></i> Онлайн`;
+        btn.innerHTML = `<i style="margin-right: 6px;" class="fa-solid fa-clock-rotate-left"></i> Онлайн`;
         btn.onclick = openModal;
         container.appendChild(btn);
       },

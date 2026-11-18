@@ -50,7 +50,10 @@
         "content/bootstrap.js"
       ],
       "css": [
-        "content/content.css"
+        "content/startup.css",
+        "content/content.css",
+        "content/modal-ui.css",
+        "content/page-ui.css"
       ],
       "run_at": "document_start"
     },
@@ -59,7 +62,8 @@
         "https://arizonarp.logsparser.info/*"
       ],
       "js": [
-        "content/stopCopy.js"
+        "content/stopCopy.js",
+        "content/site-bridge.js"
       ],
       "world": "MAIN",
       "run_at": "document_start"
@@ -72,6 +76,9 @@
         "shared/inventory.js",
         "content/inventory.js",
         "content/log-requests.js",
+        "content/modal-controls.js",
+        "content/page-controls.js",
+        "content/ui-refinements.js",
         "content/content.js"
       ],
       "run_at": "document_start",
@@ -86,7 +93,9 @@
         "icons/icon16.png",
         "icons/icon48.png",
         "icons/icon128.png",
-        "content/modules/*.js"
+        "content/modules/*.js",
+        "popup/vendor/css/fontawesome.min.css",
+        "popup/vendor/webfonts/*"
       ],
       "matches": [
         "https://arizonarp.logsparser.info/*"

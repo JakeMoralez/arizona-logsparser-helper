@@ -17,32 +17,32 @@ export function create(context) {
             </div>
             <button id="alh-forms-close" class="alh-modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
           </div>
-          <div class="alh-modal-body" style="gap: 18px !important;">
+          <div class="alh-layout-63 alh-modal-body">
             <div class="arz-modal-form-group">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <div class="alh-layout-43">
                 <label class="arz-modal-label"><i class="fa-solid fa-terminal"></i> Шаблон команды</label>
-                <span style="font-size: 10px; color: var(--az-text-secondary); background: var(--az-input-bg); border: 1px solid var(--az-border); padding: 3px 8px; border-radius: 12px;">Пример: /banoff 0 {nick} 2000 Чит</span>
+                <span class="alh-layout-64">Пример: /banoff 0 {nick} 2000 Чит</span>
               </div>
               <textarea id="alh-form-template" class="arz-textarea" rows="3" placeholder="/banoff 0 {nick} 2000 Чит"></textarea>
             </div>
             <div class="arz-modal-form-group">
-              <label class="arz-modal-label" style="margin-bottom: 4px;"><i class="fa-solid fa-user"></i> Источник ника</label>
-              <div style="display: flex; gap: 8px; background: var(--az-input-bg); padding: 6px; border-radius: 14px; border: 1px solid var(--az-border);">
-                <button type="button" class="forms-switch-btn active" data-source="first" style="flex: 1; padding: 10px 16px; background: linear-gradient(135deg, var(--az-accent) 0%, var(--az-accent-hover) 100%); border: none; border-radius: 10px; font-size: 13px; font-weight: 600; color: white; cursor: pointer; transition: all 0.2s;">Первый ник</button>
-                <button type="button" class="forms-switch-btn" data-source="second" style="flex: 1; padding: 10px 16px; background: transparent; border: none; border-radius: 10px; font-size: 13px; font-weight: 600; color: var(--az-text-secondary); cursor: pointer; transition: all 0.2s;">Второй ник</button>
+              <label class="alh-layout-65 arz-modal-label"><i class="fa-solid fa-user"></i> Источник ника</label>
+              <div class="alh-layout-31">
+                <button type="button" class="alh-layout-66 forms-switch-btn active" data-source="first">Первый ник</button>
+                <button type="button" class="alh-layout-67 forms-switch-btn" data-source="second">Второй ник</button>
               </div>
             </div>
             <div class="arz-modal-form-group">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <div class="alh-layout-43">
                 <label class="arz-modal-label"><i class="fa-solid fa-list"></i> Сгенерированные команды</label>
-                <span id="arz-commands-count" style="background: linear-gradient(135deg, var(--az-accent) 0%, var(--az-accent-hover) 100%); color: white; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 30px;">0</span>
+                <span id="arz-commands-count" class="alh-layout-34">0</span>
               </div>
               <div id="alh-form-commands" class="arz-list-container"></div>
             </div>
           </div>
           <div class="alh-modal-footer">
-            <button id="arz-forms-close-bottom" class="arz-btn-danger" style="flex: 1;">Закрыть</button>
-            <button id="arz-copy-all-btn" class="arz-btn-primary" style="flex: 1;">Копировать всё</button>
+            <button id="arz-forms-close-bottom" class="alh-layout-11 arz-btn-danger">Закрыть</button>
+            <button id="arz-copy-all-btn" class="alh-layout-11 arz-btn-primary">Копировать всё</button>
           </div>
         </div>
       </div>
@@ -119,6 +119,7 @@ export function create(context) {
 
       const switchBtns = modal.querySelectorAll('.forms-switch-btn');
       switchBtns.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.source === source);
         btn.onclick = () => {
           switchBtns.forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
@@ -156,7 +157,7 @@ export function create(context) {
         btn.id = 'arz-forms-btn';
         btn.className = 'btn btn-success';
         btn.style.cssText = 'margin-left: 10px;';
-        btn.innerHTML = `<i class="fa-solid fa-list-check" style="margin-right: 6px;"></i> Формы`;
+        btn.innerHTML = `<i style="margin-right: 6px;" class="fa-solid fa-list-check"></i> Формы`;
         btn.onclick = () => this.openModal();
 
         container.appendChild(btn);

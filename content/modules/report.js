@@ -89,11 +89,11 @@ export function create(context) {
 
       res.reports.forEach(r => {
         rowsHtml += `
-          <tr style="border-bottom: 1px solid var(--az-border);">
-            <td style="padding: 10px 16px; font-family: monospace; font-size: 12px; color: var(--az-text-secondary); white-space: nowrap;">${r.date}</td>
-            <td class="arz-col-player" style="padding: 10px 16px; font-weight: 600; color: var(--az-text); font-size: 13px;">${r.player}</td>
-            <td class="arz-col-question" style="padding: 10px 16px; color: var(--az-text-secondary); font-size: 13px; line-height: 1.4;">${r.question}</td>
-            <td class="arz-col-answer" style="padding: 10px 16px; color: var(--az-accent-hover); font-weight: 600; font-size: 13px; line-height: 1.4;">${r.answer}</td>
+          <tr class="alh-layout-75">
+            <td class="alh-layout-121">${r.date}</td>
+            <td class="alh-layout-122 arz-col-player">${r.player}</td>
+            <td class="alh-layout-123 arz-col-question">${r.question}</td>
+            <td class="alh-layout-124 arz-col-answer">${r.answer}</td>
           </tr>
         `;
         copyLines.push(`[${r.date}] Игрок: ${r.player} | Вопрос: ${r.question} | Ответ: ${r.answer}`);
@@ -112,29 +112,29 @@ export function create(context) {
       const overlay = document.createElement('div');
       overlay.className = 'alh-modal-overlay';
       overlay.innerHTML = `
-        <div class="arz-modal-container" style="max-width: 800px; width: 95%;">
+        <div class="alh-layout-125 arz-modal-container">
           <div class="alh-modal-header">
             <div class="arz-modal-icon-wrapper"><i class="fa-solid fa-comments"></i></div>
             <div class="arz-modal-title-block">
               <div class="arz-modal-title">Статистика репортов</div>
-              <div class="arz-modal-subtitle" style="display: flex; align-items: center; gap: 8px; margin-top: 2px;">
-                <span style="color: #ffffff; font-weight: 600; background: linear-gradient(135deg, var(--az-accent) 0%, var(--az-accent-hover) 100%); padding: 2px 8px; border-radius: 12px; font-size: 11px;">${res.player}</span>
+              <div class="alh-layout-90 arz-modal-subtitle">
+                <span class="alh-layout-91">${res.player}</span>
                 <span>Всего ответов: ${totalReports} | Дней: ${daysCount} | Ср. в день: ${avgReports}</span>
               </div>
             </div>
             <button id="arz-report-close-header-btn" class="alh-modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
           </div>
-          <div style="padding: 12px 16px; border-bottom: 1px solid var(--az-border); display: flex; gap: 12px; background: var(--az-bg-sidebar);">
-            <input type="text" id="arz-reports-search" class="arz-input" placeholder="Поиск по игроку, вопросу или ответу..." style="width: 100%; box-sizing: border-box; font-size: 13px; padding: 8px 12px;">
+          <div class="alh-layout-126">
+            <input type="text" id="arz-reports-search" class="alh-layout-127 arz-input" placeholder="Поиск по игроку, вопросу или ответу...">
           </div>
-          <div class="online-result-table-wrapper" style="max-height: 550px; overflow-y: auto; background: var(--az-input-bg); border-bottom: 1px solid var(--az-border);">
-            <table class="online-result-table" style="width: 100%; border-collapse: collapse;">
+          <div class="alh-layout-95 online-result-table-wrapper">
+            <table class="alh-layout-80 online-result-table">
               <thead>
-                <tr style="border-bottom: 1px solid var(--az-border); background: var(--az-bg-sidebar); position: sticky; top: 0; z-index: 1;">
-                  <th style="text-align: left; padding: 12px 16px; color: var(--az-text-secondary); font-size: 11px; text-transform: uppercase; width: 140px;">Дата</th>
-                  <th style="text-align: left; padding: 12px 16px; color: var(--az-text-secondary); font-size: 11px; text-transform: uppercase; width: 120px;">Игрок</th>
-                  <th style="text-align: left; padding: 12px 16px; color: var(--az-text-secondary); font-size: 11px; text-transform: uppercase;">Вопрос</th>
-                  <th style="text-align: left; padding: 12px 16px; color: var(--az-text-secondary); font-size: 11px; text-transform: uppercase;">Ответ</th>
+                <tr class="alh-layout-109">
+                  <th class="alh-layout-87">Дата</th>
+                  <th class="alh-layout-128">Игрок</th>
+                  <th class="alh-layout-82">Вопрос</th>
+                  <th class="alh-layout-82">Ответ</th>
                 </tr>
               </thead>
               <tbody>
@@ -143,9 +143,9 @@ export function create(context) {
             </table>
           </div>
           <div class="alh-modal-footer">
-            <button id="arz-report-copy-btn" class="arz-btn-primary" style="flex: 2;"><i class="fa-regular fa-copy"></i> Скопировать репорты</button>
-            <button id="arz-report-reopen-btn" class="arz-btn-secondary" style="flex: 1;"><i class="fa-solid fa-rotate-left"></i> Новый пробив</button>
-            <button id="arz-report-close-btn" class="arz-btn-danger" style="flex: 1;"><i class="fa-solid fa-xmark"></i> Закрыть</button>
+            <button id="arz-report-copy-btn" class="alh-layout-37 arz-btn-primary"><i class="fa-regular fa-copy"></i> Скопировать репорты</button>
+            <button id="arz-report-reopen-btn" class="alh-layout-11 arz-btn-secondary"><i class="fa-solid fa-rotate-left"></i> Новый пробив</button>
+            <button id="arz-report-close-btn" class="alh-layout-11 arz-btn-danger"><i class="fa-solid fa-xmark"></i> Закрыть</button>
           </div>
         </div>
       `;
@@ -193,24 +193,24 @@ export function create(context) {
       const progressOverlay = document.createElement('div');
       progressOverlay.className = 'alh-modal-overlay';
       progressOverlay.innerHTML = `
-        <div class="arz-modal-container" style="max-width: 400px; width: 90%;">
+        <div class="alh-layout-45 arz-modal-container">
           <div class="alh-modal-header">
-            <div class="arz-modal-icon-wrapper" style="background: rgba(0, 184, 217, 0.15); color: #00b8d9;"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+            <div class="alh-layout-129 arz-modal-icon-wrapper"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
             <div class="arz-modal-title-block">
               <div class="arz-modal-title">Пробив репортов</div>
               <div class="arz-modal-subtitle">Сбор репортов...</div>
             </div>
           </div>
-          <div class="alh-modal-body" style="padding: 24px; text-align: center;">
-            <div id="arz-progress-player" style="font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 8px;">Запуск...</div>
-            <div id="arz-progress-status" style="font-size: 13px; color: #9aa0a6; margin-bottom: 20px;">Подготовка запросов</div>
+          <div class="alh-layout-47 alh-modal-body">
+            <div id="arz-progress-player" class="alh-layout-48">Запуск...</div>
+            <div id="arz-progress-status" class="alh-layout-49">Подготовка запросов</div>
             
-            <div class="arz-progress-bar-container" style="width: 100%; height: 6px; background: rgba(255, 255, 255, 0.08); border-radius: 3px; overflow: hidden; margin-bottom: 24px;">
-              <div id="alh-progress-bar-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #00b8d9 0%, #00e5ff 100%); transition: width 0.3s ease; border-radius: 3px;"></div>
+            <div class="alh-layout-50 arz-progress-bar-container">
+              <div id="alh-progress-bar-fill" class="alh-layout-51"></div>
             </div>
           </div>
           <div class="alh-modal-footer">
-            <button id="arz-progress-cancel-btn" class="arz-btn-danger" style="flex: 1;"><i class="fa-solid fa-ban"></i> Отмена</button>
+            <button id="arz-progress-cancel-btn" class="alh-layout-11 arz-btn-danger"><i class="fa-solid fa-ban"></i> Отмена</button>
           </div>
         </div>
       `;
@@ -294,27 +294,27 @@ export function create(context) {
       results.forEach((res, index) => {
         const hasError = !!res.error;
         const hasReports = res.reports && res.reports.length > 0;
-        const countStr = hasError ? `<span style="color: var(--az-danger); font-size: 12px;">${res.error}</span>` : `${res.reports.length} реп.`;
+        const countStr = hasError ? `<span class="alh-layout-72">${res.error}</span>` : `${res.reports.length} реп.`;
 
         let detailsHtml = '';
         if (hasReports) {
           let detailRows = '';
           res.reports.forEach(r => {
             detailRows += `
-              <div style="display: flex; flex-direction: column; padding: 10px 20px; border-bottom: 1px solid var(--az-border); gap: 4px;">
-                <div style="display: flex; justify-content: space-between; font-size: 12px; align-items: center;">
-                  <span style="color: var(--az-text-secondary); font-family: monospace;">${r.date}</span>
-                  <span style="color: var(--az-text); font-weight: 500;">Игрок: ${r.player}</span>
+              <div class="alh-layout-130">
+                <div class="alh-layout-117">
+                  <span class="alh-layout-22">${r.date}</span>
+                  <span class="alh-layout-131">Игрок: ${r.player}</span>
                 </div>
-                <div style="color: var(--az-text-secondary); font-size: 13px; line-height: 1.4;"><span style="color: var(--az-text-secondary);">Вопрос:</span> ${r.question}</div>
-                <div style="color: var(--az-accent-hover); font-weight: 600; font-size: 13px; line-height: 1.4;"><span style="color: var(--az-text-secondary);">Ответ:</span> ${r.answer}</div>
+                <div class="alh-layout-132"><span class="alh-layout-22">Вопрос:</span> ${r.question}</div>
+                <div class="alh-layout-118"><span class="alh-layout-22">Ответ:</span> ${r.answer}</div>
               </div>
             `;
           });
           detailsHtml = `
-            <tr id="arz-report-details-row-${index}" class="arz-details-row" style="display: none; background: var(--az-table-row-hover);">
-              <td colspan="3" style="padding: 0; border-bottom: 1px solid var(--az-border);">
-                <div style="max-height: 280px; overflow-y: auto; padding: 4px 0;">
+            <tr id="arz-report-details-row-${index}" class="alh-layout-119 arz-details-row">
+              <td colspan="3" class="alh-layout-102">
+                <div class="alh-layout-133">
                   ${detailRows}
                 </div>
               </td>
@@ -323,16 +323,16 @@ export function create(context) {
         }
 
         rowsHtml += `
-          <tr style="border-bottom: 1px solid var(--az-border); cursor: pointer;" class="arz-player-row" data-index="${index}" data-player="${res.player}">
-            <td style="padding: 12px 16px; font-weight: 600; color: var(--az-text); font-size: 13px;">
-              <span class="arz-toggle-details-btn" style="margin-right: 8px; color: var(--az-text-secondary);"><i class="fa-solid fa-chevron-right"></i></span>
+          <tr class="alh-layout-104 arz-player-row" data-index="${index}" data-player="${res.player}">
+            <td class="alh-layout-85">
+              <span class="alh-layout-105 arz-toggle-details-btn"><i class="fa-solid fa-chevron-right"></i></span>
               ${res.player}
             </td>
             <td style="padding: 12px 16px; font-weight: 700; color: ${hasError ? 'var(--az-text-secondary)' : 'var(--az-accent-hover)'}; font-size: 13px;">
               ${countStr}
             </td>
-            <td style="padding: 12px 16px; text-align: right;">
-              <button class="arz-btn-icon arz-copy-single-report-btn" data-index="${index}" title="Копировать репорты игрока" style="background: none; border: none; color: var(--az-text-secondary); cursor: pointer; padding: 4px 8px; font-size: 14px; transition: color 0.2s;"><i class="fa-regular fa-copy"></i></button>
+            <td class="alh-layout-107">
+              <button class="alh-layout-108 arz-btn-icon arz-copy-single-report-btn" data-index="${index}" title="Копировать репорты игрока"><i class="fa-regular fa-copy"></i></button>
             </td>
           </tr>
           ${detailsHtml}
@@ -357,7 +357,7 @@ export function create(context) {
       const overlay = document.createElement('div');
       overlay.className = 'alh-modal-overlay';
       overlay.innerHTML = `
-        <div class="arz-modal-container" style="max-width: 700px; width: 95%;">
+        <div class="alh-layout-86 arz-modal-container">
           <div class="alh-modal-header">
             <div class="arz-modal-icon-wrapper"><i class="fa-solid fa-comments"></i></div>
             <div class="arz-modal-title-block">
@@ -366,16 +366,16 @@ export function create(context) {
             </div>
             <button id="arz-report-multi-close-header-btn" class="alh-modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
           </div>
-          <div style="padding: 12px 16px; border-bottom: 1px solid var(--az-border); display: flex; gap: 12px; background: var(--az-bg-sidebar);">
-            <input type="text" id="arz-reports-multi-search" class="arz-input" placeholder="Поиск по имени администратора..." style="width: 100%; box-sizing: border-box; font-size: 13px; padding: 8px 12px;">
+          <div class="alh-layout-126">
+            <input type="text" id="arz-reports-multi-search" class="alh-layout-127 arz-input" placeholder="Поиск по имени администратора...">
           </div>
-          <div class="online-result-table-wrapper" style="max-height: 550px; overflow-y: auto; background: var(--az-input-bg); border-bottom: 1px solid var(--az-border);">
-            <table class="online-result-table" style="width: 100%; border-collapse: collapse;">
+          <div class="alh-layout-95 online-result-table-wrapper">
+            <table class="alh-layout-80 online-result-table">
               <thead>
-                <tr style="border-bottom: 1px solid var(--az-border); background: var(--az-bg-sidebar); position: sticky; top: 0; z-index: 1;">
-                  <th style="text-align: left; padding: 12px 16px; color: var(--az-text-secondary); font-size: 11px; text-transform: uppercase;">Администратор</th>
-                  <th style="text-align: left; padding: 12px 16px; color: var(--az-text-secondary); font-size: 11px; text-transform: uppercase;">Репорты</th>
-                  <th style="text-align: right; padding: 12px 16px; color: var(--az-text-secondary); font-size: 11px; text-transform: uppercase; width: 50px;">Копировать</th>
+                <tr class="alh-layout-109">
+                  <th class="alh-layout-82">Администратор</th>
+                  <th class="alh-layout-82">Репорты</th>
+                  <th class="alh-layout-110">Копировать</th>
                 </tr>
               </thead>
               <tbody>
@@ -384,9 +384,9 @@ export function create(context) {
             </table>
           </div>
           <div class="alh-modal-footer">
-            <button id="arz-report-multi-copy-btn" class="arz-btn-primary" style="flex: 2;"><i class="fa-regular fa-copy"></i> Скопировать все репорты</button>
-            <button id="arz-report-multi-reopen-btn" class="arz-btn-secondary" style="flex: 1;"><i class="fa-solid fa-rotate-left"></i> Новый пробив</button>
-            <button id="arz-report-multi-close-btn" class="arz-btn-danger" style="flex: 1;"><i class="fa-solid fa-xmark"></i> Закрыть</button>
+            <button id="arz-report-multi-copy-btn" class="alh-layout-37 arz-btn-primary"><i class="fa-regular fa-copy"></i> Скопировать все репорты</button>
+            <button id="arz-report-multi-reopen-btn" class="alh-layout-11 arz-btn-secondary"><i class="fa-solid fa-rotate-left"></i> Новый пробив</button>
+            <button id="arz-report-multi-close-btn" class="alh-layout-11 arz-btn-danger"><i class="fa-solid fa-xmark"></i> Закрыть</button>
           </div>
         </div>
       `;

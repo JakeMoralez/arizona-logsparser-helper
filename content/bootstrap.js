@@ -1,7 +1,41 @@
 (function () {
   if (window.ArizonaBootstrap) return;
   const root = document.documentElement;
-  root.classList.add('arz-mask-pending', 'arz-layout-pending');
+  root.classList.add('arz-mask-pending', 'arz-layout-pending', 'alh-startup-pending');
+  let settled = false;
+  let revealing = false;
+  let readyFrame;
+  let paintFrame;
+  let pageObserver;
+  const reveal = reason => {
+    if (settled) return;
+    settled = true;
+    clearTimeout(watchdog);
+    cancelAnimationFrame(readyFrame);
+    cancelAnimationFrame(paintFrame);
+    pageObserver?.disconnect();
+    root.classList.remove('alh-startup-pending', 'arz-layout-pending');
+    if (reason !== 'ready') root.classList.remove('arz-mask-pending');
+    root.dataset.alhStartup = reason;
+    window.dispatchEvent(new CustomEvent('alh-startup-ready', { detail: { reason } }));
+  };
+  const watchdog = setTimeout(() => reveal('timeout'), 3000);
+  function markReady() {
+    if (settled || revealing) return;
+    revealing = true;
+    readyFrame = requestAnimationFrame(() => {
+      paintFrame = requestAnimationFrame(() => reveal('ready'));
+    });
+  }
+  function inspectPage() {
+    if (settled || !document.body) return;
+    const hasLogs = document.querySelector('table.table, form.filter');
+    if (!hasLogs && /Processing your request|please wait|проверка браузера/i.test(document.body.textContent)) reveal('challenge');
+    else if (document.readyState !== 'loading' && !hasLogs) reveal('non-log-page');
+  }
+  pageObserver = new MutationObserver(inspectPage);
+  pageObserver.observe(root, { childList: true, subtree: true, characterData: true });
+  document.addEventListener('DOMContentLoaded', inspectPage, { once: true });
   const keys = ['arz_logsparser_helper_settings', 'arizonaSettings', 'arizonaTemplates'];
   const values = {};
   const pending = {};
@@ -28,7 +62,6 @@
       (document.body || root).classList.toggle(name, states[index]);
       if (document.body) root.classList.remove(name);
     });
-    if (document.body) requestAnimationFrame(() => requestAnimationFrame(() => root.classList.remove('arz-layout-pending')));
   }
   function applyAppearance() {
     if (!loaded || released) return;
@@ -36,6 +69,7 @@
     const general = effective?.general || values.arz_logsparser_helper_settings || {};
     const appearance = effective?.appearance || values.arizonaSettings || {};
     const enabled = general['extension-toggle'] !== false;
+    if (!enabled) reveal('disabled');
     applyLayout(general);
     const status = window.ArizonaCompatibility?.status();
     const maskingAppearance = !window.ArizonaCompatibility?.ready && status?.appliedMode === 'auto' && !status.detected
@@ -69,22 +103,25 @@
   };
   chrome.storage.onChanged.addListener(synchronize);
   const settings = new Promise(resolve => {
-    chrome.storage.local.get(keys, saved => {
+    try { chrome.storage.local.get(keys, saved => {
+      try {
       Object.assign(values, saved, pending);
       loaded = true;
       window.ArizonaCompatibility?.start(values.arz_logsparser_helper_settings);
       applyAppearance();
       resolve(values);
-    });
+      } catch (error) { reveal('error'); resolve(values); }
+    }); } catch (error) { reveal('error'); resolve(values); }
   });
   const compatibility = settings.then(() => window.ArizonaCompatibility?.start(values.arz_logsparser_helper_settings)).then(() => {
     applyAppearance();
     return values;
-  });
-  bodyReady.then(applyAppearance);
+  }).catch(() => { reveal('error'); return values; });
+  bodyReady.then(() => { applyAppearance(); inspectPage(); }).catch(() => reveal('error'));
   window.addEventListener('alh-compatibility-status', applyAppearance);
   window.ArizonaBootstrap = {
-    settings, compatibility, bodyReady,
+    settings, compatibility, bodyReady, markReady,
+    failOpen() { reveal('error'); },
     release() {
       released = true;
       chrome.storage.onChanged.removeListener(synchronize);

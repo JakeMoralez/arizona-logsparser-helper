@@ -13,7 +13,7 @@ export function create(context) {
 
     const modalHTML = `
       <div id="arz-analytics-overlay" class="alh-modal-overlay">
-        <div class="arz-modal-container" style="max-width: 950px; width: 95%;">
+        <div class="alh-layout-28 arz-modal-container">
           <div class="alh-modal-header">
             <div class="arz-modal-icon-wrapper">
               <i class="fa-solid fa-chart-simple"></i>
@@ -25,7 +25,7 @@ export function create(context) {
             <button id="arz-analytics-close" class="alh-modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
           </div>
           
-          <div class="arz-lookup-tabs" style="gap: 2px !important;">
+          <div class="alh-layout-29 arz-lookup-tabs">
             <button class="arz-tab-btn" data-tab="similar-ips"><i class="fa-solid fa-network-wired"></i> Похожие IP</button>
             <button class="arz-tab-btn" data-tab="repeats"><i class="fa-solid fa-rotate"></i> Повторы</button>
             <button class="arz-tab-btn" data-tab="leader-sales"><i class="fa-solid fa-user-tie"></i> Продажа лид. действий</button>
@@ -33,8 +33,8 @@ export function create(context) {
             <button class="arz-tab-btn" data-tab="business"><i class="fa-solid fa-coins"></i> Финансы бизнеса</button>
           </div>
           
-          <div class="alh-modal-body" style="gap: 16px !important; padding-top: 12px !important;">
-            <div id="arz-analytics-tab-business" class="arz-tab-content" style="display:none; flex-direction:column; gap:12px">
+          <div class="alh-layout-30 alh-modal-body">
+            <div id="arz-analytics-tab-business" class="alh-layout-23 arz-tab-content">
               <div class="arz-business-intro"><i class="fa-solid fa-chart-line"></i><span>Поступления и расходы бизнеса за выбранный период с разбивкой по датам и дням недели.</span></div>
               <div class="arz-modal-form-group">
                 <label for="arz-business-id" class="arz-modal-label"><i class="fa-solid fa-building"></i> ID бизнеса</label>
@@ -55,75 +55,75 @@ export function create(context) {
               <button id="arz-business-start" class="arz-btn-primary" type="button"><i class="fa-solid fa-magnifying-glass"></i> Рассчитать финансы</button>
               <div id="arz-business-result" aria-live="polite" aria-atomic="true"></div>
             </div>
-            <div id="arz-analytics-tab-similar-ips" class="arz-tab-content" style="display: flex; flex-direction: column; gap: 12px;">
+            <div id="arz-analytics-tab-similar-ips" class="alh-layout-9 arz-tab-content">
               <div class="arz-modal-form-group">
                 <label class="arz-modal-label"><i class="fa-solid fa-sliders"></i> Режим сравнения IP (по текущей странице)</label>
-                <div style="display: flex; gap: 8px; background: var(--az-input-bg); padding: 6px; border-radius: 14px; border: 1px solid var(--az-border);">
-                  <button type="button" class="similar-mode-btn active" data-mode="exact" style="flex: 1; padding: 8px 12px; border: none; border-radius: 10px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; background: linear-gradient(135deg, var(--az-accent) 0%, var(--az-accent-hover) 100%); color: white;">Точный IP</button>
-                  <button type="button" class="similar-mode-btn" data-mode="subnet24" style="flex: 1; padding: 8px 12px; border: none; border-radius: 10px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; background: transparent; color: var(--az-text-secondary);">Подсеть /24 (Похожие)</button>
-                  <button type="button" class="similar-mode-btn" data-mode="subnet16" style="flex: 1; padding: 8px 12px; border: none; border-radius: 10px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; background: transparent; color: var(--az-text-secondary);">Подсеть /16 (Провайдер)</button>
+                <div class="alh-layout-31">
+                  <button type="button" class="alh-layout-32 similar-mode-btn active" data-mode="exact">Точный IP</button>
+                  <button type="button" class="alh-layout-33 similar-mode-btn" data-mode="subnet24">Подсеть /24 (Похожие)</button>
+                  <button type="button" class="alh-layout-33 similar-mode-btn" data-mode="subnet16">Подсеть /16 (Провайдер)</button>
                 </div>
               </div>
               
               <div class="arz-modal-form-group">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <div class="alh-layout-3">
                   <label class="arz-modal-label"><i class="fa-solid fa-list-check"></i> Найденные совпадения</label>
-                  <span id="arz-similar-groups-count" style="background: linear-gradient(135deg, var(--az-accent) 0%, var(--az-accent-hover) 100%); color: white; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 30px;">0 групп</span>
+                  <span id="arz-similar-groups-count" class="alh-layout-34">0 групп</span>
                 </div>
-                <div id="arz-similar-groups-list" class="arz-list-container" style="max-height: 450px; overflow-y: auto;"></div>
+                <div id="arz-similar-groups-list" class="alh-layout-35 arz-list-container"></div>
               </div>
             </div>
 
-            <div id="arz-analytics-tab-repeats" class="arz-tab-content" style="display: none; flex-direction: column; gap: 12px;">
-              <div style="display: flex; gap: 12px; align-items: flex-end;">
-                <div class="arz-modal-form-group" style="flex: 2;">
+            <div id="arz-analytics-tab-repeats" class="alh-layout-23 arz-tab-content">
+              <div class="alh-layout-36">
+                <div class="alh-layout-37 arz-modal-form-group">
                   <label class="arz-modal-label"><i class="fa-solid fa-sliders"></i> Режим сопоставления</label>
-                  <div style="display: flex; gap: 6px; background: var(--az-input-bg); padding: 4px; border-radius: 12px; border: 1px solid var(--az-border);">
-                    <button type="button" class="repeats-mode-btn active" data-mode="exact" style="flex: 1; padding: 6px 10px; border: none; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s; background: linear-gradient(135deg, var(--az-accent) 0%, var(--az-accent-hover) 100%); color: white;">Полный лог</button>
-                    <button type="button" class="repeats-mode-btn" data-mode="actionOnly" style="flex: 1; padding: 6px 10px; border: none; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s; background: transparent; color: var(--az-text-secondary);">Только действие</button>
+                  <div class="alh-layout-38">
+                    <button type="button" class="alh-layout-39 repeats-mode-btn active" data-mode="exact">Полный лог</button>
+                    <button type="button" class="alh-layout-40 repeats-mode-btn" data-mode="actionOnly">Только действие</button>
                   </div>
                 </div>
-                <div class="arz-modal-form-group" style="flex: 1;">
+                <div class="alh-layout-11 arz-modal-form-group">
                   <label class="arz-modal-label"><i class="fa-solid fa-arrow-up-9-1"></i> Повторов от</label>
-                  <input type="number" id="arz-repeats-threshold" class="arz-input" min="2" max="100" value="2" style="padding: 6px 10px !important; text-align: center;">
+                  <input type="number" id="arz-repeats-threshold" class="alh-layout-41 arz-input" min="2" max="100" value="2">
                 </div>
               </div>
               
               <div class="arz-modal-form-group">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <div class="alh-layout-3">
                   <label class="arz-modal-label"><i class="fa-solid fa-list-check"></i> Обнаруженные повторы</label>
-                  <span id="arz-repeats-groups-count" style="background: linear-gradient(135deg, var(--az-accent) 0%, var(--az-accent-hover) 100%); color: white; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 30px;">0 групп</span>
+                  <span id="arz-repeats-groups-count" class="alh-layout-34">0 групп</span>
                 </div>
-                <div id="arz-repeats-groups-list" class="arz-list-container" style="max-height: 450px; overflow-y: auto;"></div>
+                <div id="arz-repeats-groups-list" class="alh-layout-35 arz-list-container"></div>
               </div>
             </div>
 
-            <div id="arz-analytics-tab-leader-sales" class="arz-tab-content" style="display: none; flex-direction: column; gap: 12px;">
-              <div style="font-size: 12px; color: var(--az-text-secondary); line-height: 1.4; display: flex; align-items: center; gap: 8px;">
-                <i class="fa-solid fa-triangle-exclamation" style="color: #ef4444;"></i>
+            <div id="arz-analytics-tab-leader-sales" class="alh-layout-23 arz-tab-content">
+              <div class="alh-layout-24">
+                <i class="alh-layout-42 fa-solid fa-triangle-exclamation"></i>
                 <span>Пробив истории логов лидеров: Поиск пар "Лидерское действие + Передача средств от того же игрока за 15 минут".</span>
               </div>
               <div class="arz-modal-form-group">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                  <label class="arz-modal-label" style="margin: 0;"><i class="fa-solid fa-user-tie"></i> Ник(и) лидеров / заместителей</label>
-                  <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 11px; color: var(--az-text-secondary); background: var(--az-input-bg); border: 1px solid var(--az-border); padding: 2px 8px; border-radius: 12px; white-space: nowrap;">Введено: <strong id="arz-leader-sales-count-num" style="color: var(--az-accent-hover);">0</strong></span>
-                    <span id="arz-leader-extract-btn" style="font-size: 11px; color: var(--az-accent-hover); cursor: pointer; display: flex; align-items: center; gap: 4px; user-select: none; border-bottom: 1px dashed currentColor; white-space: nowrap;" title="Извлечь ники Nick_Name из любого текста"><i class="fa-solid fa-wand-magic-sparkles"></i> Извлечь ники</span>
+                <div class="alh-layout-43">
+                  <label class="alh-layout-4 arz-modal-label"><i class="fa-solid fa-user-tie"></i> Ник(и) лидеров / заместителей</label>
+                  <div class="alh-layout-20">
+                    <span class="alh-layout-6">Введено: <strong id="arz-leader-sales-count-num" class="alh-layout-7">0</strong></span>
+                    <span id="arz-leader-extract-btn" title="Извлечь ники Nick_Name из любого текста" class="alh-layout-8"><i class="fa-solid fa-wand-magic-sparkles"></i> Извлечь ники</span>
                   </div>
                 </div>
                 <textarea id="arz-leader-sales-nicks" class="arz-textarea" rows="3" placeholder="Введите никнеймы лидеров (каждый с новой строки или через запятую)"></textarea>
               </div>
-              <div style="display: flex; gap: 12px; width: 100%; box-sizing: border-box;">
-                <div class="arz-modal-form-group" style="flex: 1;">
+              <div class="alh-layout-10">
+                <div class="alh-layout-11 arz-modal-form-group">
                   <label class="arz-modal-label"><i class="fa-regular fa-calendar"></i> Дата от</label>
                   <input type="date" id="arz-leader-sales-date-from" class="arz-input">
                 </div>
-                <div class="arz-modal-form-group" style="flex: 1;">
+                <div class="alh-layout-11 arz-modal-form-group">
                   <label class="arz-modal-label"><i class="fa-regular fa-calendar"></i> Дата до</label>
                   <input type="date" id="arz-leader-sales-date-to" class="arz-input">
                 </div>
               </div>
-              <div class="arz-date-shortcuts" style="display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 6px !important; width: 100% !important; box-sizing: border-box !important; margin-top: -4px !important;">
+              <div class="alh-layout-12 arz-date-shortcuts">
                 <button type="button" class="arz-btn-shortcut" data-range="day">За день</button>
                 <button type="button" class="arz-btn-shortcut" data-range="week">За неделю</button>
                 <button type="button" class="arz-btn-shortcut" data-range="month">За месяц</button>
@@ -131,35 +131,35 @@ export function create(context) {
                 <button type="button" class="arz-btn-shortcut" data-range="start-month">С начала месяца</button>
                 <button type="button" class="arz-btn-shortcut" data-range="start-year">С начала года</button>
               </div>
-              <button type="button" id="arz-start-leader-sales-btn" class="arz-btn-primary" style="margin-top: 4px;"><i class="fa-solid fa-magnifying-glass"></i> Пробить логи лидеров</button>
+              <button type="button" id="arz-start-leader-sales-btn" class="alh-layout-44 arz-btn-primary"><i class="fa-solid fa-magnifying-glass"></i> Пробить логи лидеров</button>
             </div>
 
-            <div id="arz-analytics-tab-admin-sales" class="arz-tab-content" style="display: none; flex-direction: column; gap: 12px;">
-              <div style="font-size: 12px; color: var(--az-text-secondary); line-height: 1.4; display: flex; align-items: center; gap: 8px;">
-                <i class="fa-solid fa-triangle-exclamation" style="color: #ef4444;"></i>
+            <div id="arz-analytics-tab-admin-sales" class="alh-layout-23 arz-tab-content">
+              <div class="alh-layout-24">
+                <i class="alh-layout-42 fa-solid fa-triangle-exclamation"></i>
                 <span>Пробив истории логов админов: Поиск пар "Админское действие + Передача средств от того же игрока за 15 минут".</span>
               </div>
               <div class="arz-modal-form-group">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                  <label class="arz-modal-label" style="margin: 0;"><i class="fa-solid fa-user-ninja"></i> Ник(и) администраторов</label>
-                  <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 11px; color: var(--az-text-secondary); background: var(--az-input-bg); border: 1px solid var(--az-border); padding: 2px 8px; border-radius: 12px; white-space: nowrap;">Введено: <strong id="arz-admin-sales-count-num" style="color: var(--az-accent-hover);">0</strong></span>
-                    <span id="arz-admin-extract-btn" style="font-size: 11px; color: var(--az-accent-hover); cursor: pointer; display: flex; align-items: center; gap: 4px; user-select: none; border-bottom: 1px dashed currentColor; white-space: nowrap;" title="Извлечь ники Nick_Name из любого текста"><i class="fa-solid fa-wand-magic-sparkles"></i> Извлечь ники</span>
+                <div class="alh-layout-43">
+                  <label class="alh-layout-4 arz-modal-label"><i class="fa-solid fa-user-ninja"></i> Ник(и) администраторов</label>
+                  <div class="alh-layout-20">
+                    <span class="alh-layout-6">Введено: <strong id="arz-admin-sales-count-num" class="alh-layout-7">0</strong></span>
+                    <span id="arz-admin-extract-btn" title="Извлечь ники Nick_Name из любого текста" class="alh-layout-8"><i class="fa-solid fa-wand-magic-sparkles"></i> Извлечь ники</span>
                   </div>
                 </div>
                 <textarea id="arz-admin-sales-nicks" class="arz-textarea" rows="3" placeholder="Введите никнеймы админов (каждый с новой строки или через запятую)"></textarea>
               </div>
-              <div style="display: flex; gap: 12px; width: 100%; box-sizing: border-box;">
-                <div class="arz-modal-form-group" style="flex: 1;">
+              <div class="alh-layout-10">
+                <div class="alh-layout-11 arz-modal-form-group">
                   <label class="arz-modal-label"><i class="fa-regular fa-calendar"></i> Дата от</label>
                   <input type="date" id="arz-admin-sales-date-from" class="arz-input">
                 </div>
-                <div class="arz-modal-form-group" style="flex: 1;">
+                <div class="alh-layout-11 arz-modal-form-group">
                   <label class="arz-modal-label"><i class="fa-regular fa-calendar"></i> Дата до</label>
                   <input type="date" id="arz-admin-sales-date-to" class="arz-input">
                 </div>
               </div>
-              <div class="arz-date-shortcuts" style="display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 6px !important; width: 100% !important; box-sizing: border-box !important; margin-top: -4px !important;">
+              <div class="alh-layout-12 arz-date-shortcuts">
                 <button type="button" class="arz-btn-shortcut" data-range="day">За день</button>
                 <button type="button" class="arz-btn-shortcut" data-range="week">За неделю</button>
                 <button type="button" class="arz-btn-shortcut" data-range="month">За месяц</button>
@@ -167,13 +167,13 @@ export function create(context) {
                 <button type="button" class="arz-btn-shortcut" data-range="start-month">С начала месяца</button>
                 <button type="button" class="arz-btn-shortcut" data-range="start-year">С начала года</button>
               </div>
-              <button type="button" id="arz-start-admin-sales-btn" class="arz-btn-primary" style="margin-top: 4px;"><i class="fa-solid fa-magnifying-glass"></i> Пробить логи админов</button>
+              <button type="button" id="arz-start-admin-sales-btn" class="alh-layout-44 arz-btn-primary"><i class="fa-solid fa-magnifying-glass"></i> Пробить логи админов</button>
             </div>
           </div>
           
           <div class="alh-modal-footer">
-            <button id="arz-analytics-reset" class="arz-btn-danger" style="flex: 1;"><i class="fa-solid fa-rotate-left"></i> Сбросить фильтр</button>
-            <button id="arz-analytics-show-all" class="arz-btn-primary" style="flex: 1.5;"><i class="fa-solid fa-eye"></i> Показать все на странице</button>
+            <button id="arz-analytics-reset" class="alh-layout-11 arz-btn-danger"><i class="fa-solid fa-rotate-left"></i> Сбросить фильтр</button>
+            <button id="arz-analytics-show-all" class="alh-layout-25 arz-btn-primary"><i class="fa-solid fa-eye"></i> Показать все на странице</button>
           </div>
         </div>
       </div>
@@ -407,24 +407,24 @@ export function create(context) {
       const progressOverlay = document.createElement('div');
       progressOverlay.className = 'alh-modal-overlay';
       progressOverlay.innerHTML = `
-        <div class="arz-modal-container" style="max-width: 400px; width: 90%;">
+        <div class="alh-layout-45 arz-modal-container">
           <div class="alh-modal-header">
-            <div class="arz-modal-icon-wrapper" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+            <div class="alh-layout-46 arz-modal-icon-wrapper"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
             <div class="arz-modal-title-block">
               <div class="arz-modal-title">Пробив продажи услуг</div>
               <div class="arz-modal-subtitle">Анализ истории логов ${type === 'leader' ? 'лидеров' : 'админов'}...</div>
             </div>
           </div>
-          <div class="alh-modal-body" style="padding: 24px; text-align: center;">
-            <div id="arz-progress-player" style="font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 8px;">Запуск...</div>
-            <div id="arz-progress-status" style="font-size: 13px; color: #9aa0a6; margin-bottom: 20px;">Загрузка логов с сервера</div>
+          <div class="alh-layout-47 alh-modal-body">
+            <div id="arz-progress-player" class="alh-layout-48">Запуск...</div>
+            <div id="arz-progress-status" class="alh-layout-49">Загрузка логов с сервера</div>
             
-            <div class="arz-progress-bar-container" style="width: 100%; height: 6px; background: rgba(255, 255, 255, 0.08); border-radius: 3px; overflow: hidden; margin-bottom: 24px;">
-              <div id="alh-progress-bar-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #ef4444 0%, #ff7373 100%); transition: width 0.3s ease; border-radius: 3px;"></div>
+            <div class="alh-layout-50 arz-progress-bar-container">
+              <div id="alh-progress-bar-fill" class="alh-layout-51"></div>
             </div>
           </div>
           <div class="alh-modal-footer">
-            <button id="arz-progress-cancel-btn" class="arz-btn-danger" style="flex: 1;"><i class="fa-solid fa-ban"></i> Отмена</button>
+            <button id="arz-progress-cancel-btn" class="alh-layout-11 arz-btn-danger"><i class="fa-solid fa-ban"></i> Отмена</button>
           </div>
         </div>
       `;
@@ -535,7 +535,7 @@ export function create(context) {
       if (matches.length === 0) {
         cardsHtml = `
           <div class="alh-empty-state">
-            <i class="fa-solid fa-circle-check" style="font-size: 28px; color: #10b981;"></i>
+            <i class="alh-layout-52 fa-solid fa-circle-check"></i>
             <span>Подозрительных совпадений за указанный период не обнаружено</span>
           </div>
         `;
@@ -546,23 +546,23 @@ export function create(context) {
 
           cardsHtml += `
             <div class="arz-sales-card">
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-size: 13px; font-weight: 700; color: var(--az-text);">
-                  <i class="fa-solid ${titleIcon}" style="color: #ef4444; margin-right: 6px;"></i> ${m.nicks.join(' ↔ ')}
+              <div class="alh-layout-53">
+                <span class="alh-layout-54">
+                  <i class="alh-layout-55 fa-solid ${titleIcon}"></i> ${m.nicks.join(' ↔ ')}
                 </span>
-                <div style="display: flex; align-items: center; gap: 8px;">
+                <div class="alh-layout-20">
                   <span class="arz-sales-badge"><i class="fa-solid fa-stopwatch"></i> разница: ${timeDiffStr}</span>
-                  <button type="button" class="arz-btn-secondary arz-copy-pair-btn" data-index="${idx}" title="Скопировать эту пару логов" style="padding: 2px 8px !important; font-size: 11px !important; height: auto !important;">
+                  <button type="button" class="alh-layout-56 arz-btn-secondary arz-copy-pair-btn" data-index="${idx}" title="Скопировать эту пару логов">
                     <i class="fa-regular fa-copy"></i>
                   </button>
                 </div>
               </div>
               <div class="arz-sales-log-item">
-                <div style="font-size: 10px; color: var(--az-text-secondary); margin-bottom: 2px;">${m.actionLog.timeStr}</div>
+                <div class="alh-layout-57">${m.actionLog.timeStr}</div>
                 <div>${window.ArizonaUtils.escapeHtml(m.actionLog.text)}</div>
               </div>
               <div class="arz-sales-log-item transfer">
-                <div style="font-size: 10px; color: var(--az-text-secondary); margin-bottom: 2px;">${m.transferLog.timeStr}</div>
+                <div class="alh-layout-57">${m.transferLog.timeStr}</div>
                 <div>${window.ArizonaUtils.escapeHtml(m.transferLog.text)}</div>
               </div>
             </div>
@@ -577,21 +577,21 @@ export function create(context) {
       const overlay = document.createElement('div');
       overlay.className = 'alh-modal-overlay';
       overlay.innerHTML = `
-        <div class="arz-modal-container" style="max-width: 950px; width: 95%;">
+        <div class="alh-layout-28 arz-modal-container">
           <div class="alh-modal-header">
-            <div class="arz-modal-icon-wrapper" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <div class="alh-layout-46 arz-modal-icon-wrapper"><i class="fa-solid fa-triangle-exclamation"></i></div>
             <div class="arz-modal-title-block">
               <div class="arz-modal-title">Результаты пробива продажи услуг</div>
               <div class="arz-modal-subtitle">Обнаружено совпадений: ${matches.length}</div>
             </div>
             <button id="arz-sales-results-close-header" class="alh-modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
           </div>
-          <div class="online-result-table-wrapper" style="max-height: 420px; overflow-y: auto; padding: 16px; background: var(--az-input-bg); border-bottom: 1px solid var(--az-border);">
+          <div class="alh-layout-58 online-result-table-wrapper">
             ${cardsHtml}
           </div>
           <div class="alh-modal-footer">
-            <button id="arz-sales-copy-btn" class="arz-btn-primary" style="flex: 2;"><i class="fa-regular fa-copy"></i> Скопировать все найденные логи</button>
-            <button id="arz-sales-close-btn" class="arz-btn-danger" style="flex: 1;"><i class="fa-solid fa-xmark"></i> Закрыть</button>
+            <button id="arz-sales-copy-btn" class="alh-layout-37 arz-btn-primary"><i class="fa-regular fa-copy"></i> Скопировать все найденные логи</button>
+            <button id="arz-sales-close-btn" class="alh-layout-11 arz-btn-danger"><i class="fa-solid fa-xmark"></i> Закрыть</button>
           </div>
         </div>
       `;
@@ -641,7 +641,7 @@ export function create(context) {
       if (groups.length === 0) {
         listContainer.innerHTML = `
           <div class="alh-empty-state">
-            <i class="fa-solid fa-face-smile" style="font-size: 24px; color: var(--az-text-secondary);"></i>
+            <i class="alh-layout-59 fa-solid fa-face-smile"></i>
             <span>Совпадений не найдено</span>
           </div>
         `;
@@ -668,8 +668,8 @@ export function create(context) {
 
         card.innerHTML = `
           <div class="arz-similar-group-title">
-            <span><i class="fa-solid fa-network-wired" style="color: var(--az-accent-hover); margin-right: 6px;"></i> ${group.key}</span>
-            <span class="badge" style="background: rgba(var(--az-accent-rgb), 0.1); color: var(--az-accent-hover); border: 1px solid rgba(var(--az-accent-rgb), 0.2);">${countText}</span>
+            <span><i class="alh-layout-60 fa-solid fa-network-wired"></i> ${group.key}</span>
+            <span class="alh-layout-61 badge">${countText}</span>
           </div>
           <div class="arz-similar-group-nicks">
             Аккаунты: <strong>${accountListText}</strong>
@@ -707,7 +707,7 @@ export function create(context) {
       if (groups.length === 0) {
         listContainer.innerHTML = `
           <div class="alh-empty-state">
-            <i class="fa-solid fa-face-smile" style="font-size: 24px; color: var(--az-text-secondary);"></i>
+            <i class="alh-layout-59 fa-solid fa-face-smile"></i>
             <span>Повторов не найдено</span>
           </div>
         `;
@@ -721,8 +721,8 @@ export function create(context) {
 
         card.innerHTML = `
           <div class="arz-repeat-group-title">
-            <span><i class="fa-solid fa-user" style="color: var(--az-accent-hover); margin-right: 6px;"></i> ${group.nick}</span>
-            <span class="badge" style="background: rgba(var(--az-accent-rgb), 0.1); color: var(--az-accent-hover); border: 1px solid rgba(var(--az-accent-rgb), 0.2);">${group.rows.length} повт.</span>
+            <span><i class="alh-layout-60 fa-solid fa-user"></i> ${group.nick}</span>
+            <span class="alh-layout-61 badge">${group.rows.length} повт.</span>
           </div>
           <div class="arz-repeat-group-desc">
             Действие: <strong>${window.ArizonaUtils.escapeHtml(group.actionText)}</strong>
@@ -981,7 +981,7 @@ export function create(context) {
             b.style.color = 'var(--az-text-secondary)';
           });
           btn.classList.add('active');
-          btn.style.background = 'linear-gradient(135deg, var(--az-accent) 0%, var(--az-accent-hover) 100%)';
+          btn.style.background = 'var(--az-accent)';
           btn.style.color = 'white';
 
           currentModeIP = btn.dataset.mode;
@@ -1013,7 +1013,7 @@ export function create(context) {
             b.style.color = 'var(--az-text-secondary)';
           });
           btn.classList.add('active');
-          btn.style.background = 'linear-gradient(135deg, var(--az-accent) 0%, var(--az-accent-hover) 100%)';
+          btn.style.background = 'var(--az-accent)';
           btn.style.color = 'white';
 
           currentModeRepeats = btn.dataset.mode;
@@ -1094,7 +1094,7 @@ export function create(context) {
         btn.id = 'arz-analytics-btn';
         btn.className = 'btn btn-success';
         btn.style.cssText = 'margin-left: 10px;';
-        btn.innerHTML = `<i class="fa-solid fa-chart-simple" style="margin-right: 6px;"></i> Аналитика`;
+        btn.innerHTML = `<i style="margin-right: 6px;" class="fa-solid fa-chart-simple"></i> Аналитика`;
 
         btn.onclick = () => this.openModal();
 
