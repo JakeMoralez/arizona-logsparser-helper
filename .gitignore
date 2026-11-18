@@ -7,7 +7,6 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 package.json
-tests
 node-compile-cache
 lib
 arizona_helper_by_sakai
@@ -148,3 +147,7 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
 tests/results/sakai-*.png
+
+# Local modal UI verification artifacts
+/test-results/
+/debug.log
