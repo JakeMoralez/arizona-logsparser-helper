@@ -6439,7 +6439,8 @@
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.id = 'arz-select-all-logs-btn';
-      btn.className = 'btn btn-secondary';
+      btn.className = 'btn btn-secondary alh-action-secondary';
+      btn.dataset.alhAction = 'secondary';
       btn.style.cssText = 'margin-left: 10px;';
       btn.innerHTML = `<i class="fa-solid fa-check-double" style="margin-right: 6px;"></i> Выделить всё на странице`;
       btn.onclick = () => selectAllVisible();

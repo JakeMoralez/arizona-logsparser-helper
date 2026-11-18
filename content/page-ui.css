@@ -57,13 +57,16 @@ html.alh-authenticator-page .card-body form .row.mb-0 .btn { margin: 0; min-heig
 #alh-log-filter-root > .alh-search-actions { display: flex; gap: 8px; flex-wrap: nowrap; }
 #arz-filter-logs-options { display: flex; flex-direction: column; align-items: stretch; gap: 12px; }
 #arz-filter-logs-options .form-check { padding: 0; margin: 0; min-height: 0; }
-#arz-filter-logs-options .alh-search-segments { display: flex; border: 1px solid var(--alh-line); border-radius: 6px; padding: 3px; gap: 3px; }
+#arz-filter-logs-options .alh-search-segments { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); border: 1px solid var(--alh-line); border-radius: 8px; background: var(--alh-inset); padding: 3px; gap: 4px; }
 #arz-filter-logs-options .alh-search-mode { flex: 1; min-width: 0; }
 #arz-filter-logs-options input[type='radio'] { appearance: none; position: absolute; opacity: 0; width: 1px; height: 1px; }
 #arz-filter-logs-options label { margin: 0; cursor: pointer; }
-#arz-filter-logs-options input[type='radio'] + label { display: block; text-align: center; padding: 6px 10px; border-radius: 4px; font-size: 12px; color: var(--alh-muted); }
-#arz-filter-logs-options input[type='radio']:checked + label { background: var(--alh-inset); color: var(--alh-text); box-shadow: inset 0 0 0 1px var(--alh-line); }
-#arz-filter-logs-options input[type='radio']:focus-visible + label { outline: 2px solid var(--alh-accent); outline-offset: -2px; }
+#arz-filter-logs-options input[type='radio'] + label { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 34px; box-sizing: border-box; text-align: center; padding: 6px 12px; border: 1px solid transparent; border-radius: 5px; font: 500 13px/20px 'Segoe UI',sans-serif; color: var(--alh-muted); }
+#arz-filter-logs-options input[type='radio']:checked + label { background: rgba(var(--az-accent-rgb),.12); color: var(--alh-text); border-color: var(--alh-accent); font-weight: 600; }
+#arz-filter-logs-options input[type='radio']:focus-visible + label { outline: 2px solid var(--alh-text); outline-offset: -3px; }
+#arz-filter-logs-options .alh-search-mode label svg { flex: 0 0 16px; width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+#arz-filter-logs-options input[type='radio']:checked + label svg { color: var(--alh-accent); }
+#arz-filter-logs-options input[type='radio']:not(:checked) + label:hover { background: var(--alh-surface); color: var(--alh-text); }
 #arz-filter-logs-options .form-check:has(#arz-filter-logs-auto) { display: flex; align-items: center; gap: 8px; font-size: 12px; line-height: 20px; }
 #arz-filter-logs-auto { margin: 0; flex-shrink: 0; }
 .arz-filter-modal .arz-filter-modal-content { background: var(--az-card-bg); background-image: none; border-radius: 8px; width: min(1100px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); display: flex; flex-direction: column; }
@@ -183,7 +186,7 @@ html body .alh-controls-scope .alh-control-popover input.alh-combo-search[type='
 .alh-extra-menu.alh-controls-scope > button.alh-control-button { display: flex; justify-content: flex-start; width: 100%; text-align: left; border: 0; background: transparent; color: var(--az-text); padding: 9px 10px; border-radius: 4px; font: 13px 'Segoe UI',sans-serif; cursor: pointer; }
 .alh-extra-menu button:hover { background: var(--az-input-bg); }
 .alh-more-periods { padding: 0 7px; min-width: 28px; height: 24px; border: 1px solid var(--az-border); border-radius: 4px; color: var(--az-text-secondary); background: transparent; cursor: pointer; font: 600 18px/1 'Segoe UI',sans-serif; }
-html body .alh-form-actions .btn[data-alh-action='secondary'], html body .alh-form-actions .btn[data-alh-action='utility'] { background: var(--az-input-bg) !important; border: 1px solid var(--az-border) !important; color: var(--az-text) !important; box-shadow: none !important; transform: none !important; }
+html body .alh-form-actions .btn[data-alh-action='secondary'], html body .alh-form-actions .btn.alh-action-secondary, html body .alh-form-actions .btn[data-alh-action='utility'] { background: var(--az-input-bg) !important; border: 1px solid var(--az-border) !important; color: var(--az-text) !important; box-shadow: none !important; transform: none !important; }
 html body .alh-form-actions .btn[data-alh-action='utility'] { background: transparent !important; }
 html body .alh-form-actions .btn[data-alh-action]:hover { border-color: var(--az-accent) !important; transform: none !important; box-shadow: none !important; }
 html body #alh-log-filter-root .alh-search-actions { align-items: center; }
